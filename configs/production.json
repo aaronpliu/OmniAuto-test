@@ -1,0 +1,14 @@
+{
+  "name": "production",
+  "app": {
+    "baseUrl": "https://yourapp.com",
+    "apiBaseUrl": "https://api.yourapp.com",
+    "timeout": 30000,
+    "implicitWait": 5000,
+    "retryAttempts": 2
+  },
+  "credentials": {
+    "username": "produser",
+    "password": "securepass"
+  }
+}

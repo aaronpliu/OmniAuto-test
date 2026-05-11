@@ -1,0 +1,14 @@
+{
+  "name": "development",
+  "app": {
+    "baseUrl": "https://dev.yourapp.com",
+    "apiBaseUrl": "https://api.dev.yourapp.com",
+    "timeout": 30000,
+    "implicitWait": 5000,
+    "retryAttempts": 3
+  },
+  "credentials": {
+    "username": "testuser",
+    "password": "password123"
+  }
+}

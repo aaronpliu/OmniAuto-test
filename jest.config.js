@@ -1,0 +1,28 @@
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/tests'],
+  testMatch: ['**/*.spec.ts'],
+  moduleDirectories: ['node_modules', '<rootDir>'],
+  moduleNameMapper: {
+    '^@framework/(.*)$': '<rootDir>/framework/$1',
+    '^@applications/(.*)$': '<rootDir>/applications/$1',
+    '^@tests/(.*)$': '<rootDir>/tests/$1',
+    '^@configs/(.*)$': '<rootDir>/configs/$1'
+  },
+  setupFilesAfterSetup: ['<rootDir>/framework/hooks/globalSetup.ts'],
+  reporters: [
+    'default',
+    ['allure-jest', { resultsDirectory: 'artifacts/allure-results' }]
+  ],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true
+      }
+    }]
+  },
+  testTimeout: 120000,
+  verbose: true
+};

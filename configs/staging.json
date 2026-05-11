@@ -1,0 +1,14 @@
+{
+  "name": "staging",
+  "app": {
+    "baseUrl": "https://staging.yourapp.com",
+    "apiBaseUrl": "https://api.staging.yourapp.com",
+    "timeout": 30000,
+    "implicitWait": 5000,
+    "retryAttempts": 3
+  },
+  "credentials": {
+    "username": "testuser",
+    "password": "password123"
+  }
+}

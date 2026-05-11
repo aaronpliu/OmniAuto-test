@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Test artifacts
+artifacts/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.lingma/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Detox
+.detoxrc.json.local
+
+# Coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/
