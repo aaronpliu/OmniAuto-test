@@ -239,4 +239,14 @@ LOG_LEVEL=debug npm run test:mobile
 
 ## License
 
-MIT
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+### Summary
+
+- ✅ You can use, modify, and distribute this software
+- ✅ You must disclose source code when distributing
+- ✅ You must include the same license in derivative works
+- ❌ You cannot use this in proprietary/closed-source software
+- ❌ No warranty provided
+
+For more information, visit: https://www.gnu.org/licenses/gpl-3.0.html
