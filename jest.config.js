@@ -10,7 +10,7 @@ module.exports = {
     '^@tests/(.*)$': '<rootDir>/tests/$1',
     '^@configs/(.*)$': '<rootDir>/configs/$1'
   },
-  setupFilesAfterSetup: ['<rootDir>/framework/hooks/globalSetup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/framework/hooks/globalSetup.ts'],
   reporters: [
     'default',
     ['allure-jest', { resultsDirectory: 'artifacts/allure-results' }]

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { PlaywrightActions } from '@framework/actions/PlaywrightActions';
+import { PlaywrightActions } from '@framework/actions';
 
 // Web tests use Playwright's native test runner and PlaywrightActions directly
 test.describe('Web Login Tests', () => {

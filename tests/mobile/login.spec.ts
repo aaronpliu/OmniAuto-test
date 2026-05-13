@@ -1,5 +1,5 @@
 import { describe, it, beforeAll, afterAll } from '@jest/globals';
-import { ActionFactory } from '@framework/actions/ActionFactory';
+import { ActionFactory } from '@framework/actions';
 import { LoginPage } from '@applications/your-app/pages/LoginPage';
 import { HomePage } from '@applications/your-app/pages/HomePage';
 
@@ -11,7 +11,7 @@ describe('Mobile Login Tests', () => {
 
   beforeAll(async () => {
     // Platform determined by TEST_PLATFORM env var: 'ios' or 'android'
-    const platform = process.env.TEST_PLATFORM || 'ios';
+    const platform = (process.env.TEST_PLATFORM || 'ios') as 'ios' | 'android';
     const actions = ActionFactory.create(platform);
     loginPage = new LoginPage(actions);
     homePage = new HomePage(actions);
