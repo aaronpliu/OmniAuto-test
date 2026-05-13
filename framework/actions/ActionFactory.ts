@@ -18,7 +18,7 @@ export class ActionFactory {
         return new DetoxActions();
       
       case 'android': {
-        const capabilities = typeof config === 'object' ? config.capabilities : {};
+        const capabilities = typeof config === 'object' && config.capabilities ? config.capabilities : {};
         return new AppiumActions(capabilities);
       }
       
