@@ -4,6 +4,18 @@ import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
 
+// Type for flexible selector: string (for id) or Detox NativeElement
+export type DetoxSelector = string | ReturnType<typeof element>;
+
+// Helper function to resolve selector to NativeElement
+function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
+  if (typeof selector === 'string') {
+    // Default to by.id for backward compatibility
+    return element(by.id(selector));
+  }
+  return selector;
+}
+
 export class DetoxActions extends BaseActions {
   // Navigation
   async navigateTo(url?: string): Promise<void> {
@@ -12,77 +24,99 @@ export class DetoxActions extends BaseActions {
   }
 
   // Element interactions
-  async click(selector: string): Promise<void> {
-    logger.debug(`Clicking element: ${selector}`);
-    await element(by.id(selector)).tap();
+  async click(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Clicking element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await elem.tap();
   }
 
-  async doubleClick(selector: string): Promise<void> {
-    logger.debug(`Double clicking element: ${selector}`);
-    await element(by.id(selector)).multiTap(2);
+  async doubleClick(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Double clicking element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await elem.multiTap(2);
   }
 
-  async tap(selector: string): Promise<void> {
-    logger.debug(`Tapping element: ${selector}`);
-    await element(by.id(selector)).tap();
+  async tap(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Tapping element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await elem.tap();
   }
 
-  async longPress(selector: string, duration = 1000): Promise<void> {
-    logger.debug(`Long pressing element: ${selector} for ${duration}ms`);
-    await element(by.id(selector)).longPress(duration);
+  async longPress(selector: DetoxSelector, duration = 1000): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Long pressing element: ${typeof selector === 'string' ? selector : 'custom matcher'} for ${duration}ms`);
+    await elem.longPress(duration);
   }
 
   // Input
-  async typeText(selector: string, text: string): Promise<void> {
-    logger.debug(`Typing text into element: ${selector}`);
-    await element(by.id(selector)).replaceText(text);
+  async typeText(selector: DetoxSelector, text: string): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Typing text into element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await elem.replaceText(text);
   }
 
-  async clearText(selector: string): Promise<void> {
-    logger.debug(`Clearing text from element: ${selector}`);
-    await element(by.id(selector)).clearText();
+  async clearText(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Clearing text from element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await elem.clearText();
   }
 
-  async getText(selector: string): Promise<string> {
-    logger.debug(`Getting text from element: ${selector}`);
-    const attribute = await element(by.id(selector)).getAttributes();
+  async getText(selector: DetoxSelector): Promise<string> {
+    const elem = resolveElement(selector);
+    logger.debug(`Getting text from element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    const attribute = await elem.getAttributes();
     return (attribute as any).text || '';
   }
 
   // Assertions
-  async waitForElement(selector: string, timeout = 10000): Promise<void> {
-    logger.debug(`Waiting for element: ${selector}`);
-    await waitFor(element(by.id(selector))).toBeVisible().withTimeout(timeout);
+  async waitForElement(selector: DetoxSelector, timeout = 10000): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Waiting for element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await waitFor(elem).toBeVisible().withTimeout(timeout);
   }
 
-  async expectVisible(selector: string): Promise<void> {
-    logger.debug(`Expecting element visible: ${selector}`);
-    await detoxExpect(element(by.id(selector))).toBeVisible();
+  async expectVisible(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Expecting element visible: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await detoxExpect(elem).toBeVisible();
   }
 
-  async expectNotVisible(selector: string): Promise<void> {
-    logger.debug(`Expecting element not visible: ${selector}`);
-    await detoxExpect(element(by.id(selector))).toBeNotVisible();
+  async expectNotVisible(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Expecting element not visible: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await detoxExpect(elem).toBeNotVisible();
   }
 
-  async expectText(selector: string, text: string): Promise<void> {
-    logger.debug(`Expecting text in element: ${selector}`);
-    await detoxExpect(element(by.id(selector))).toHaveText(text);
+  async expectText(selector: DetoxSelector, text: string): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Expecting text in element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await detoxExpect(elem).toHaveText(text);
   }
 
-  async expectContainsText(selector: string, text: string): Promise<void> {
-    logger.debug(`Expecting element contains text: ${selector}`);
-    await detoxExpect(element(by.id(selector))).toHaveLabel(text);
+  async expectContainsText(selector: DetoxSelector, text: string): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Expecting element contains text: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await detoxExpect(elem).toHaveLabel(text);
   }
 
-  async expectEnabled(selector: string): Promise<void> {
-    logger.debug(`Expecting element enabled: ${selector}`);
-    await detoxExpect(element(by.id(selector))).toBeEnabled();
+  async expectEnabled(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Expecting element enabled: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    const attribute = await elem.getAttributes();
+    const isEnabled = (attribute as any).enabled !== false;
+    if (!isEnabled) {
+      throw new Error(`Element is not enabled`);
+    }
   }
 
-  async expectDisabled(selector: string): Promise<void> {
-    logger.debug(`Expecting element disabled: ${selector}`);
-    await detoxExpect(element(by.id(selector))).toBeDisabled();
+  async expectDisabled(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Expecting element disabled: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    const attribute = await elem.getAttributes();
+    const isEnabled = (attribute as any).enabled !== false;
+    if (isEnabled) {
+      throw new Error(`Element is not disabled`);
+    }
   }
 
   // Gestures
@@ -91,14 +125,62 @@ export class DetoxActions extends BaseActions {
     await element(by.type('UIScrollView')).swipe(direction, 'fast', NaN, 0.5, 0.5);
   }
 
-  async scroll(toSelector: string): Promise<void> {
-    logger.debug(`Scrolling to element: ${toSelector}`);
-    await element(by.id(toSelector)).scrollTo('bottom');
+  async scroll(toSelector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(toSelector);
+    logger.debug(`Scrolling to element: ${typeof toSelector === 'string' ? toSelector : 'custom matcher'}`);
+    await elem.scrollTo('bottom');
   }
 
-  async pinch(scale: number): Promise<void> {
-    logger.debug(`Pinching with scale: ${scale}`);
-    await element(by.type('UIView')).pinchWithScale(scale, 0, 1000);
+  async pinch(scale: number, speed: 'slow' | 'fast' = 'fast', angle: number = 0): Promise<void> {
+    logger.debug(`Pinching with scale: ${scale}, speed: ${speed}, angle: ${angle}`);
+    await element(by.type('UIView')).pinch(scale, speed, angle);
+  }
+
+  // Helper methods to create Detox matchers
+  /**
+   * Create a matcher by test ID (accessibilityIdentifier)
+   * @param id - The test ID
+   */
+  static byId(id: string): ReturnType<typeof element> {
+    return element(by.id(id));
+  }
+
+  /**
+   * Create a matcher by text content
+   * @param text - The text to match
+   */
+  static byText(text: string): ReturnType<typeof element> {
+    return element(by.text(text));
+  }
+
+  /**
+   * Create a matcher by label (accessibilityLabel)
+   * @param label - The label to match
+   */
+  static byLabel(label: string): ReturnType<typeof element> {
+    return element(by.label(label));
+  }
+
+  /**
+   * Create a matcher by type (native component type)
+   * @param type - The native type (e.g., 'UIScrollView', 'UIButton')
+   */
+  static byType(type: string): ReturnType<typeof element> {
+    return element(by.type(type));
+  }
+
+  /**
+   * Create a matcher using multiple conditions (AND)
+   * Example: DetoxActions.byAll('button', 'Submit') - matches element with id='button' AND text='Submit'
+   * @param firstMatcher - First matcher function call (e.g., by.id('...'))
+   * @param additionalMatchers - Additional matchers to combine with AND
+   */
+  static byAll(firstMatcher: any, ...additionalMatchers: any[]): ReturnType<typeof element> {
+    let combined = firstMatcher;
+    for (const matcher of additionalMatchers) {
+      combined = combined.and(matcher);
+    }
+    return element(combined);
   }
 
   // Utilities
