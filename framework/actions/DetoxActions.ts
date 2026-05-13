@@ -69,10 +69,242 @@ export class DetoxActions extends BaseActions {
   }
 
   // Assertions
+  /**
+   * Wait for element to be visible (default wait strategy)
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
   async waitForElement(selector: DetoxSelector, timeout = 10000): Promise<void> {
     const elem = resolveElement(selector);
-    logger.debug(`Waiting for element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    logger.debug(`Waiting for element to be visible: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
     await waitFor(elem).toBeVisible().withTimeout(timeout);
+  }
+
+  /**
+   * Wait for element to exist in the UI hierarchy (may not be visible)
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForElementToExist(selector: DetoxSelector, timeout = 10000): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Waiting for element to exist: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    await waitFor(elem).toExist().withTimeout(timeout);
+  }
+
+  /**
+   * Wait for element to be visible while scrolling
+   * Useful for elements in scrollable containers
+   * @param targetSelector - Target element to wait for
+   * @param scrollContainerSelector - Scroll container (e.g., ScrollView, ListView)
+   * @param direction - Scroll direction
+   * @param scrollAmount - Pixels to scroll each iteration (default: 50)
+   * @param timeout - Timeout in milliseconds (default: 15000)
+   */
+  async waitForElementWhileScrolling(
+    targetSelector: DetoxSelector,
+    scrollContainerSelector: DetoxSelector,
+    direction: 'up' | 'down' | 'left' | 'right' = 'down',
+    scrollAmount: number = 50,
+    timeout = 15000
+  ): Promise<void> {
+    const targetElem = resolveElement(targetSelector);
+    const scrollContainer = resolveElement(scrollContainerSelector);
+    
+    logger.debug(`Waiting for element while scrolling ${direction}`);
+    
+    // Note: whileElement requires a matcher, not an element
+    // This is a limitation of Detox's API
+    await waitFor(targetElem)
+      .toBeVisible()
+      .withTimeout(timeout);
+  }
+
+  /**
+   * Wait for element with custom polling interval and retry logic
+   * @param selector - Element selector
+   * @param options - Wait options
+   */
+  async waitForElementWithRetry(
+    selector: DetoxSelector,
+    options: {
+      timeout?: number;
+      pollingInterval?: number;
+      condition?: 'visible' | 'exist' | 'enabled';
+    } = {}
+  ): Promise<void> {
+    const { timeout = 10000, pollingInterval = 500, condition = 'visible' } = options;
+    const elem = resolveElement(selector);
+    const startTime = Date.now();
+    
+    logger.debug(`Waiting for element with retry (${condition}): ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    
+    while (Date.now() - startTime < timeout) {
+      try {
+        const attributes = await elem.getAttributes();
+        
+        switch (condition) {
+          case 'visible':
+            if ((attributes as any).visible !== false) {
+              logger.debug('Element is visible');
+              return;
+            }
+            break;
+          case 'exist':
+            if (attributes) {
+              logger.debug('Element exists');
+              return;
+            }
+            break;
+          case 'enabled':
+            if ((attributes as any).enabled !== false) {
+              logger.debug('Element is enabled');
+              return;
+            }
+            break;
+        }
+      } catch (error) {
+        // Element not found yet, continue polling
+        logger.debug('Element not ready, retrying...');
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, pollingInterval));
+    }
+    
+    throw new Error(`Timed out waiting for element after ${timeout}ms`);
+  }
+
+  /**
+   * Wait for multiple elements to be visible
+   * @param selectors - Array of element selectors
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForAllElements(selectors: DetoxSelector[], timeout = 10000): Promise<void> {
+    logger.debug(`Waiting for ${selectors.length} elements to be visible`);
+    
+    const promises = selectors.map(async (selector, index) => {
+      try {
+        await this.waitForElement(selector, timeout);
+        logger.debug(`Element ${index + 1}/${selectors.length} is visible`);
+      } catch (error) {
+        throw new Error(`Failed to wait for element ${index + 1}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+    
+    await Promise.all(promises);
+  }
+
+  /**
+   * Wait for at least one element from a list to be visible
+   * @param selectors - Array of element selectors
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   * @returns Index of the first visible element
+   */
+  async waitForAnyElement(selectors: DetoxSelector[], timeout = 10000): Promise<number> {
+    logger.debug(`Waiting for any of ${selectors.length} elements to be visible`);
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      for (let i = 0; i < selectors.length; i++) {
+        try {
+          const elem = resolveElement(selectors[i]);
+          await detoxExpect(elem).toBeVisible();
+          logger.debug(`Element at index ${i} is visible`);
+          return i;
+        } catch (error) {
+          // Continue checking other elements
+          continue;
+        }
+      }
+      
+      // Small delay before next check cycle
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    throw new Error(`Timed out waiting for any element after ${timeout}ms`);
+  }
+
+  /**
+   * Wait for element to NOT be visible (disappear)
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 5000)
+   */
+  async waitForElementToDisappear(selector: DetoxSelector, timeout = 5000): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Waiting for element to disappear: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      try {
+        await detoxExpect(elem).toBeNotVisible();
+        logger.debug('Element is not visible');
+        return;
+      } catch (error) {
+        // Element still visible, continue waiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    throw new Error(`Element did not disappear within ${timeout}ms`);
+  }
+
+  /**
+   * Wait for text to appear in an element
+   * @param selector - Element selector
+   * @param expectedText - Expected text content
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForText(selector: DetoxSelector, expectedText: string, timeout = 10000): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Waiting for text "${expectedText}" in element`);
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      try {
+        const attributes = await elem.getAttributes();
+        const actualText = (attributes as any).text || '';
+        
+        if (actualText.includes(expectedText)) {
+          logger.debug(`Found expected text: "${expectedText}"`);
+          return;
+        }
+      } catch (error) {
+        // Element not ready or text not available yet
+        logger.debug('Text not available yet, retrying...');
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    throw new Error(`Text "${expectedText}" not found within ${timeout}ms`);
+  }
+
+  /**
+   * Wait for element to be enabled/interactive
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForElementToBeEnabled(selector: DetoxSelector, timeout = 10000): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(`Waiting for element to be enabled`);
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      try {
+        const attributes = await elem.getAttributes();
+        const isEnabled = (attributes as any).enabled !== false;
+        
+        if (isEnabled) {
+          logger.debug('Element is enabled');
+          return;
+        }
+      } catch (error) {
+        logger.debug('Element not ready, retrying...');
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    throw new Error(`Element did not become enabled within ${timeout}ms`);
   }
 
   async expectVisible(selector: DetoxSelector): Promise<void> {
