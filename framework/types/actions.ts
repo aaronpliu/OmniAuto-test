@@ -3,28 +3,28 @@ export interface IActions {
   navigateTo(url?: string): Promise<void>;
   
   // Element interactions
-  click(selector: string): Promise<void>;
-  doubleClick(selector: string): Promise<void>;
-  tap(selector: string): Promise<void>;
-  longPress(selector: string, duration?: number): Promise<void>;
+  click(selector: any): Promise<void>;
+  doubleClick(selector: any): Promise<void>;
+  tap(selector: any): Promise<void>;
+  longPress(selector: any, duration?: number): Promise<void>;
   
   // Input
-  typeText(selector: string, text: string): Promise<void>;
-  clearText(selector: string): Promise<void>;
-  getText(selector: string): Promise<string>;
+  typeText(selector: any, text: string): Promise<void>;
+  clearText(selector: any): Promise<void>;
+  getText(selector: any): Promise<string>;
   
   // Assertions
-  waitForElement(selector: string, timeout?: number): Promise<void>;
-  expectVisible(selector: string): Promise<void>;
-  expectNotVisible(selector: string): Promise<void>;
-  expectText(selector: string, text: string): Promise<void>;
-  expectContainsText(selector: string, text: string): Promise<void>;
-  expectEnabled(selector: string): Promise<void>;
-  expectDisabled(selector: string): Promise<void>;
+  waitForElement(selector: any, timeout?: number): Promise<void>;
+  expectVisible(selector: any): Promise<void>;
+  expectNotVisible(selector: any): Promise<void>;
+  expectText(selector: any, text: string): Promise<void>;
+  expectContainsText(selector: any, text: string): Promise<void>;
+  expectEnabled(selector: any): Promise<void>;
+  expectDisabled(selector: any): Promise<void>;
   
   // Gestures
   swipe(direction: 'up' | 'down' | 'left' | 'right', distance?: number): Promise<void>;
-  scroll(toSelector: string): Promise<void>;
+  scroll(toSelector: any): Promise<void>;
   pinch(scale: number): Promise<void>;
   
   // Utilities

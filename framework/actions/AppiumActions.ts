@@ -4,13 +4,114 @@ import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
 
+// Type for flexible selector: string (for accessibility ID) or WebdriverIO Element
+export type AppiumSelector = string | WebdriverIO.Element;
+
+// Helper function to resolve selector to Element
+async function resolveElement(driver: WebdriverIO.Browser, selector: AppiumSelector): Promise<WebdriverIO.Element> {
+  if (typeof selector === 'string') {
+    // Default to accessibility ID for backward compatibility
+    return await driver.$(`~${selector}`);
+  }
+  return selector;
+}
+
 export class AppiumActions extends BaseActions {
   private driver: WebdriverIO.Browser | null = null;
   private capabilities: RemoteOptions['capabilities'];
 
-  constructor(capabilities: RemoteOptions['capabilities']) {
+  constructor(capabilities?: RemoteOptions['capabilities']) {
     super();
-    this.capabilities = capabilities;
+    // If no capabilities provided, build from environment variables
+    this.capabilities = capabilities || this.buildDefaultCapabilities();
+  }
+
+  /**
+   * Build default capabilities from environment variables
+   * This allows AppiumActions to work without explicit capabilities,
+   * similar to how DetoxActions uses Detox configuration
+   */
+  private buildDefaultCapabilities(): RemoteOptions['capabilities'] {
+    const platformName = process.env.PLATFORM_NAME || 'android';
+    const automationName = process.env.ANDROID_AUTOMATION_NAME || 'UiAutomator2';
+    const deviceName = process.env.ANDROID_DEVICE_NAME || 'emulator-5554';
+    const platformVersion = process.env.ANDROID_PLATFORM_VERSION || '13';
+    
+    // Build base capabilities
+    const capabilities: any = {
+      platformName,
+      'appium:automationName': automationName,
+      'appium:deviceName': deviceName,
+      'appium:platformVersion': platformVersion,
+    };
+
+    // Add app package and activity for Android
+    if (platformName === 'android') {
+      const appPackage = process.env.ANDROID_APP_PACKAGE;
+      const appActivity = process.env.ANDROID_APP_ACTIVITY;
+      const appPath = process.env.ANDROID_APP_PATH;
+
+      if (appPackage && appActivity) {
+        capabilities['appium:appPackage'] = appPackage;
+        capabilities['appium:appActivity'] = appActivity;
+      } else if (appPath) {
+        capabilities['appium:app'] = appPath;
+      }
+
+      // Optional Android-specific capabilities
+      if (process.env.ANDROID_SYSTEM_PORT) {
+        capabilities['appium:systemPort'] = parseInt(process.env.ANDROID_SYSTEM_PORT);
+      }
+      if (process.env.AUTO_GRANT_PERMISSIONS) {
+        capabilities['appium:autoGrantPermissions'] = process.env.AUTO_GRANT_PERMISSIONS === 'true';
+      }
+    }
+
+    // Add iOS capabilities if needed
+    if (platformName === 'ios') {
+      const bundleId = process.env.IOS_BUNDLE_ID;
+      const appPath = process.env.IOS_APP_PATH;
+      const iosDeviceName = process.env.IOS_DEVICE_NAME || 'iPhone 14';
+      const iosPlatformVersion = process.env.IOS_PLATFORM_VERSION || '17.0';
+
+      capabilities['appium:deviceName'] = iosDeviceName;
+      capabilities['appium:platformVersion'] = iosPlatformVersion;
+      capabilities['appium:automationName'] = process.env.IOS_AUTOMATION_NAME || 'XCUITest';
+
+      if (bundleId) {
+        capabilities['appium:bundleId'] = bundleId;
+      } else if (appPath) {
+        capabilities['appium:app'] = appPath;
+      }
+
+      // Optional iOS-specific capabilities
+      if (process.env.AUTO_ACCEPT_ALERTS) {
+        capabilities['appium:autoAcceptAlerts'] = process.env.AUTO_ACCEPT_ALERTS === 'true';
+      }
+    }
+
+    // Add common capabilities
+    if (process.env.NO_RESET) {
+      capabilities['appium:noReset'] = process.env.NO_RESET === 'true';
+    }
+    if (process.env.FULL_RESET) {
+      capabilities['appium:fullReset'] = process.env.FULL_RESET === 'true';
+    }
+    if (process.env.NEW_COMMAND_TIMEOUT) {
+      capabilities['appium:newCommandTimeout'] = parseInt(process.env.NEW_COMMAND_TIMEOUT);
+    }
+    if (process.env.LANGUAGE) {
+      capabilities['appium:language'] = process.env.LANGUAGE;
+    }
+    if (process.env.LOCALE) {
+      capabilities['appium:locale'] = process.env.LOCALE;
+    }
+    if (process.env.ORIENTATION) {
+      capabilities['appium:orientation'] = process.env.ORIENTATION;
+    }
+
+    logger.debug('Built capabilities from environment:', JSON.stringify(capabilities, null, 2));
+    return capabilities;
   }
 
   private async getDriver(): Promise<WebdriverIO.Browser> {
@@ -38,31 +139,31 @@ export class AppiumActions extends BaseActions {
   }
 
   // Element interactions
-  async click(selector: string): Promise<void> {
-    logger.debug(`Clicking element: ${selector}`);
+  async click(selector: AppiumSelector): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Clicking element: ${typeof selector === 'string' ? selector : 'custom element'}`);
     await el.click();
   }
 
-  async doubleClick(selector: string): Promise<void> {
-    logger.debug(`Double clicking element: ${selector}`);
+  async doubleClick(selector: AppiumSelector): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Double clicking element: ${typeof selector === 'string' ? selector : 'custom element'}`);
     await el.doubleClick();
   }
 
-  async tap(selector: string): Promise<void> {
-    logger.debug(`Tapping element: ${selector}`);
+  async tap(selector: AppiumSelector): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Tapping element: ${typeof selector === 'string' ? selector : 'custom element'}`);
     await el.click();
   }
 
-  async longPress(selector: string, duration = 1000): Promise<void> {
-    logger.debug(`Long pressing element: ${selector} for ${duration}ms`);
+  async longPress(selector: AppiumSelector, duration = 1000): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Long pressing element: ${typeof selector === 'string' ? selector : 'custom element'} for ${duration}ms`);
     await el.touchAction([
       { action: 'press' },
       { action: 'wait', ms: duration },
@@ -71,92 +172,352 @@ export class AppiumActions extends BaseActions {
   }
 
   // Input
-  async typeText(selector: string, text: string): Promise<void> {
-    logger.debug(`Typing text into element: ${selector}`);
+  async typeText(selector: AppiumSelector, text: string): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Typing text into element: ${typeof selector === 'string' ? selector : 'custom element'}`);
     await el.setValue(text);
   }
 
-  async clearText(selector: string): Promise<void> {
-    logger.debug(`Clearing text from element: ${selector}`);
+  async clearText(selector: AppiumSelector): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Clearing text from element: ${typeof selector === 'string' ? selector : 'custom element'}`);
     await el.clearValue();
   }
 
-  async getText(selector: string): Promise<string> {
-    logger.debug(`Getting text from element: ${selector}`);
+  async getText(selector: AppiumSelector): Promise<string> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Getting text from element: ${typeof selector === 'string' ? selector : 'custom element'}`);
     return await el.getText();
   }
 
   // Assertions
-  async waitForElement(selector: string, timeout = 10000): Promise<void> {
-    logger.debug(`Waiting for element: ${selector}`);
+  /**
+   * Wait for element to be visible (default wait strategy)
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForElement(selector: AppiumSelector, timeout = 10000): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Waiting for element to be visible: ${typeof selector === 'string' ? selector : 'custom element'}`);
     await el.waitForDisplayed({ timeout });
   }
 
-  async expectVisible(selector: string): Promise<void> {
-    logger.debug(`Expecting element visible: ${selector}`);
+  /**
+   * Wait for element to exist in the UI hierarchy (may not be visible)
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForElementToExist(selector: AppiumSelector, timeout = 10000): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Waiting for element to exist: ${typeof selector === 'string' ? selector : 'custom element'}`);
+    await el.waitForExist({ timeout });
+  }
+
+  /**
+   * Wait for element to be visible while scrolling
+   * Useful for elements in scrollable containers
+   * @param targetSelector - Target element to wait for
+   * @param scrollContainerSelector - Scroll container selector
+   * @param direction - Scroll direction
+   * @param scrollAmount - Pixels to scroll each iteration (default: 50)
+   * @param timeout - Timeout in milliseconds (default: 15000)
+   */
+  async waitForElementWhileScrolling(
+    targetSelector: AppiumSelector,
+    scrollContainerSelector: AppiumSelector,
+    direction: 'up' | 'down' | 'left' | 'right' = 'down',
+    scrollAmount: number = 50,
+    timeout = 15000
+  ): Promise<void> {
+    const driver = await this.getDriver();
+    const targetElem = await resolveElement(driver, targetSelector);
+    const scrollContainer = await resolveElement(driver, scrollContainerSelector);
+    
+    logger.debug(`Waiting for element while scrolling ${direction}`);
+    
+    // Scroll until element is visible or timeout
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      try {
+        const isDisplayed = await targetElem.isDisplayed();
+        if (isDisplayed) {
+          logger.debug('Element is visible after scrolling');
+          return;
+        }
+      } catch (error) {
+        // Element not found yet, continue scrolling
+      }
+      
+      // Perform scroll
+      await this.scroll(scrollContainerSelector);
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    throw new Error(`Timed out waiting for element after scrolling for ${timeout}ms`);
+  }
+
+  /**
+   * Wait for element with custom polling interval and retry logic
+   * @param selector - Element selector
+   * @param options - Wait options
+   */
+  async waitForElementWithRetry(
+    selector: AppiumSelector,
+    options: {
+      timeout?: number;
+      pollingInterval?: number;
+      condition?: 'visible' | 'exist' | 'enabled';
+    } = {}
+  ): Promise<void> {
+    const { timeout = 10000, pollingInterval = 500, condition = 'visible' } = options;
+    const driver = await this.getDriver();
+    const startTime = Date.now();
+    
+    logger.debug(`Waiting for element with retry (${condition}): ${typeof selector === 'string' ? selector : 'custom element'}`);
+    
+    while (Date.now() - startTime < timeout) {
+      try {
+        const el = await resolveElement(driver, selector);
+        
+        switch (condition) {
+          case 'visible':
+            const isDisplayed = await el.isDisplayed();
+            if (isDisplayed) {
+              logger.debug('Element is visible');
+              return;
+            }
+            break;
+          case 'exist':
+            const exists = await el.isExisting();
+            if (exists) {
+              logger.debug('Element exists');
+              return;
+            }
+            break;
+          case 'enabled':
+            const isEnabled = await el.isEnabled();
+            if (isEnabled) {
+              logger.debug('Element is enabled');
+              return;
+            }
+            break;
+        }
+      } catch (error) {
+        // Element not found yet, continue polling
+        logger.debug('Element not ready, retrying...');
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, pollingInterval));
+    }
+    
+    throw new Error(`Timed out waiting for element after ${timeout}ms`);
+  }
+
+  /**
+   * Wait for multiple elements to be visible
+   * @param selectors - Array of element selectors
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForAllElements(selectors: AppiumSelector[], timeout = 10000): Promise<void> {
+    logger.debug(`Waiting for ${selectors.length} elements to be visible`);
+    
+    const promises = selectors.map(async (selector, index) => {
+      try {
+        await this.waitForElement(selector, timeout);
+        logger.debug(`Element ${index + 1}/${selectors.length} is visible`);
+      } catch (error) {
+        throw new Error(`Failed to wait for element ${index + 1}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+    
+    await Promise.all(promises);
+  }
+
+  /**
+   * Wait for at least one element from a list to be visible
+   * @param selectors - Array of element selectors
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   * @returns Index of the first visible element
+   */
+  async waitForAnyElement(selectors: AppiumSelector[], timeout = 10000): Promise<number> {
+    logger.debug(`Waiting for any of ${selectors.length} elements to be visible`);
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      for (let i = 0; i < selectors.length; i++) {
+        try {
+          const driver = await this.getDriver();
+          const el = await resolveElement(driver, selectors[i]);
+          const isDisplayed = await el.isDisplayed();
+          if (isDisplayed) {
+            logger.debug(`Element at index ${i} is visible`);
+            return i;
+          }
+        } catch (error) {
+          // Continue checking other elements
+          continue;
+        }
+      }
+      
+      // Small delay before next check cycle
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    throw new Error(`Timed out waiting for any element after ${timeout}ms`);
+  }
+
+  /**
+   * Wait for element to NOT be visible (disappear)
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 5000)
+   */
+  async waitForElementToDisappear(selector: AppiumSelector, timeout = 5000): Promise<void> {
+    const driver = await this.getDriver();
+    logger.debug(`Waiting for element to disappear: ${typeof selector === 'string' ? selector : 'custom element'}`);
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      try {
+        const el = await resolveElement(driver, selector);
+        const isDisplayed = await el.isDisplayed();
+        if (!isDisplayed) {
+          logger.debug('Element is not visible');
+          return;
+        }
+      } catch (error) {
+        // Element not found, which means it's disappeared
+        logger.debug('Element not found (disappeared)');
+        return;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    throw new Error(`Element did not disappear within ${timeout}ms`);
+  }
+
+  /**
+   * Wait for text to appear in an element
+   * @param selector - Element selector
+   * @param expectedText - Expected text content
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForText(selector: AppiumSelector, expectedText: string, timeout = 10000): Promise<void> {
+    const driver = await this.getDriver();
+    logger.debug(`Waiting for text "${expectedText}" in element`);
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      try {
+        const el = await resolveElement(driver, selector);
+        const actualText = await el.getText();
+        
+        if (actualText.includes(expectedText)) {
+          logger.debug(`Found expected text: "${expectedText}"`);
+          return;
+        }
+      } catch (error) {
+        // Element not ready or text not available yet
+        logger.debug('Text not available yet, retrying...');
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    throw new Error(`Text "${expectedText}" not found within ${timeout}ms`);
+  }
+
+  /**
+   * Wait for element to be enabled/interactive
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   */
+  async waitForElementToBeEnabled(selector: AppiumSelector, timeout = 10000): Promise<void> {
+    const driver = await this.getDriver();
+    logger.debug(`Waiting for element to be enabled`);
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      try {
+        const el = await resolveElement(driver, selector);
+        const isEnabled = await el.isEnabled();
+        
+        if (isEnabled) {
+          logger.debug('Element is enabled');
+          return;
+        }
+      } catch (error) {
+        logger.debug('Element not ready, retrying...');
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    throw new Error(`Element did not become enabled within ${timeout}ms`);
+  }
+
+  async expectVisible(selector: AppiumSelector): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Expecting element visible: ${typeof selector === 'string' ? selector : 'custom element'}`);
     const isDisplayed = await el.isDisplayed();
     if (!isDisplayed) {
-      throw new Error(`Element ${selector} is not visible`);
+      throw new Error(`Element is not visible`);
     }
   }
 
-  async expectNotVisible(selector: string): Promise<void> {
-    logger.debug(`Expecting element not visible: ${selector}`);
+  async expectNotVisible(selector: AppiumSelector): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Expecting element not visible: ${typeof selector === 'string' ? selector : 'custom element'}`);
     const isDisplayed = await el.isDisplayed();
     if (isDisplayed) {
-      throw new Error(`Element ${selector} is visible`);
+      throw new Error(`Element is visible`);
     }
   }
 
-  async expectText(selector: string, text: string): Promise<void> {
-    logger.debug(`Expecting text in element: ${selector}`);
+  async expectText(selector: AppiumSelector, text: string): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Expecting text in element: ${typeof selector === 'string' ? selector : 'custom element'}`);
     const actualText = await el.getText();
     if (actualText !== text) {
       throw new Error(`Expected text "${text}" but got "${actualText}"`);
     }
   }
 
-  async expectContainsText(selector: string, text: string): Promise<void> {
-    logger.debug(`Expecting element contains text: ${selector}`);
+  async expectContainsText(selector: AppiumSelector, text: string): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Expecting element contains text: ${typeof selector === 'string' ? selector : 'custom element'}`);
     const actualText = await el.getText();
     if (!actualText.includes(text)) {
       throw new Error(`Expected text to contain "${text}" but got "${actualText}"`);
     }
   }
 
-  async expectEnabled(selector: string): Promise<void> {
-    logger.debug(`Expecting element enabled: ${selector}`);
+  async expectEnabled(selector: AppiumSelector): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Expecting element enabled: ${typeof selector === 'string' ? selector : 'custom element'}`);
     const isEnabled = await el.isEnabled();
     if (!isEnabled) {
-      throw new Error(`Element ${selector} is not enabled`);
+      throw new Error(`Element is not enabled`);
     }
   }
 
-  async expectDisabled(selector: string): Promise<void> {
-    logger.debug(`Expecting element disabled: ${selector}`);
+  async expectDisabled(selector: AppiumSelector): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${selector}`);
+    const el = await resolveElement(driver, selector);
+    logger.debug(`Expecting element disabled: ${typeof selector === 'string' ? selector : 'custom element'}`);
     const isEnabled = await el.isEnabled();
     if (isEnabled) {
-      throw new Error(`Element ${selector} is enabled`);
+      throw new Error(`Element is not disabled`);
     }
   }
 
@@ -195,10 +556,10 @@ export class AppiumActions extends BaseActions {
     ]);
   }
 
-  async scroll(toSelector: string): Promise<void> {
-    logger.debug(`Scrolling to element: ${toSelector}`);
+  async scroll(toSelector: AppiumSelector): Promise<void> {
     const driver = await this.getDriver();
-    const el = await driver.$(`~${toSelector}`);
+    const el = await resolveElement(driver, toSelector);
+    logger.debug(`Scrolling to element: ${typeof toSelector === 'string' ? toSelector : 'custom element'}`);
     await el.scrollIntoView();
   }
 
@@ -248,5 +609,46 @@ export class AppiumActions extends BaseActions {
     logger.info(`Setting location to: ${latitude}, ${longitude}`);
     const driver = await this.getDriver();
     await driver.setGeoLocation({ latitude, longitude });
+  }
+
+  // Helper methods to create Appium selectors
+  /**
+   * Create a selector by accessibility ID
+   * @param id - The accessibility ID
+   */
+  static async byId(driver: WebdriverIO.Browser, id: string): Promise<WebdriverIO.Element> {
+    return await driver.$(`~${id}`);
+  }
+
+  /**
+   * Create a selector by text content
+   * @param text - The text to match
+   */
+  static async byText(driver: WebdriverIO.Browser, text: string): Promise<WebdriverIO.Element> {
+    return await driver.$(`android=new UiSelector().text("${text}")|ios=**/XCUIElementTypeStaticText[` + text + `]`);
+  }
+
+  /**
+   * Create a selector by label (accessibility label)
+   * @param label - The label to match
+   */
+  static async byLabel(driver: WebdriverIO.Browser, label: string): Promise<WebdriverIO.Element> {
+    return await driver.$(`~${label}`);
+  }
+
+  /**
+   * Create a selector using XPath
+   * @param xpath - The XPath expression
+   */
+  static async byXPath(driver: WebdriverIO.Browser, xpath: string): Promise<WebdriverIO.Element> {
+    return await driver.$(xpath);
+  }
+
+  /**
+   * Create a selector using CSS selector (for web contexts)
+   * @param cssSelector - The CSS selector
+   */
+  static async byCSS(driver: WebdriverIO.Browser, cssSelector: string): Promise<WebdriverIO.Element> {
+    return await driver.$(cssSelector);
   }
 }

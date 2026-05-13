@@ -18,7 +18,9 @@ export class ActionFactory {
         return new DetoxActions();
       
       case 'android': {
-        const capabilities = typeof config === 'object' && config.capabilities ? config.capabilities : {};
+        // AppiumActions will automatically build capabilities from environment variables
+        // if none are provided, making it consistent with DetoxActions behavior
+        const capabilities = typeof config === 'object' ? config.capabilities : undefined;
         return new AppiumActions(capabilities);
       }
       
