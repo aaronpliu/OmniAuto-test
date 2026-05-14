@@ -25,7 +25,8 @@
   "include": [
     "framework/**/*",
     "applications/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    "examples/**/*"
   ],
   "exclude": [
     "node_modules",

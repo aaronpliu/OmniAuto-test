@@ -7,6 +7,27 @@ import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
 
+/**
+ * Type guard to check if actions is DetoxActions
+ */
+export function isDetoxActions(actions: BaseActions): actions is DetoxActions {
+  return actions instanceof DetoxActions;
+}
+
+/**
+ * Type guard to check if actions is AppiumActions
+ */
+export function isAppiumActions(actions: BaseActions): actions is AppiumActions {
+  return actions instanceof AppiumActions;
+}
+
+/**
+ * Type guard to check if actions is PlaywrightActions
+ */
+export function isPlaywrightActions(actions: BaseActions): actions is PlaywrightActions {
+  return actions instanceof PlaywrightActions;
+}
+
 export class ActionFactory {
   static create(config: Platform | ActionFactoryConfig): BaseActions {
     const platform = typeof config === 'string' ? config : config.platform;

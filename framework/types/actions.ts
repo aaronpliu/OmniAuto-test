@@ -1,30 +1,36 @@
+/**
+ * Generic selector type that allows each platform to define its own selector format
+ * This follows the Open/Closed Principle - open for extension, closed for modification
+ */
+export type Selector = string | object;
+
 export interface IActions {
   // Navigation
   navigateTo(url?: string): Promise<void>;
   
-  // Element interactions
-  click(selector: any): Promise<void>;
-  doubleClick(selector: any): Promise<void>;
-  tap(selector: any): Promise<void>;
-  longPress(selector: any, duration?: number): Promise<void>;
+  // Element interactions - using generic Selector type
+  click(selector: Selector): Promise<void>;
+  doubleClick(selector: Selector): Promise<void>;
+  tap(selector: Selector): Promise<void>;
+  longPress(selector: Selector, duration?: number): Promise<void>;
   
   // Input
-  typeText(selector: any, text: string): Promise<void>;
-  clearText(selector: any): Promise<void>;
-  getText(selector: any): Promise<string>;
+  typeText(selector: Selector, text: string): Promise<void>;
+  clearText(selector: Selector): Promise<void>;
+  getText(selector: Selector): Promise<string>;
   
   // Assertions
-  waitForElement(selector: any, timeout?: number): Promise<void>;
-  expectVisible(selector: any): Promise<void>;
-  expectNotVisible(selector: any): Promise<void>;
-  expectText(selector: any, text: string): Promise<void>;
-  expectContainsText(selector: any, text: string): Promise<void>;
-  expectEnabled(selector: any): Promise<void>;
-  expectDisabled(selector: any): Promise<void>;
+  waitForElement(selector: Selector, timeout?: number): Promise<void>;
+  expectVisible(selector: Selector): Promise<void>;
+  expectNotVisible(selector: Selector): Promise<void>;
+  expectText(selector: Selector, text: string): Promise<void>;
+  expectContainsText(selector: Selector, text: string): Promise<void>;
+  expectEnabled(selector: Selector): Promise<void>;
+  expectDisabled(selector: Selector): Promise<void>;
   
   // Gestures
   swipe(direction: 'up' | 'down' | 'left' | 'right', distance?: number): Promise<void>;
-  scroll(toSelector: any): Promise<void>;
+  scroll(toSelector: Selector): Promise<void>;
   pinch(scale: number): Promise<void>;
   
   // Utilities

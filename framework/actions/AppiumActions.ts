@@ -1,19 +1,29 @@
 import { remote, RemoteOptions } from 'webdriverio';
 import { BaseActions } from './BaseActions';
+import { Selector } from '../types/actions';
 import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
 
-// Type for flexible selector: string (for accessibility ID) or WebdriverIO Element
-export type AppiumSelector = string | WebdriverIO.Element;
+/**
+ * Appium-specific selector type
+ * Extends the base Selector type with WebdriverIO Element support
+ */
+export type AppiumSelector = Selector | WebdriverIO.Element;
 
 // Helper function to resolve selector to Element
 async function resolveElement(driver: WebdriverIO.Browser, selector: AppiumSelector): Promise<WebdriverIO.Element> {
-  if (typeof selector === 'string') {
-    // Default to accessibility ID for backward compatibility
-    return await driver.$(`~${selector}`);
+  // If it's already a WebdriverIO element, return it
+  if (typeof selector !== 'string' && typeof selector !== 'number' && !Array.isArray(selector)) {
+    // Check if it's an Element by checking for isExisting method
+    if ('isExisting' in selector) {
+      return selector as WebdriverIO.Element;
+    }
   }
-  return selector;
+  
+  // Otherwise treat as string accessibility ID
+  const id = typeof selector === 'string' ? selector : String(selector);
+  return await driver.$(`~${id}`);
 }
 
 export class AppiumActions extends BaseActions {

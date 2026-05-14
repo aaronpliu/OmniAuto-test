@@ -1,19 +1,29 @@
 import { device, element, by, expect as detoxExpect } from 'detox';
 import { BaseActions } from './BaseActions';
+import { Selector } from '../types/actions';
 import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
 
-// Type for flexible selector: string (for id) or Detox NativeElement
-export type DetoxSelector = string | ReturnType<typeof element>;
+/**
+ * Detox-specific selector type
+ * Extends the base Selector type with Detox NativeElement support
+ */
+export type DetoxSelector = Selector | ReturnType<typeof element>;
 
 // Helper function to resolve selector to NativeElement
 function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
-  if (typeof selector === 'string') {
-    // Default to by.id for backward compatibility
-    return element(by.id(selector));
+  // If it's already a Detox element, return it
+  if (typeof selector !== 'string' && typeof selector !== 'number' && !Array.isArray(selector)) {
+    // Check if it's a NativeElement by checking for tap method
+    if ('tap' in selector) {
+      return selector as ReturnType<typeof element>;
+    }
   }
-  return selector;
+  
+  // Otherwise treat as string ID
+  const id = typeof selector === 'string' ? selector : String(selector);
+  return element(by.id(id));
 }
 
 export class DetoxActions extends BaseActions {
