@@ -206,7 +206,9 @@ export class PlaywrightActions extends BaseActions {
 
   async setLocation(latitude: number, longitude: number): Promise<void> {
     logger.info(`Setting location to: ${latitude}, ${longitude}`);
-    await this.page.setGeolocation({ latitude, longitude });
+    const context = this.page.context();
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation({ latitude, longitude });
     await this.page.reload();
   }
 }
