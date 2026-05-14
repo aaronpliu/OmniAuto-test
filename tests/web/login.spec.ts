@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { PlaywrightActions } from '@framework/actions';
+import { PlaywrightActions, ActionFactory } from '@framework/actions';
 
-// Web tests use Playwright's native test runner and PlaywrightActions directly
+// Web tests can use PlaywrightActions directly or via ActionFactory
 test.describe('Web Login Tests', () => {
-  test('should login successfully with valid credentials', async ({ page }) => {
-    const actions = new PlaywrightActions(page);
+  test('should login successfully with valid credentials (using ActionFactory)', async ({ page }) => {
+    // Using ActionFactory for consistent API across platforms
+    const actions = ActionFactory.createForWeb(page);
     await actions.navigateTo('https://yourapp.com');
     
     await actions.typeText('#username', 'testuser');
@@ -15,7 +16,8 @@ test.describe('Web Login Tests', () => {
     await expect(page).toHaveURL('/home');
   });
 
-  test('should show error with invalid credentials', async ({ page }) => {
+  test('should show error with invalid credentials (direct instantiation)', async ({ page }) => {
+    // Direct instantiation also works
     const actions = new PlaywrightActions(page);
     await actions.navigateTo('https://yourapp.com');
     
@@ -24,5 +26,17 @@ test.describe('Web Login Tests', () => {
     await actions.click('#login-button');
     
     await actions.expectText('.error-message', 'Invalid credentials');
+  });
+
+  test('should demonstrate ActionFactory.create with config object', async ({ page, browser }) => {
+    // Using ActionFactory.create with full config object
+    const actions = ActionFactory.create({ 
+      platform: 'web', 
+      page,
+      browser // optional
+    });
+    
+    await actions.navigateTo('https://yourapp.com');
+    await actions.expectVisible('#login-form');
   });
 });

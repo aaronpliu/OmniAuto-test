@@ -47,10 +47,16 @@ export class ActionFactory {
       
       case 'web': {
         // For web, PlaywrightActions requires a Page object
-        // This should be passed from the test setup
-        throw new Error(
-          'For web platform, use PlaywrightActions constructor directly with a Page object'
-        );
+        const configObj = typeof config === 'object' ? config : null;
+        
+        if (!configObj || !configObj.page) {
+          throw new Error(
+            'For web platform, a Page object must be provided in the config. ' +
+            'Example: ActionFactory.create({ platform: "web", page })'
+          );
+        }
+        
+        return new PlaywrightActions(configObj.page, configObj.browser);
       }
       
       default:
@@ -60,5 +66,9 @@ export class ActionFactory {
 
   static createForMobile(platform: 'ios' | 'android', capabilities?: Record<string, any>): BaseActions {
     return this.create({ platform, capabilities });
+  }
+
+  static createForWeb(page: any, browser?: any): BaseActions {
+    return this.create({ platform: 'web', page, browser });
   }
 }

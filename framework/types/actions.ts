@@ -50,4 +50,6 @@ export interface ActionFactoryConfig {
   platform: Platform;
   capabilities?: Record<string, any>;
   browserType?: 'chromium' | 'firefox' | 'webkit';
+  page?: any; // Playwright Page object for web platform
+  browser?: any; // Playwright Browser object for web platform (optional)
 }
