@@ -7,23 +7,54 @@ const logger = Logger.getInstance();
 
 /**
  * Detox-specific selector type
- * Extends the base Selector type with Detox NativeElement support
+ * Supports:
+ * - String: treated as test ID (by.id)
+ * - NativeElement: already wrapped element (element(by.xxx))
+ * - Matcher: raw matcher that needs wrapping (by.text(), by.label(), etc.)
  */
-export type DetoxSelector = Selector | ReturnType<typeof element>;
+export type DetoxSelector = 
+  | string 
+  | ReturnType<typeof element>
+  | ReturnType<typeof by.id>
+  | ReturnType<typeof by.text>
+  | ReturnType<typeof by.label>
+  | ReturnType<typeof by.type>;
+
+// Type guard to check if something is a NativeElement
+function isNativeElement(obj: any): obj is ReturnType<typeof element> {
+  return obj && typeof obj === 'object' && 'tap' in obj && typeof obj.tap === 'function';
+}
+
+// Type guard to check if something is a Detox matcher (not yet wrapped in element())
+function isDetoxMatcher(obj: any): boolean {
+  // Detox matchers have specific internal structure
+  // They are objects with 'and', 'or', 'withAncestor', etc. methods
+  return obj && 
+         typeof obj === 'object' && 
+         !isNativeElement(obj) &&
+         ('and' in obj || 'or' in obj || 'withAncestor' in obj || 'withDescendant' in obj);
+}
 
 // Helper function to resolve selector to NativeElement
 function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
-  // If it's already a Detox element, return it
-  if (typeof selector !== 'string' && typeof selector !== 'number' && !Array.isArray(selector)) {
-    // Check if it's a NativeElement by checking for tap method
-    if ('tap' in selector) {
-      return selector as ReturnType<typeof element>;
-    }
+  // Case 1: Already a NativeElement (wrapped with element())
+  if (isNativeElement(selector)) {
+    return selector;
   }
   
-  // Otherwise treat as string ID
-  const id = typeof selector === 'string' ? selector : String(selector);
-  return element(by.id(id));
+  // Case 2: Raw matcher (by.text(), by.label(), etc.) - needs to be wrapped
+  if (isDetoxMatcher(selector)) {
+    return element(selector as any);
+  }
+  
+  // Case 3: String - treat as test ID
+  if (typeof selector === 'string') {
+    return element(by.id(selector));
+  }
+  
+  // This should never happen due to TypeScript types, but handle it gracefully
+  logger.warn(`Unexpected selector type: ${typeof selector}. Converting to string and using by.id()`);
+  return element(by.id(String(selector)));
 }
 
 export class DetoxActions extends BaseActions {
