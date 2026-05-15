@@ -11,7 +11,6 @@ export interface IActions {
   // Element interactions - using generic Selector type
   click(selector: Selector): Promise<void>;
   doubleClick(selector: Selector): Promise<void>;
-  tap(selector: Selector): Promise<void>;
   longPress(selector: Selector, duration?: number): Promise<void>;
   
   // Input

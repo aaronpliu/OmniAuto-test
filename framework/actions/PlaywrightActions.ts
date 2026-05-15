@@ -33,11 +33,6 @@ export class PlaywrightActions extends BaseActions {
     await this.page.dblclick(selector);
   }
 
-  async tap(selector: string): Promise<void> {
-    logger.debug(`Tapping element: ${selector}`);
-    await this.page.click(selector);
-  }
-
   async longPress(selector: string, duration = 1000): Promise<void> {
     logger.debug(`Long pressing element: ${selector} for ${duration}ms`);
     await this.page.dispatchEvent(selector, 'mousedown');

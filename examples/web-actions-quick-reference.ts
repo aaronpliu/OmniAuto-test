@@ -131,7 +131,6 @@ test.describe('Web Actions Examples', () => {
   // Interactions
   await actions.click(selector: string);
   await actions.doubleClick(selector: string);
-  await actions.tap(selector: string);
   await actions.longPress(selector: string, duration?: number);
   
   // Input

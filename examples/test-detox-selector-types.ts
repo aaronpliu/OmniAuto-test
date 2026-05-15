@@ -18,7 +18,7 @@ async function demonstrateSelectorTypes() {
   
   // String is automatically converted to by.id()
   await actions.click('loginButton');
-  await actions.tap('submitBtn');
+  await actions.click('submitBtn');
   await actions.typeText('usernameInput', 'testuser');
   await actions.clearText('passwordInput');
   await actions.getText('welcomeText');
@@ -39,7 +39,7 @@ async function demonstrateSelectorTypes() {
   
   // Pre-wrapped elements are used directly
   await actions.click(element(by.id('loginButton')));
-  await actions.tap(element(by.text('Submit')));
+  await actions.click(element(by.text('Submit')));
   await actions.typeText(element(by.label('Email')), 'user@example.com');
   await actions.clearText(element(by.type('UITextField')));
   await actions.getText(element(by.id('title')));
@@ -60,7 +60,7 @@ async function demonstrateSelectorTypes() {
   
   // Matchers like by.text(), by.label(), by.type() are automatically wrapped with element()
   await actions.click(by.text('Submit'));
-  await actions.tap(by.label('Menu Button'));
+  await actions.click(by.label('Menu Button'));
   await actions.typeText(by.id('email'), 'test@test.com');
   await actions.clearText(by.label('Password Field'));
   await actions.getText(by.text('Username'));
@@ -81,7 +81,7 @@ async function demonstrateSelectorTypes() {
   
   // Using DetoxActions static helpers
   await actions.click(DetoxActions.byId('loginBtn'));
-  await actions.tap(DetoxActions.byText('Login'));
+  await actions.click(DetoxActions.byText('Login'));
   await actions.typeText(DetoxActions.byLabel('Email'), 'user@test.com');
   await actions.clearText(DetoxActions.byType('UITextField'));
   await actions.getText(DetoxActions.byId('header'));
@@ -108,7 +108,7 @@ async function demonstrateSelectorTypes() {
     )
   );
   
-  await actions.tap(
+  await actions.click(
     DetoxActions.byAll(
       by.label('Action'),
       by.type('UIButton')
@@ -136,7 +136,7 @@ async function demonstrateSelectorTypes() {
     element(by.id('item').withDescendant(by.text('Content')))
   );
   
-  await actions.tap(
+  await actions.click(
     element(by.text('Button').and(by.id('btn')))
   );
 

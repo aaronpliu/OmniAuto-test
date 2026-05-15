@@ -41,7 +41,7 @@ async function exampleWithStaticHelpers() {
   
   // Match by accessibility label
   const menuButton = DetoxActions.byLabel('Open Menu');
-  await actions.tap(menuButton);
+  await actions.click(menuButton);
   
   // Match by native type
   const scrollView = DetoxActions.byType('UIScrollView');
@@ -129,9 +129,9 @@ async function practicalExample2_ListScrolling() {
   const list = DetoxActions.byType('UITableView');
   await actions.scroll(list);
   
-  // Find and tap item by text
+  // Find and click item by text
   const targetItem = DetoxActions.byText('Target Item Name');
-  await actions.tap(targetItem);
+  await actions.click(targetItem);
   
   // Verify item details are visible
   await actions.expectVisible(element(by.label('Item Details')));

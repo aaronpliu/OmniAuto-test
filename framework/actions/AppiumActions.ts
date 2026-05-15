@@ -163,13 +163,6 @@ export class AppiumActions extends BaseActions {
     await el.doubleClick();
   }
 
-  async tap(selector: AppiumSelector): Promise<void> {
-    const driver = await this.getDriver();
-    const el = await resolveElement(driver, selector);
-    logger.debug(`Tapping element: ${typeof selector === 'string' ? selector : 'custom element'}`);
-    await el.click();
-  }
-
   async longPress(selector: AppiumSelector, duration = 1000): Promise<void> {
     const driver = await this.getDriver();
     const el = await resolveElement(driver, selector);

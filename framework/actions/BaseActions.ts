@@ -7,7 +7,6 @@ export abstract class BaseActions implements IActions {
   // Element interactions - using generic Selector type for flexibility
   abstract click(selector: Selector): Promise<void>;
   abstract doubleClick(selector: Selector): Promise<void>;
-  abstract tap(selector: Selector): Promise<void>;
   abstract longPress(selector: Selector, duration?: number): Promise<void>;
   
   // Input

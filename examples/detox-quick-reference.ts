@@ -20,7 +20,7 @@ await actions.click('loginButton');
 // 2️⃣ STATIC HELPERS
 await actions.click(DetoxActions.byId('loginBtn'));        // By test ID
 await actions.click(DetoxActions.byText('Submit'));        // By text
-await actions.tap(DetoxActions.byLabel('Menu'));           // By label
+await actions.click(DetoxActions.byLabel('Menu'));         // By label
 await actions.scroll(DetoxActions.byType('UIScrollView')); // By type
 
 // 3️⃣ DIRECT MATCHERS
@@ -78,7 +78,6 @@ await actions.navigateTo();
 // Interactions
 await actions.click(selector: DetoxSelector);
 await actions.doubleClick(selector: DetoxSelector);
-await actions.tap(selector: DetoxSelector);
 await actions.longPress(selector: DetoxSelector, duration?: number);
 
 // Input

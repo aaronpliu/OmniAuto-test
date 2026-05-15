@@ -1,6 +1,5 @@
 import { device, element, by, expect as detoxExpect } from 'detox';
 import { BaseActions } from './BaseActions';
-import { Selector } from '../types/actions';
 import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
@@ -75,12 +74,6 @@ export class DetoxActions extends BaseActions {
     const elem = resolveElement(selector);
     logger.debug(`Double clicking element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
     await elem.multiTap(2);
-  }
-
-  async tap(selector: DetoxSelector): Promise<void> {
-    const elem = resolveElement(selector);
-    logger.debug(`Tapping element: ${typeof selector === 'string' ? selector : 'custom matcher'}`);
-    await elem.tap();
   }
 
   async longPress(selector: DetoxSelector, duration = 1000): Promise<void> {
