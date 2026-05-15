@@ -13,59 +13,62 @@ const actions = new DetoxActions();
 // QUICK REFERENCE: SELECTOR STRATEGIES
 // ============================================
 
-// 1️⃣ STRING SELECTOR (Backward Compatible)
-//    Uses by.id() automatically
-await actions.click('loginButton');
+// Example usage within an async function:
+async function exampleUsage() {
+  // 1️⃣ STRING SELECTOR (Backward Compatible)
+  //    Uses by.id() automatically
+  await actions.click('loginButton');
 
-// 2️⃣ STATIC HELPERS
-await actions.click(DetoxActions.byId('loginBtn'));        // By test ID
-await actions.click(DetoxActions.byText('Submit'));        // By text
-await actions.click(DetoxActions.byLabel('Menu'));         // By label
-await actions.scroll(DetoxActions.byType('UIScrollView')); // By type
+  // 2️⃣ STATIC HELPERS
+  await actions.click(DetoxActions.byId('loginBtn'));        // By test ID
+  await actions.click(DetoxActions.byText('Submit'));        // By text
+  await actions.click(DetoxActions.byLabel('Menu'));         // By label
+  await actions.scroll(DetoxActions.byType('UIScrollView')); // By type
 
-// 3️⃣ DIRECT MATCHERS
-await actions.click(element(by.text('OK')));
-await actions.expectVisible(element(by.label('Welcome')));
+  // 3️⃣ DIRECT MATCHERS
+  await actions.click(element(by.text('OK')));
+  await actions.expectVisible(element(by.label('Welcome')));
 
-// 4️⃣ COMBINED MATCHERS
-await actions.click(
-  DetoxActions.byAll(
-    by.id('btn'),
-    by.text('Submit')
-  )
-);
+  // 4️⃣ COMBINED MATCHERS
+  await actions.click(
+    DetoxActions.byAll(
+      by.id('btn'),
+      by.text('Submit')
+    )
+  );
+}
 
 // ============================================
 // COMMON PATTERNS
 // ============================================
 
 // ✅ Element with testID
-await actions.click('myButton');
+// await actions.click('myButton');
 
 // ✅ Button without testID
-await actions.click(DetoxActions.byText('Login'));
+// await actions.click(DetoxActions.byText('Login'));
 
 // ✅ Input field by label
-await actions.typeText(
-  DetoxActions.byLabel('Email'),
-  'user@example.com'
-);
+// await actions.typeText(
+//   DetoxActions.byLabel('Email'),
+//   'user@example.com'
+// );
 
 // ✅ Scroll view
-await actions.scroll(DetoxActions.byType('UITableView'));
+// await actions.scroll(DetoxActions.byType('UITableView'));
 
 // ✅ Specific element (avoid duplicates)
-await actions.click(
-  DetoxActions.byAll(
-    by.text('Submit'),
-    by.id('form-submit')
-  )
-);
+// await actions.click(
+//   DetoxActions.byAll(
+//     by.text('Submit'),
+//     by.id('form-submit')
+//   )
+// );
 
 // ✅ Nested element
-await actions.expectVisible(
-  element(by.id('child').withAncestor(by.id('parent')))
-);
+// await actions.expectVisible(
+//   element(by.id('child').withAncestor(by.id('parent')))
+// );
 
 // ============================================
 // ALL AVAILABLE METHODS (Signature Reference)
