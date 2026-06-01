@@ -36,3 +36,9 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# allure
+allure-results/
+
+#playwright
+playwright-report/
