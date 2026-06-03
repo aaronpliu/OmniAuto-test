@@ -8,6 +8,7 @@ module.exports = {
     '<rootDir>/framework/hooks/appiumSetup.ts'
   ],
   testEnvironmentOptions: {
+    ...baseConfig.testEnvironmentOptions,
     platform: 'android'
   }
 };

@@ -1,6 +1,9 @@
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
+  testEnvironment: 'allure-jest/node',
+  testEnvironmentOptions: {
+    resultsDir: 'artifacts/allure-results'
+  },
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.spec.ts'],
   moduleDirectories: ['node_modules', '<rootDir>'],
@@ -12,8 +15,7 @@ module.exports = {
   },
   setupFilesAfterEnv: ['<rootDir>/framework/hooks/globalSetup.ts'],
   reporters: [
-    'default',
-    ['allure-jest', { resultsDirectory: 'artifacts/allure-results' }]
+    'default'
   ],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
