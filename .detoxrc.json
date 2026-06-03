@@ -2,7 +2,7 @@
   "testRunner": {
     "args": {
       "$0": "jest",
-      "config": "e2e/jest.config.js"
+      "config": "jest.ios.config.js"
     },
     "jest": {
       "setupTimeout": 120000
@@ -11,7 +11,7 @@
   "apps": {
     "ios.debug": {
       "type": "ios.app",
-      "binaryPath": "ios/build/Build/Products/Debug-iphonesimulator/YourApp.app",
+      "binaryPath": "ios/dist/Build/Products/Debug-iphonesimulator/TestingGround.app",
       "build": "xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build"
     },
     "ios.release": {
@@ -34,7 +34,7 @@
     "simulator": {
       "type": "ios.simulator",
       "device": {
-        "type": "iPhone 14"
+        "type": "iPhone 17 Pro"
       }
     },
     "emulator": {
