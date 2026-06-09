@@ -4,6 +4,7 @@
   "description": "Cross-platform test automation framework for React Native iOS (Detox), Android (Appium), Web (Playwright), and API testing",
   "main": "dist/index.js",
   "scripts": {
+    "postinstall": "cp offline_library/applesimutils node_modules/.bin",
     "build": "tsc",
     "test:mobile:ios": "TEST_PLATFORM=ios detox test --configuration ios.sim.debug",
     "test:mobile:android": "TEST_PLATFORM=android jest tests/mobile --config jest.android.config.js",
@@ -62,3 +63,4 @@
     "node": ">=22.22.0"
   }
 }
+

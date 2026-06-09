@@ -11,7 +11,7 @@
   "apps": {
     "ios.debug": {
       "type": "ios.app",
-      "binaryPath": "ios/dist/Build/Products/Debug-iphonesimulator/TestingGround.app",
+      "binaryPath": "applications/TestGround/ios-app/TestingGround.app",
       "build": "xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build"
     },
     "ios.release": {
@@ -40,7 +40,7 @@
     "emulator": {
       "type": "android.emulator",
       "device": {
-        "avdName": "Pixel_5_API_33"
+        "avdName": "Pixel 10 Pro XL"
       }
     }
   },
