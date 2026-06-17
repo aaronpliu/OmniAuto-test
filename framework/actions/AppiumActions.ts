@@ -129,7 +129,17 @@ export class AppiumActions extends BaseActions {
       const host = process.env.APPIUM_HOST || 'localhost';
       const port = parseInt(process.env.APPIUM_PORT || '4723');
       
-      logger.info(`Connecting to Appium at ${host}:${port}`);
+      // 记录设备信息
+      const deviceName = (this.capabilities as any)['appium:deviceName'] || process.env.ANDROID_DEVICE_NAME || 'Unknown';
+      const platformVersion = (this.capabilities as any)['appium:platformVersion'] || process.env.ANDROID_PLATFORM_VERSION || 'Unknown';
+      const deviceType = process.env.ANDROID_DEVICE_TYPE || 'unknown';
+      
+      logger.info('========== 连接 Appium Server ==========');
+      logger.info(`Appium Server: ${host}:${port}`);
+      logger.info(`设备名称: ${deviceName}`);
+      logger.info(`设备类型: ${deviceType === 'emulator' ? '模拟器' : deviceType === 'real' ? '真机' : '未知'}`);
+      logger.info(`系统版本: Android ${platformVersion}`);
+      logger.info('=======================================');
       
       this.driver = await remote({
         hostname: host,
@@ -137,6 +147,8 @@ export class AppiumActions extends BaseActions {
         path: '/',
         capabilities: this.capabilities
       });
+      
+      logger.info('✓ 已成功连接到 Appium Server');
     }
     return this.driver;
   }
