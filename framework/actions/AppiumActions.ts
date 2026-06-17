@@ -44,8 +44,8 @@ export class AppiumActions extends BaseActions {
   private buildDefaultCapabilities(): RemoteOptions['capabilities'] {
     const platformName = process.env.PLATFORM_NAME || 'android';
     const automationName = process.env.ANDROID_AUTOMATION_NAME || 'UiAutomator2';
-    const deviceName = process.env.ANDROID_DEVICE_NAME || 'emulator-5554';
-    const platformVersion = process.env.ANDROID_PLATFORM_VERSION || '13';
+    const deviceName = process.env.ANDROID_DEVICE_NAME || 'Pixel_10_Pro_XL';
+    const platformVersion = process.env.ANDROID_PLATFORM_VERSION || '17';
     
     // Build base capabilities
     const capabilities: any = {
@@ -134,7 +134,7 @@ export class AppiumActions extends BaseActions {
       this.driver = await remote({
         hostname: host,
         port,
-        path: '/wd/hub',
+        path: '/',
         capabilities: this.capabilities
       });
     }

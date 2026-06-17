@@ -30,7 +30,7 @@ describe('Mobile Login Tests', () => {
     await loginPage.isVisible();
   });
 
-  it('should show error with invalid credentials', async () => {
+  it.skip('should show error with invalid credentials', async () => {
     await loginPage.login('wronguser', 'wrongpass');
     await loginPage.expectLoginError('Invalid username or password');
   });

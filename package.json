@@ -7,7 +7,7 @@
     "postinstall": "cp offline_library/applesimutils node_modules/.bin",
     "build": "tsc",
     "test:mobile:ios": "TEST_PLATFORM=ios detox test --configuration ios.sim.debug",
-    "test:mobile:android": "TEST_PLATFORM=android jest tests/mobile --config jest.android.config.js",
+    "test:mobile:android": "NODE_OPTIONS=--experimental-vm-modules TEST_PLATFORM=android jest tests/mobile --config jest.android.config.js",
     "test:mobile": "npm run test:mobile:ios && npm run test:mobile:android",
     "test:web": "playwright test tests/web",
     "test:web:chromium": "playwright test tests/web --project=chromium --headed",
@@ -45,6 +45,7 @@
     "allure-jest": "^3.9.0",
     "allure-playwright": "^3.9.0",
     "appium": "^3.0.0",
+    "appium-uiautomator2-driver": "^7.6.1",
     "axios": "^1.6.2",
     "detox": "^20.51.0",
     "eslint": "^8.54.0",
@@ -63,4 +64,3 @@
     "node": ">=22.22.0"
   }
 }
-

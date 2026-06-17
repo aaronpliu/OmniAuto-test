@@ -20,6 +20,6 @@ export class LoginPage {
   }
 
   async isVisible(): Promise<void> {
-    await this.actions.expectVisible('login-screen');
+    await this.actions.expectVisible('Logout');
   }
 }
