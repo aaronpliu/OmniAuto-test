@@ -23,16 +23,25 @@ export class ConfigManager {
     const environment = env || process.env.NODE_ENV || 'development';
     logger.info(`Loading configuration for environment: ${environment}`);
 
-    const configPath = path.join(process.cwd(), 'configs', `${environment}.json`);
+    // 首先尝试加载指定环境的配置文件
+    let configPath = path.join(process.cwd(), 'configs', `${environment}.json`);
     
+    // 如果文件不存在，回退到 development.json
     if (!fs.existsSync(configPath)) {
-      throw new Error(`Configuration file not found: ${configPath}`);
+      logger.warn(`Configuration file not found: ${configPath}`);
+      logger.info(`Falling back to development configuration`);
+      configPath = path.join(process.cwd(), 'configs', 'development.json');
+      
+      // 如果 development.json 也不存在，则报错
+      if (!fs.existsSync(configPath)) {
+        throw new Error(`Configuration file not found: ${configPath}`);
+      }
     }
 
     const configData = fs.readFileSync(configPath, 'utf-8');
     this.config = JSON.parse(configData) as EnvironmentConfig;
     
-    logger.info(`Configuration loaded successfully for ${environment}`);
+    logger.info(`Configuration loaded successfully from ${path.basename(configPath)}`);
     return this.config;
   }
 
