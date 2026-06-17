@@ -2,6 +2,7 @@ import { remote, RemoteOptions } from 'webdriverio';
 import { BaseActions } from './BaseActions';
 import { Selector } from '../types/actions';
 import { Logger } from '../utils/logger';
+import { config } from '../utils/config';
 
 const logger = Logger.getInstance();
 
@@ -37,7 +38,7 @@ export class AppiumActions extends BaseActions {
   }
 
   /**
-   * Build default capabilities from environment variables
+   * Build default capabilities from environment variables and configuration
    * This allows AppiumActions to work without explicit capabilities,
    * similar to how DetoxActions uses Detox configuration
    */
@@ -61,11 +62,25 @@ export class AppiumActions extends BaseActions {
       const appActivity = process.env.ANDROID_APP_ACTIVITY;
       const appPath = process.env.ANDROID_APP_PATH;
 
+      // Priority: environment variable > configuration file > nothing
       if (appPackage && appActivity) {
         capabilities['appium:appPackage'] = appPackage;
         capabilities['appium:appActivity'] = appActivity;
       } else if (appPath) {
         capabilities['appium:app'] = appPath;
+      } else {
+        // Try to read from configuration file
+        try {
+          const envConfig = config.getConfig();
+          if (envConfig.applications && envConfig.applications.androidApk) {
+            const path = require('path');
+            const apkPath = path.resolve(process.cwd(), envConfig.applications.androidApk);
+            capabilities['appium:app'] = apkPath;
+            logger.info(`使用配置文件中的 APK 路径: ${apkPath}`);
+          }
+        } catch (error) {
+          logger.warn('无法从配置文件读取 APK 路径');
+        }
       }
 
       // Optional Android-specific capabilities

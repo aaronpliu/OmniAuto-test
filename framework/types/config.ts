@@ -6,6 +6,11 @@ export interface AppConfig {
   retryAttempts: number;
 }
 
+export interface ApplicationsConfig {
+  androidApk?: string;
+  iosApp?: string;
+}
+
 export interface EnvironmentConfig {
   name: string;
   app: AppConfig;
@@ -13,6 +18,7 @@ export interface EnvironmentConfig {
     username: string;
     password: string;
   };
+  applications?: ApplicationsConfig;
 }
 
 export interface FrameworkConfig {
