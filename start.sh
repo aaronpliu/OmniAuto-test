@@ -365,100 +365,81 @@ MENU_ITEMS=(
 
 # 显示菜单（带高亮）
 # $1: 当前选中项索引
-# $2: 是否重绘（redraw=重绘，其他=首次绘制）
 show_menu() {
     local selected=$1
-    local redraw=$2
     local items_count=${#MENU_ITEMS[@]}
 
-    # 如果是重绘，向上移动光标到菜单顶部
-    if [ "$redraw" == "redraw" ]; then
-        tput cuu $((items_count + 4))
-    fi
-
+    # 清除屏幕并显示菜单
+    clear
     echo -e "${CYAN}================================================${NC}"
     echo -e "${CYAN}   OmniAutoTest 自动化测试平台 / Testing Platform${NC}"
     echo -e "${CYAN}================================================${NC}"
 
     for i in "${!MENU_ITEMS[@]}"; do
         if [ $i -eq $selected ]; then
-            echo -e "${GREEN} > ${MENU_ITEMS[$i]}${NC}"
+            # 高亮显示选中项
+            echo -e "${GREEN} > [$(printf "%2d" $((i+1)))] ${MENU_ITEMS[$i]}${NC}"
         else
-            echo "   ${MENU_ITEMS[$i]}"
+            echo "   [$(printf "%2d" $((i+1)))] ${MENU_ITEMS[$i]}"
         fi
     done
 
     echo -e "${CYAN}================================================${NC}"
     echo ""
-    echo -e "${YELLOW}↑/↓: 选择 / Select | Enter: 确认 / Confirm | q: 退出 / Quit${NC}"
+    echo -e "${YELLOW}操作说明 / Instructions:${NC}"
+    echo "  w/k: 上移 / Up | s/j: 下移 / Down"
+    echo "  数字: 直接选择 / Direct select | Enter: 确认 / Confirm"
+    echo "  q: 退出 / Quit"
+    echo ""
 }
 
 # 处理键盘选择菜单
 # 使用全局变量 MENU_SELECTION 存储选择结果
+# 兼容 macOS bash 3.x
 handle_menu_selection() {
     local selected=0
     local items_count=${#MENU_ITEMS[@]}
     local key=""
-    local key2=""
-    local key3=""
 
     # 首次绘制菜单
     show_menu $selected
 
     while true; do
-        # 读取按键（原始模式，不回显）
+        # 读取按键（阻塞，等待用户输入）
         read -rs -n1 key
 
-        # 处理 ESC 序列（方向键）
-        if [[ "$key" == $'\033' ]]; then
-            read -rs -n1 -t 0.1 key2
-            if [[ "$key2" == "[" ]]; then
-                read -rs -n1 -t 0.1 key3
-                case "$key3" in
-                    "A") # 上箭头
-                        if [ $selected -gt 0 ]; then
-                            selected=$((selected - 1))
-                            show_menu $selected "redraw"
-                        fi
-                        ;;
-                    "B") # 下箭头
-                        if [ $selected -lt $((items_count - 1)) ]; then
-                            selected=$((selected + 1))
-                            show_menu $selected "redraw"
-                        fi
-                        ;;
-                esac
-            fi
-        else
-            case "$key" in
-                "") # Enter 键
-                    # 清除菜单区域
-                    tput cuu $((items_count + 4))
-                    tput ed
-                    MENU_SELECTION=$selected
+        case "$key" in
+            "w"|"W"|"k"|"K") # 上移
+                if [ $selected -gt 0 ]; then
+                    selected=$((selected - 1))
+                    show_menu $selected
+                fi
+                ;;
+            "s"|"S"|"j"|"J") # 下移
+                if [ $selected -lt $((items_count - 1)) ]; then
+                    selected=$((selected + 1))
+                    show_menu $selected
+                fi
+                ;;
+            "q"|"Q") # 退出
+                clear
+                print_info "退出程序 / Exiting program"
+                exit 0
+                ;;
+            "") # Enter 键确认
+                clear
+                MENU_SELECTION=$selected
+                return 0
+                ;;
+            [0-9]) # 数字键直接选择
+                local num=$((key - 1))
+                if [ $num -ge 0 ] && [ $num -lt $items_count ]; then
+                    clear
+                    MENU_SELECTION=$num
                     return 0
-                    ;;
-                "q"|"Q") # q 键退出
-                    # 清除菜单区域
-                    tput cuu $((items_count + 4))
-                    tput ed
-                    print_info "退出程序 / Exiting program"
-                    exit 0
-                    ;;
-                "w"|"W") # w 键上移（vim 风格）
-                    if [ $selected -gt 0 ]; then
-                        selected=$((selected - 1))
-                        show_menu $selected "redraw"
-                    fi
-                    ;;
-                "s"|"S") # s 键下移（vim 风格）
-                    if [ $selected -lt $((items_count - 1)) ]; then
-                        selected=$((selected + 1))
-                        show_menu $selected "redraw"
-                    fi
-                    ;;
-            esac
-        fi
+                fi
+                ;;
+        esac
     done
 }
 
