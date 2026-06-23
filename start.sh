@@ -1,14 +1,9 @@
 #!/bin/bash
 
 # OmniAutoTest 自动化启动脚本
-# 使用 Podman 替代 Docker
+# 仅支持连接远程 Appium Server（本地模式）
 
 # 不设置 set -e，以便我们可以自定义错误处理
-
-# Appium 启动模式
-# - container: 容器模式（使用 Podman/Docker 启动 Appium 容器）
-# - local: 本地模式（在宿主机直接启动 Appium Server）
-APPIUM_MODE="${APPIUM_MODE:-local}"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -46,17 +41,14 @@ show_help() {
     echo ""
     echo -e "${GREEN}选项 / Options:${NC}"
     echo ""
-    echo -e "  ${YELLOW}start${NC}             启动 Appium 服务器 / Start Appium servers"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh start"
-    echo ""
-    echo -e "  ${YELLOW}stop${NC}              停止 Appium 服务器 / Stop Appium servers"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh stop"
-    echo ""
-    echo -e "  ${YELLOW}status${NC}            检查 Appium 服务器状态 / Check Appium servers status"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh status"
-    echo ""
     echo -e "  ${YELLOW}install${NC}           安装项目依赖 / Install project dependencies"
     echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh install"
+    echo ""
+    echo -e "  ${YELLOW}appium:start${NC}      启动本地 Appium Server（用于调试）/ Start local Appium Server (for debugging)"
+    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh appium:start"
+    echo ""
+    echo -e "  ${YELLOW}appium:stop${NC}       停止本地 Appium Server / Stop local Appium Server"
+    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh appium:stop"
     echo ""
     echo -e "  ${YELLOW}test:ios${NC}          运行 iOS 测试 (使用 Detox) / Run iOS tests (using Detox)"
     echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:ios"
@@ -85,26 +77,30 @@ show_help() {
     echo "  ./start.sh"
     echo "  将显示交互式菜单 / Will show interactive menu"
     echo ""
-    echo -e "${GREEN}Appium 启动模式 / Appium Start Modes:${NC}"
-    echo "  - 容器模式 (container): 使用 Podman/Docker 启动 Appium 容器"
-    echo "                          Container Mode: Start Appium containers using Podman/Docker"
-    echo "  - 本地模式 (local): 在宿主机直接启动 Appium Server"
-    echo "                      Local Mode: Start Appium Server directly on host"
-    echo "  切换模式 / Switch mode: 在交互式菜单中选择选项 4 / Select option 4 in interactive menu"
-    echo "  或设置环境变量 / Or set environment variable: export APPIUM_MODE=local"
+    echo -e "${GREEN}Appium 配置 / Appium Configuration:${NC}"
+    echo "  本项目仅支持连接远程 Appium Server"
+    echo "  This project only supports connecting to remote Appium Servers"
+    echo "  请在配置文件中设置 Appium Server 地址"
+    echo "  Please set Appium Server address in configuration file"
+    echo "  配置文件位置 / Configuration file location: configs/development.json"
+    echo ""
+    echo -e "${GREEN}本地调试 / Local Debugging:${NC}"
+    echo "  可以使用以下命令启动本地 Appium Server:"
+    echo "  You can use the following commands to start a local Appium Server:"
+    echo "  ./start.sh appium:start"
     echo ""
     echo -e "${GREEN}快速开始 / Quick Start:${NC}"
-    echo "  1. 启动 Appium:     ./start.sh start"
-    echo "     Start Appium:    ./start.sh start"
+    echo "  1. 安装依赖:     ./start.sh install"
+    echo "     Install deps: ./start.sh install"
     echo "  2. 运行 iOS 测试:   ./start.sh test:ios"
     echo "     Run iOS tests:   ./start.sh test:ios"
     echo "  3. 生成报告:        ./start.sh report"
     echo "     Generate report: ./start.sh report"
     echo ""
     echo -e "${GREEN}前置要求 / Prerequisites:${NC}"
-    echo "  - Podman (容器模式) / Podman (container):     brew install podman"
-    echo "  - Podman Compose:                            pip3 install podman-compose"
-    echo "  - Appium (本地模式) / Appium (local):         npm install -g appium"
+    echo "  - Appium (可选，用于本地调试) / Appium (optional, for local debugging):"
+    echo "                    npm install appium (项目中安装 / install in project)"
+    echo "                    npm install -g appium (全局安装 / install globally)"
     echo "  - Node.js >= 22.22.0"
     echo ""
     echo -e "${CYAN}================================================================${NC}"
@@ -116,123 +112,55 @@ show_help() {
     exit 0
 }
 
-# 检查 Podman 是否安装
-check_podman() {
-    print_info "检查 Podman 安装状态..."
-    if ! command -v podman &> /dev/null; then
-        print_error "Podman 未安装，请先安装 Podman"
-        print_info "安装命令: brew install podman"
-        return 1
-    fi
-    print_success "Podman 已安装: $(podman --version)"
-    return 0
-}
-
-# 检查 Podman Compose 是否安装
-check_podman_compose() {
-    print_info "检查 Podman Compose 安装状态..."
-    if ! command -v podman-compose &> /dev/null; then
-        print_warning "Podman Compose 未安装，正在安装..."
-        pip3 install podman-compose
-        if [ $? -ne 0 ]; then
-            print_error "Podman Compose 安装失败"
-            print_error "Failed to install Podman Compose"
-            return 1
-        fi
-    fi
-    print_success "Podman Compose 已安装"
-    return 0
-}
-
-# 启动 Appium 服务器（容器模式）
-start_appium_container() {
-    print_info "启动 Appium 服务器（容器模式）..."
-    print_info "Starting Appium servers (container mode)..."
+# 检查 Appium 是否安装（可选）
+check_appium() {
+    print_info "检查 Appium 安装状态..."
     
-    # 检查 Podman
-    check_podman
-    if [ $? -ne 0 ]; then
-        return 1
-    fi
-    
-    check_podman_compose
-    if [ $? -ne 0 ]; then
-        return 1
-    fi
-    
-    if podman-compose ps | grep -q "appium"; then
-        print_warning "Appium 服务器已经在运行"
-        print_warning "Appium servers are already running"
-        return 0
-    else
-        podman-compose up -d
-        if [ $? -ne 0 ]; then
-            print_error "Appium 容器启动失败"
-            print_error "Failed to start Appium containers"
-            return 1
-        fi
-        print_success "Appium 服务器已启动"
-        print_success "Appium servers started"
-        print_info "Appium 1 端口/Port: 4723"
-        print_info "Appium 2 端口/Port: 4724"
+    # 先检查项目中是否安装了 Appium
+    if [ -f "node_modules/.bin/appium" ]; then
+        print_success "项目中已安装 Appium: $(node_modules/.bin/appium --version 2>/dev/null || echo 'version unknown')"
+        print_info "使用项目中的 Appium: ./node_modules/.bin/appium"
+        APPIUM_CMD="./node_modules/.bin/appium"
         return 0
     fi
-}
-
-# 停止 Appium 服务器（容器模式）
-stop_appium_container() {
-    print_info "停止 Appium 服务器（容器模式）..."
-    print_info "Stopping Appium servers (container mode)..."
     
-    # 检查 Podman
-    if ! command -v podman &> /dev/null; then
-        print_error "Podman 未安装，无法停止容器"
-        print_error "Podman not installed, cannot stop containers"
-        return 1
+    # 再检查全局是否安装了 Appium
+    if command -v appium &> /dev/null; then
+        print_success "全局已安装 Appium: $(appium --version)"
+        print_info "使用全局 Appium: $(command -v appium)"
+        APPIUM_CMD="appium"
+        return 0
     fi
     
-    podman-compose down
-    if [ $? -ne 0 ]; then
-        print_error "停止 Appium 容器失败"
-        print_error "Failed to stop Appium containers"
-        return 1
-    fi
-    print_success "Appium 服务器已停止"
-    print_success "Appium servers stopped"
+    # 都未安装
+    print_warning "Appium 未安装，但这是可选的（仅用于本地调试）"
+    print_warning "Appium not installed, but it's optional (only for local debugging)"
+    print_info "安装命令 / Installation command:"
+    print_info "  - 项目中安装 / Install in project: npm install appium"
+    print_info "  - 全局安装 / Install globally: npm install -g appium"
+    APPIUM_CMD=""
     return 0
 }
 
-# 检查 Appium 服务器状态（容器模式）
-check_appium_status_container() {
-    print_info "检查 Appium 服务器状态（容器模式）..."
-    print_info "Checking Appium servers status (container mode)..."
-    
-    # 检查 Podman
-    if ! command -v podman &> /dev/null; then
-        print_error "Podman 未安装，无法检查容器状态"
-        print_error "Podman not installed, cannot check container status"
-        return 1
-    fi
-    
-    podman-compose ps
-    return $?
-}
-
-# 启动 Appium 服务器（本地模式）
+# 启动本地 Appium Server（用于调试）
 start_appium_local() {
-    print_info "启动 Appium 服务器（本地模式）..."
-    print_info "Starting Appium server (local mode)..."
+    print_info "启动本地 Appium Server..."
     
-    # 检查 Appium 是否安装
-    if ! command -v appium &> /dev/null; then
+    # 检查 Appium 是否可用
+    if [ -z "$APPIUM_CMD" ]; then
+        check_appium
+    fi
+    
+    if [ -z "$APPIUM_CMD" ]; then
         print_error "未找到 Appium 命令，请先安装 Appium"
-        print_error "Appium command not found, please install Appium first"
-        print_info "安装命令 / Installation command: npm install -g appium"
+        print_info "安装命令 / Installation command:"
+        print_info "  - 项目中安装 / Install in project: npm install appium"
+        print_info "  - 全局安装 / Install globally: npm install -g appium"
         return 1
     fi
     
     # 检查 Appium 是否已经在运行
-    if pgrep -x "appium" > /dev/null; then
+    if pgrep -f "appium" > /dev/null; then
         print_warning "Appium 服务器已经在运行"
         print_warning "Appium server is already running"
         return 0
@@ -243,7 +171,7 @@ start_appium_local() {
     
     # 启动 Appium 服务器（后台运行）
     print_info "启动 Appium 服务器（端口/Port: 4723）..."
-    nohup appium --allow-cors --relaxed-security > logs/appium.log 2>&1 &
+    nohup $APPIUM_CMD --allow-cors --relaxed-security > logs/appium.log 2>&1 &
     APPIUM_PID=$!
     echo $APPIUM_PID > /tmp/appium.pid
     
@@ -251,11 +179,13 @@ start_appium_local() {
     sleep 3
     
     # 检查是否启动成功
-    if pgrep -x "appium" > /dev/null; then
-        print_success "Appium 服务器已启动（本地模式）"
-        print_success "Appium server started (local mode)"
+    if pgrep -f "appium" > /dev/null; then
+        print_success "Appium 服务器已启动"
+        print_success "Appium server started"
         print_info "进程 ID / Process ID: $APPIUM_PID"
         print_info "日志文件 / Log file: logs/appium.log"
+        print_info "停止命令 / Stop command: kill $APPIUM_PID"
+        return 0
     else
         print_error "Appium 服务器启动失败"
         print_error "Failed to start Appium server"
@@ -264,10 +194,9 @@ start_appium_local() {
     fi
 }
 
-# 停止 Appium 服务器（本地模式）
+# 停止本地 Appium Server
 stop_appium_local() {
-    print_info "停止 Appium 服务器（本地模式）..."
-    print_info "Stopping Appium server (local mode)..."
+    print_info "停止本地 Appium Server..."
     
     if [ -f /tmp/appium.pid ]; then
         APPIUM_PID=$(cat /tmp/appium.pid)
@@ -283,8 +212,8 @@ stop_appium_local() {
         fi
     else
         # 尝试直接杀死 appium 进程
-        if pgrep -x "appium" > /dev/null; then
-            pkill -x appium
+        if pgrep -f "appium" > /dev/null; then
+            pkill -f "appium"
             print_success "Appium 服务器已停止"
             print_success "Appium server stopped"
         else
@@ -292,88 +221,6 @@ stop_appium_local() {
             print_warning "No running Appium server found"
         fi
     fi
-}
-
-# 检查 Appium 服务器状态（本地模式）
-check_appium_status_local() {
-    print_info "检查 Appium 服务器状态（本地模式）..."
-    print_info "Checking Appium server status (local mode)..."
-    
-    if pgrep -x "appium" > /dev/null; then
-        print_success "Appium 服务器正在运行"
-        print_success "Appium server is running"
-        print_info "进程信息 / Process info:"
-        ps aux | grep "[a]ppium"
-    else
-        print_warning "Appium 服务器未运行"
-        print_warning "Appium server is not running"
-    fi
-}
-
-# 根据模式启动 Appium 服务器
-start_appium() {
-    if [ "$APPIUM_MODE" = "local" ]; then
-        start_appium_local
-        return $?
-    else
-        start_appium_container
-        return $?
-    fi
-}
-
-# 根据模式停止 Appium 服务器
-stop_appium() {
-    if [ "$APPIUM_MODE" = "local" ]; then
-        stop_appium_local
-        return $?
-    else
-        stop_appium_container
-        return $?
-    fi
-}
-
-# 根据模式检查 Appium 服务器状态
-check_appium_status() {
-    if [ "$APPIUM_MODE" = "local" ]; then
-        check_appium_status_local
-        return $?
-    else
-        check_appium_status_container
-        return $?
-    fi
-}
-
-# 切换 Appium 模式
-switch_appium_mode() {
-    echo ""
-    echo -e "${CYAN}================================================${NC}"
-    echo -e "${CYAN}   选择 Appium 启动模式 / Select Appium Start Mode${NC}"
-    echo -e "${CYAN}================================================${NC}"
-    echo "1. 容器模式（连接远程 Appium 容器）"
-    echo "   Container Mode (Connect to remote Appium container)"
-    echo "2. 本地模式（在宿主机直接启动 Appium）"
-    echo "   Local Mode (Start Appium directly on host)"
-    echo -e "${CYAN}================================================${NC}"
-    echo ""
-    echo -e "当前模式 / Current mode: ${GREEN}$APPIUM_MODE${NC}"
-    echo ""
-    
-    read -p "请选择模式 [1-2] / Please select mode [1-2]: " mode_choice
-    
-    case $mode_choice in
-        1)
-            APPIUM_MODE="container"
-            print_success "已切换到容器模式 / Switched to container mode"
-            ;;
-        2)
-            APPIUM_MODE="local"
-            print_success "已切换到本地模式 / Switched to local mode"
-            ;;
-        *)
-            print_error "无效选择，保持当前模式: $APPIUM_MODE"
-            print_error "Invalid choice, keeping current mode: $APPIUM_MODE"
-            ;;
-    esac
 }
 
 # 安装依赖
@@ -448,14 +295,11 @@ run_android_test() {
         return 1
     fi
     
-    # 设备检测通过，启动 Appium 服务
-    if ! start_appium; then
-        print_error "启动 Appium 失败，无法运行测试"
-        print_error "Failed to start Appium, cannot run tests"
-        return 1
-    fi
-    
     # 运行测试
+    print_info "正在连接远程 Appium Server..."
+    print_info "Connecting to remote Appium Server..."
+    print_info "请确保 Appium Server 已启动并可访问"
+    print_info "Please ensure Appium Server is running and accessible"
     npm run test:mobile:android
     return $?
 }
@@ -500,37 +344,207 @@ clean_environment() {
         print_warning "清理 npm 缓存失败"
         print_warning "Failed to clean npm cache"
     fi
-    podman-compose down -v
-    if [ $? -ne 0 ]; then
-        print_warning "停止容器失败"
-        print_warning "Failed to stop containers"
-    fi
     print_success "环境清理完成"
     return 0
 }
 
-# 显示菜单
+# 菜单项定义
+MENU_ITEMS=(
+    "安装依赖 / Install dependencies"
+    "启动本地 Appium Server / Start local Appium Server"
+    "停止本地 Appium Server / Stop local Appium Server"
+    "运行 iOS 测试 / Run iOS tests"
+    "运行 Android 测试 / Run Android tests"
+    "运行 Web 测试 / Run Web tests"
+    "运行 API 测试 / Run API tests"
+    "运行所有测试 / Run all tests"
+    "生成测试报告 / Generate test report"
+    "清理环境 / Clean environment"
+    "退出 / Exit"
+)
+
+# 显示菜单（带高亮）
+# $1: 当前选中项索引
+# $2: 是否重绘（redraw=重绘，其他=首次绘制）
 show_menu() {
-    echo ""
+    local selected=$1
+    local redraw=$2
+    local items_count=${#MENU_ITEMS[@]}
+
+    # 如果是重绘，向上移动光标到菜单顶部
+    if [ "$redraw" == "redraw" ]; then
+        tput cuu $((items_count + 4))
+    fi
+
     echo -e "${CYAN}================================================${NC}"
     echo -e "${CYAN}   OmniAutoTest 自动化测试平台 / Testing Platform${NC}"
-    echo -e "${CYAN}   Appium 模式 / Appium Mode: ${GREEN}$APPIUM_MODE${NC}${CYAN}${NC}"
     echo -e "${CYAN}================================================${NC}"
-    echo "1.  启动 Appium 服务器 / Start Appium servers"
-    echo "2.  停止 Appium 服务器 / Stop Appium servers"
-    echo "3.  检查服务器状态 / Check server status"
-    echo "4.  切换 Appium 模式 / Switch Appium mode"
-    echo "5.  安装依赖 / Install dependencies"
-    echo "6.  运行 iOS 测试 / Run iOS tests"
-    echo "7.  运行 Android 测试 / Run Android tests"
-    echo "8.  运行 Web 测试 / Run Web tests"
-    echo "9.  运行 API 测试 / Run API tests"
-    echo "10. 运行所有测试 / Run all tests"
-    echo "11. 生成测试报告 / Generate test report"
-    echo "12. 清理环境 / Clean environment"
-    echo "0.  退出 / Exit"
+
+    for i in "${!MENU_ITEMS[@]}"; do
+        if [ $i -eq $selected ]; then
+            echo -e "${GREEN} > ${MENU_ITEMS[$i]}${NC}"
+        else
+            echo "   ${MENU_ITEMS[$i]}"
+        fi
+    done
+
     echo -e "${CYAN}================================================${NC}"
     echo ""
+    echo -e "${YELLOW}↑/↓: 选择 / Select | Enter: 确认 / Confirm | q: 退出 / Quit${NC}"
+}
+
+# 处理键盘选择菜单
+# 使用全局变量 MENU_SELECTION 存储选择结果
+handle_menu_selection() {
+    local selected=0
+    local items_count=${#MENU_ITEMS[@]}
+    local key=""
+    local key2=""
+    local key3=""
+
+    # 首次绘制菜单
+    show_menu $selected
+
+    while true; do
+        # 读取按键（原始模式，不回显）
+        read -rs -n1 key
+
+        # 处理 ESC 序列（方向键）
+        if [[ "$key" == $'\033' ]]; then
+            read -rs -n1 -t 0.1 key2
+            if [[ "$key2" == "[" ]]; then
+                read -rs -n1 -t 0.1 key3
+                case "$key3" in
+                    "A") # 上箭头
+                        if [ $selected -gt 0 ]; then
+                            selected=$((selected - 1))
+                            show_menu $selected "redraw"
+                        fi
+                        ;;
+                    "B") # 下箭头
+                        if [ $selected -lt $((items_count - 1)) ]; then
+                            selected=$((selected + 1))
+                            show_menu $selected "redraw"
+                        fi
+                        ;;
+                esac
+            fi
+        else
+            case "$key" in
+                "") # Enter 键
+                    # 清除菜单区域
+                    tput cuu $((items_count + 4))
+                    tput ed
+                    MENU_SELECTION=$selected
+                    return 0
+                    ;;
+                "q"|"Q") # q 键退出
+                    # 清除菜单区域
+                    tput cuu $((items_count + 4))
+                    tput ed
+                    print_info "退出程序 / Exiting program"
+                    exit 0
+                    ;;
+                "w"|"W") # w 键上移（vim 风格）
+                    if [ $selected -gt 0 ]; then
+                        selected=$((selected - 1))
+                        show_menu $selected "redraw"
+                    fi
+                    ;;
+                "s"|"S") # s 键下移（vim 风格）
+                    if [ $selected -lt $((items_count - 1)) ]; then
+                        selected=$((selected + 1))
+                        show_menu $selected "redraw"
+                    fi
+                    ;;
+            esac
+        fi
+    done
+}
+
+# 执行菜单对应的操作
+execute_menu_action() {
+    local choice=$1
+
+    case $choice in
+        0)
+            install_dependencies
+            ;;
+        1)
+            check_appium
+            if ! start_appium_local; then
+                print_warning "启动 Appium 失败，返回菜单"
+                print_warning "Failed to start Appium, returning to menu"
+                return 1
+            fi
+            ;;
+        2)
+            if ! stop_appium_local; then
+                print_warning "停止 Appium 失败，返回菜单"
+                print_warning "Failed to stop Appium, returning to menu"
+                return 1
+            fi
+            ;;
+        3)
+            install_dependencies
+            if ! run_ios_test; then
+                print_warning "iOS 测试运行失败，返回菜单"
+                print_warning "iOS test failed, returning to menu"
+                return 1
+            fi
+            ;;
+        4)
+            install_dependencies
+            if ! run_android_test; then
+                print_warning "Android 测试运行失败，返回菜单"
+                print_warning "Android test failed, returning to menu"
+                return 1
+            fi
+            ;;
+        5)
+            install_dependencies
+            if ! run_web_test; then
+                print_warning "Web 测试运行失败，返回菜单"
+                print_warning "Web test failed, returning to menu"
+                return 1
+            fi
+            ;;
+        6)
+            install_dependencies
+            if ! run_api_test; then
+                print_warning "API 测试运行失败，返回菜单"
+                print_warning "API test failed, returning to menu"
+                return 1
+            fi
+            ;;
+        7)
+            install_dependencies
+            if ! run_all_tests; then
+                print_warning "测试运行失败，返回菜单"
+                print_warning "Test failed, returning to menu"
+                return 1
+            fi
+            ;;
+        8)
+            if ! generate_report; then
+                print_warning "生成报告失败，返回菜单"
+                print_warning "Failed to generate report, returning to menu"
+                return 1
+            fi
+            ;;
+        9)
+            if ! clean_environment; then
+                print_warning "清理环境失败，返回菜单"
+                print_warning "Failed to clean environment, returning to menu"
+                return 1
+            fi
+            ;;
+        10)
+            print_info "退出程序 / Exiting program"
+            exit 0
+            ;;
+    esac
+    return 0
 }
 
 # 主函数
@@ -539,156 +553,43 @@ main() {
     if [[ "$1" == "-h" || "$1" == "--help" ]]; then
         show_help
     fi
-    
-    # 检查 Podman（仅在容器模式下需要）
-    # 在交互式模式下，如果检查失败，给出警告但继续显示菜单
-    # 在命令行模式下，如果检查失败，直接退出
-    if [ "$APPIUM_MODE" = "container" ] || [ $# -eq 0 ]; then
-        if ! check_podman; then
-            if [ $# -eq 0 ]; then
-                # 交互式模式，给出警告但继续
-                print_warning "Podman 未安装，容器模式不可用"
-                print_warning "Podman not installed, container mode unavailable"
-            else
-                # 命令行模式，直接退出
-                print_error "Podman 检查失败，退出程序"
-                print_error "Podman check failed, exiting program"
-                exit 1
-            fi
-        fi
-        
-        if ! check_podman_compose; then
-            if [ $# -eq 0 ]; then
-                # 交互式模式，给出警告但继续
-                print_warning "Podman Compose 未安装，容器模式可能不可用"
-                print_warning "Podman Compose not installed, container mode may be unavailable"
-            else
-                # 命令行模式，直接退出
-                print_error "Podman Compose 检查失败，退出程序"
-                print_error "Podman Compose check failed, exiting program"
-                exit 1
-            fi
-        fi
-    fi
-    
+
     # 如果没有参数，显示交互式菜单
     if [ $# -eq 0 ]; then
         while true; do
-            show_menu
-            read -p "请选择操作 [0-11]: " choice
+            # 处理键盘选择（结果存储在全局变量 MENU_SELECTION 中）
+            handle_menu_selection
+
+            # 执行选中的操作
+            execute_menu_action $MENU_SELECTION
+
+            # 操作完成后暂停，等待用户按键
             echo ""
-            
-            case $choice in
-                1)
-                    if ! start_appium; then
-                        print_warning "启动 Appium 失败，返回菜单"
-                        print_warning "Failed to start Appium, returning to menu"
-                    fi
-                    ;;
-                2)
-                    if ! stop_appium; then
-                        print_warning "停止 Appium 失败，返回菜单"
-                        print_warning "Failed to stop Appium, returning to menu"
-                    fi
-                    ;;
-                3)
-                    check_appium_status
-                    ;;
-                4)
-                    switch_appium_mode
-                    ;;
-                5)
-                    install_dependencies
-                    ;;
-                6)
-                    install_dependencies
-                    if ! run_ios_test; then
-                        print_warning "iOS 测试运行失败，返回菜单"
-                        print_warning "iOS test failed, returning to menu"
-                    fi
-                    ;;
-                7)
-                    install_dependencies
-                    if ! run_android_test; then
-                        print_warning "Android 测试运行失败，返回菜单"
-                        print_warning "Android test failed, returning to menu"
-                    fi
-                    ;;
-                8)
-                    install_dependencies
-                    if ! run_web_test; then
-                        print_warning "Web 测试运行失败，返回菜单"
-                        print_warning "Web test failed, returning to menu"
-                    fi
-                    ;;
-                9)
-                    install_dependencies
-                    if ! run_api_test; then
-                        print_warning "API 测试运行失败，返回菜单"
-                        print_warning "API test failed, returning to menu"
-                    fi
-                    ;;
-                10)
-                    install_dependencies
-                    if ! start_appium; then
-                        print_warning "启动 Appium 失败，返回菜单"
-                        print_warning "Failed to start Appium, returning to menu"
-                    else
-                        if ! run_all_tests; then
-                            print_warning "测试运行失败，返回菜单"
-                            print_warning "Test failed, returning to menu"
-                        fi
-                    fi
-                    ;;
-                11)
-                    if ! generate_report; then
-                        print_warning "生成报告失败，返回菜单"
-                        print_warning "Failed to generate report, returning to menu"
-                    fi
-                    ;;
-                12)
-                    if ! clean_environment; then
-                        print_warning "清理环境失败，返回菜单"
-                        print_warning "Failed to clean environment, returning to menu"
-                    fi
-                    ;;
-                0)
-                    print_info "退出程序 / Exiting program"
-                    exit 0
-                    ;;
-                *)
-                    print_error "无效选择，请重新选择"
-                    print_error "Invalid choice, please try again"
-                    ;;
-            esac
-            
+            read -rs -n1 -p "按任意键返回菜单... / Press any key to return to menu..."
             echo ""
-            read -p "按 Enter 键继续..."
         done
     else
         # 根据参数执行对应操作
         case $1 in
-            start)
-                if ! start_appium; then
+            install)
+                if ! install_dependencies; then
+                    print_error "安装依赖失败"
+                    print_error "Failed to install dependencies"
+                    exit 1
+                fi
+                ;;
+            appium:start)
+                check_appium
+                if ! start_appium_local; then
                     print_error "启动 Appium 失败"
                     print_error "Failed to start Appium"
                     exit 1
                 fi
                 ;;
-            stop)
-                if ! stop_appium; then
+            appium:stop)
+                if ! stop_appium_local; then
                     print_error "停止 Appium 失败"
                     print_error "Failed to stop Appium"
-                    exit 1
-                fi
-                ;;
-            status)
-                check_appium_status
-                ;;
-            install)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
                     exit 1
                 fi
                 ;;
@@ -746,11 +647,6 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! start_appium; then
-                    print_error "启动 Appium 失败"
-                    print_error "Failed to start Appium"
-                    exit 1
-                fi
                 if ! run_all_tests; then
                     print_error "测试运行失败"
                     print_error "Test failed"
@@ -773,7 +669,7 @@ main() {
                 ;;
             *)
                 print_error "未知命令: $1"
-                echo "可用命令: start, stop, status, install, test:ios, test:android, test:web, test:api, test:all, report, clean"
+                echo "可用命令: install, appium:start, appium:stop, test:ios, test:android, test:web, test:api, test:all, report, clean"
                 exit 1
                 ;;
         esac
