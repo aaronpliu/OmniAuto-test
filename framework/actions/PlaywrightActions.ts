@@ -2,6 +2,10 @@ import { Browser, Page } from 'playwright';
 import { BaseActions } from './BaseActions';
 import { Logger } from '../utils/logger';
 
+// 声明 DOM 类型 (仅在浏览器环境可用)
+declare const window: any;
+declare const document: any;
+
 const logger = Logger.getInstance();
 
 export class PlaywrightActions extends BaseActions {

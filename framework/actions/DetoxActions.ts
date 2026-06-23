@@ -1,13 +1,15 @@
 import { device, element, by, expect as detoxExpect } from 'detox';
 import { BaseActions } from './BaseActions';
 import { Logger } from '../utils/logger';
+import { parseSelector, SelectorType } from '../utils/SelectorBuilder';
 
 const logger = Logger.getInstance();
 
 /**
  * Detox-specific selector type
  * Supports:
- * - String: treated as test ID (by.id)
+ * - String (no prefix): treated as test ID (by.id)
+ * - String (with prefix): parsed as unified selector (id:, text:, label:, etc.)
  * - NativeElement: already wrapped element (element(by.xxx))
  * - Matcher: raw matcher that needs wrapping (by.text(), by.label(), etc.)
  */
@@ -34,6 +36,25 @@ function isDetoxMatcher(obj: any): boolean {
          ('and' in obj || 'or' in obj || 'withAncestor' in obj || 'withDescendant' in obj);
 }
 
+// Helper: convert unified selector string to Detox matcher
+function selectorToDetoxMatcher(selector: string): any {
+  const { type, value } = parseSelector(selector);
+  switch (type) {
+    case 'id':    return by.id(value);
+    case 'text':  return by.text(value);
+    case 'label': return by.label(value);
+    case 'xpath':
+      // Detox 不直接支持 XPath，记录警告并降级为 id
+      logger.warn(`Detox does not natively support XPath selectors, falling back to id: ${value}`);
+      return by.id(value);
+    case 'css':
+      logger.warn(`Detox does not support CSS selectors, falling back to id: ${value}`);
+      return by.id(value);
+    case 'class': return by.type(value);
+    case 'raw':   return by.id(value);
+  }
+}
+
 // Helper function to resolve selector to NativeElement
 function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
   // Case 1: Already a NativeElement (wrapped with element())
@@ -46,8 +67,16 @@ function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
     return element(selector as any);
   }
   
-  // Case 3: String - treat as test ID
+  // Case 3: String - check for prefix (unified selector format)
   if (typeof selector === 'string') {
+    const { type } = parseSelector(selector);
+    if (type !== 'raw') {
+      // Has a prefix, use unified selector parsing
+      const matcher = selectorToDetoxMatcher(selector);
+      logger.debug(`Resolved unified selector: ${selector} → Detox ${type} matcher`);
+      return element(matcher);
+    }
+    // No prefix, treat as test ID (backward compatible)
     return element(by.id(selector));
   }
   

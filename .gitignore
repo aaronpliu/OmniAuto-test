@@ -13,6 +13,7 @@ artifacts/
 *.swp
 *.swo
 .lingma/
+.codebuddy/
 
 # OS
 .DS_Store
@@ -42,6 +43,17 @@ allure-results/
 
 #playwright
 playwright-report/
+
+# Screenshots and videos
+screenshots/
+videos/
+*.png
+*.webm
+*.mp4
+
+# Logs
+logs/
+*.log
 
 applications/TestGround/android-app/*
 !applications/TestGround/android-app/.gitkeep

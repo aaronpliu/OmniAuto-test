@@ -10,5 +10,9 @@
   "credentials": {
     "username": "testuser",
     "password": "password123"
+  },
+  "applications": {
+    "androidApk": "applications/TestGround/android-app/app-debug.apk",
+    "iosApp": "applications/TestGround/ios-app/TestingGround.app"
   }
 }

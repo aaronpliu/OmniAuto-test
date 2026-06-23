@@ -47,25 +47,25 @@ IOS_APP_PATH=./apps/ios/MyApp.app
 IOS_AUTOMATION_NAME=XCUITest
 ```
 
-### 3. Start Appium Server
+### 3. Configure Appium Server
 
-#### Option A: Using Docker (Recommended)
+#### Option A: Connect to Remote Appium Server
 
-```bash
-# Start Appium containers
-npm run appium:start
+Configure the Appium Server address in `configs/development.json`:
 
-# Or directly with docker-compose
-docker-compose up -d
-
-# Check if running
-docker-compose ps
-
-# View logs
-docker-compose logs -f appium1
+```json
+{
+  "platform": "android",
+  "test": {
+    "appium": {
+      "host": "your-appium-server.com",
+      "port": 4723
+    }
+  }
+}
 ```
 
-#### Option B: Local Installation
+#### Option B: Local Installation (for debugging)
 
 ```bash
 # Install Appium globally
@@ -161,45 +161,6 @@ LOG_PATH=./artifacts/logs
 
 ---
 
-## Parallel Testing Setup
-
-### Running Multiple Appium Instances
-
-1. **Start multiple Docker containers:**
-
-```bash
-# Already configured in docker-compose.yml
-docker-compose up -d
-
-# This starts:
-# - appium1 on port 4723
-# - appium2 on port 4724
-```
-
-2. **Configure environment for parallel tests:**
-
-```env
-# First test session
-APPIUM_HOST=localhost
-APPIUM_PORT=4723
-
-# Second test session (use in separate test runner)
-APPIUM_HOST_2=localhost
-APPIUM_PORT_2=4724
-```
-
-3. **Run tests in parallel:**
-
-```bash
-# Terminal 1
-APPIUM_PORT=4723 npm run test:mobile:android
-
-# Terminal 2
-APPIUM_PORT=4724 npm run test:mobile:android
-```
-
----
-
 ## Cloud Testing Services
 
 ### BrowserStack
@@ -250,14 +211,14 @@ LAMBDATEST_KEY=your_access_key
 # Check if Appium is running
 curl http://localhost:4723/wd/hub/status
 
-# If using Docker, check container status
-docker-compose ps
+# If using local Appium, check if it's running
+ps aux | grep appium
 
-# Restart Appium
-docker-compose restart
+# If using remote Appium, check network connectivity
+ping your-appium-server.com
 
-# View logs for errors
-docker-compose logs appium1
+# View Appium logs for errors
+# (Check the log location configured for your Appium Server)
 ```
 
 ### Issue: Device not found
@@ -402,14 +363,13 @@ CUSTOM_CAPABILITIES={"appium:disableWindowAnimation": true}
 - [Desired Capabilities Reference](https://appium.io/docs/en/latest/guides/caps/)
 - [UiAutomator2 Driver](https://github.com/appium/appium-uiautomator2-driver)
 - [XCUITest Driver](https://github.com/appium/appium-xcuitest-driver)
-- [Docker Compose Setup](../docker-compose.yml)
 
 ---
 
 ## Support
 
 For issues or questions:
-1. Check Appium logs: `docker-compose logs -f appium1`
+1. Check Appium logs (location depends on your Appium Server setup)
 2. Review [.env.example](./.env.example) for all available options
 3. See [WAIT_MECHANISMS.md](./WAIT_MECHANISMS.md) for test wait strategies
 4. Check project README for general setup instructions

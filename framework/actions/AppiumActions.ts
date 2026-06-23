@@ -3,6 +3,7 @@ import { BaseActions } from './BaseActions';
 import { Selector } from '../types/actions';
 import { Logger } from '../utils/logger';
 import { config } from '../utils/config';
+import { parseSelector, SelectorType } from '../utils/SelectorBuilder';
 
 const logger = Logger.getInstance();
 
@@ -11,6 +12,20 @@ const logger = Logger.getInstance();
  * Extends the base Selector type with WebdriverIO Element support
  */
 export type AppiumSelector = Selector | WebdriverIO.Element;
+
+// Helper: convert unified selector string to Appium/Wdio selector
+function selectorToAppiumString(selector: string): string {
+  const { type, value } = parseSelector(selector);
+  switch (type) {
+    case 'id':    return `~${value}`;                           // Accessibility ID
+    case 'text':  return `android=new UiSelector().text("${value}")|ios=**/XCUIElementTypeStaticText[\`label == "${value}"\`]`;
+    case 'label': return `~${value}`;                           // Accessibility ID
+    case 'xpath':return value;                                  // XPath as-is
+    case 'css':   return value;                                  // CSS as-is
+    case 'class': return `~${value}`;                           // Fallback to ~id
+    case 'raw':   return `~${value}`;                           // Default: Accessibility ID
+  }
+}
 
 // Helper function to resolve selector to Element
 async function resolveElement(driver: WebdriverIO.Browser, selector: AppiumSelector): Promise<WebdriverIO.Element> {
@@ -22,8 +37,21 @@ async function resolveElement(driver: WebdriverIO.Browser, selector: AppiumSelec
     }
   }
   
-  // Otherwise treat as string accessibility ID
-  const id = typeof selector === 'string' ? selector : String(selector);
+  // String selector — may be plain or unified format (with prefix)
+  if (typeof selector === 'string') {
+    const { type } = parseSelector(selector);
+    if (type !== 'raw') {
+      // Unified selector with prefix
+      const wdioSelector = selectorToAppiumString(selector);
+      logger.debug(`Resolved unified selector: ${selector} → Appium: ${wdioSelector}`);
+      return await driver.$(wdioSelector);
+    }
+    // No prefix — treat as Accessibility ID (backward compatible)
+    return await driver.$(`~${selector}`);
+  }
+
+  // Fallback: convert to string and treat as Accessibility ID
+  const id = String(selector);
   return await driver.$(`~${id}`);
 }
 

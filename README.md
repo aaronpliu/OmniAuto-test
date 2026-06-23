@@ -222,9 +222,9 @@ LOG_LEVEL=debug npm run test:mobile
 - Verify Detox is properly set up
 
 ### Android Tests Fail
-- Ensure Docker is running: `docker ps`
-- Check Appium containers: `docker-compose ps`
-- Verify Android emulator/device is connected
+- Ensure Appium Server is running and accessible
+- Check Appium Server configuration in `configs/development.json`
+- Verify Android emulator/device is connected: `adb devices`
 
 ### Web Tests Fail
 - Ensure Playwright browsers are installed: `npx playwright install`
