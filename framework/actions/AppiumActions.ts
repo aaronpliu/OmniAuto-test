@@ -128,21 +128,53 @@ export class AppiumActions extends BaseActions {
     if (platformName === 'ios') {
       const bundleId = process.env.IOS_BUNDLE_ID;
       const appPath = process.env.IOS_APP_PATH;
+      const iosUdid = process.env.IOS_UDID;
       const iosDeviceName = process.env.IOS_DEVICE_NAME || 'iPhone 14';
       const iosPlatformVersion = process.env.IOS_PLATFORM_VERSION || '17.0';
+      const iosDeviceType = process.env.IOS_DEVICE_TYPE;
 
       capabilities['appium:deviceName'] = iosDeviceName;
       capabilities['appium:platformVersion'] = iosPlatformVersion;
       capabilities['appium:automationName'] = process.env.IOS_AUTOMATION_NAME || 'XCUITest';
 
+      // UDID（真机或已启动的模拟器）
+      if (iosUdid) {
+        capabilities['appium:udid'] = iosUdid;
+      }
+
+      // 应用路径或 Bundle ID
       if (bundleId) {
         capabilities['appium:bundleId'] = bundleId;
       } else if (appPath) {
         capabilities['appium:app'] = appPath;
+      } else {
+        // 尝试从配置文件读取 iOS 应用路径
+        try {
+          const envConfig = config.getConfig();
+          if (envConfig.applications && envConfig.applications.iosApp) {
+            const path = require('path');
+            const iosAppPath = path.resolve(process.cwd(), envConfig.applications.iosApp);
+            capabilities['appium:app'] = iosAppPath;
+            logger.info(`Using iOS app from config: ${iosAppPath}`);
+          }
+        } catch (error) {
+          logger.warn('Cannot read iOS app path from config');
+        }
+      }
+
+      // 模拟器 vs 真机
+      if (iosDeviceType === 'real') {
+        capabilities['appium:xcodeSigningId'] = process.env.IOS_XCODE_SIGNING_ID || 'iPhone Developer';
+        if (process.env.IOS_TEAM_ID) {
+          capabilities['appium:xcodeOrgId'] = process.env.IOS_TEAM_ID;
+        }
       }
 
       if (process.env.AUTO_ACCEPT_ALERTS) {
         capabilities['appium:autoAcceptAlerts'] = process.env.AUTO_ACCEPT_ALERTS === 'true';
+      }
+      if (process.env.IOS_CONNECT_HARDWARE_KEYBOARD !== undefined) {
+        capabilities['appium:connectHardwareKeyboard'] = process.env.IOS_CONNECT_HARDWARE_KEYBOARD === 'true';
       }
     }
 
@@ -174,15 +206,24 @@ export class AppiumActions extends BaseActions {
       const host = process.env.APPIUM_HOST || 'localhost';
       const port = parseInt(process.env.APPIUM_PORT || '4723');
 
-      const deviceName = (this.capabilities as any)['appium:deviceName'] || process.env.ANDROID_DEVICE_NAME || 'Unknown';
-      const platformVersion = (this.capabilities as any)['appium:platformVersion'] || process.env.ANDROID_PLATFORM_VERSION || 'Unknown';
-      const deviceType = process.env.ANDROID_DEVICE_TYPE || 'unknown';
+      const deviceName = (this.capabilities as any)['appium:deviceName'] ||
+        process.env.IOS_DEVICE_NAME || process.env.ANDROID_DEVICE_NAME || 'Unknown';
+      const platformVersion = (this.capabilities as any)['appium:platformVersion'] ||
+        process.env.IOS_PLATFORM_VERSION || process.env.ANDROID_PLATFORM_VERSION || 'Unknown';
+      const deviceType = this.platform === 'ios'
+        ? (process.env.IOS_DEVICE_TYPE || 'unknown')
+        : (process.env.ANDROID_DEVICE_TYPE || 'unknown');
 
       logger.info('========== Connecting to Appium Server ==========');
       logger.info(`Appium Server: ${host}:${port}`);
       logger.info(`Device: ${deviceName}`);
-      logger.info(`Type: ${deviceType === 'emulator' ? 'Emulator' : deviceType === 'real' ? 'Real Device' : 'Unknown'}`);
-      logger.info(`OS: ${this.platform === 'android' ? 'Android' : 'iOS'} ${platformVersion}`);
+      if (this.platform === 'ios') {
+        logger.info(`Type: ${deviceType === 'simulator' ? 'Simulator' : deviceType === 'real' ? 'Real Device' : 'Unknown'}`);
+        logger.info(`OS: iOS ${platformVersion}`);
+      } else {
+        logger.info(`Type: ${deviceType === 'emulator' ? 'Emulator' : deviceType === 'real' ? 'Real Device' : 'Unknown'}`);
+        logger.info(`OS: Android ${platformVersion}`);
+      }
       logger.info('===============================================');
 
       this.driver = await remote({

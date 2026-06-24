@@ -2,7 +2,7 @@ import { BaseActions } from './BaseActions';
 import { DetoxActions } from './DetoxActions';
 import { AppiumActions } from './AppiumActions';
 import { PlaywrightActions } from './PlaywrightActions';
-import { Platform, ActionFactoryConfig } from '../types/actions';
+import { Platform, ActionFactoryConfig, IosAutomationMode } from '../types/actions';
 import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
@@ -28,37 +28,49 @@ export function isPlaywrightActions(actions: BaseActions): actions is Playwright
   return actions instanceof PlaywrightActions;
 }
 
+/**
+ * 获取 iOS 自动化模式
+ * 优先级：参数 > 环境变量 IOS_AUTOMATION_MODE > 默认 'detox'
+ */
+function getIosAutomationMode(config?: ActionFactoryConfig): IosAutomationMode {
+  const mode = config?.iosAutomationMode || process.env.IOS_AUTOMATION_MODE || 'detox';
+  return mode === 'appium' ? 'appium' : 'detox';
+}
+
 export class ActionFactory {
   static create(config: Platform | ActionFactoryConfig): BaseActions {
-    const platform = typeof config === 'string' ? config : config.platform;
-    
+    const configObj = typeof config === 'string' ? { platform: config } : config;
+    const platform = configObj.platform;
+
     logger.info(`Creating actions for platform: ${platform}`);
 
     switch (platform) {
-      case 'ios':
+      case 'ios': {
+        const iosMode = getIosAutomationMode(configObj);
+        if (iosMode === 'appium') {
+          logger.info('iOS automation mode: Appium (XCUITest)');
+          return new AppiumActions(configObj.capabilities);
+        }
+        logger.info('iOS automation mode: Detox');
         return new DetoxActions();
-      
+      }
+
       case 'android': {
-        // AppiumActions will automatically build capabilities from environment variables
-        // if none are provided, making it consistent with DetoxActions behavior
-        const capabilities = typeof config === 'object' ? config.capabilities : undefined;
+        const capabilities = configObj.capabilities;
         return new AppiumActions(capabilities);
       }
-      
+
       case 'web': {
-        // For web, PlaywrightActions requires a Page object
-        const configObj = typeof config === 'object' ? config : null;
-        
-        if (!configObj || !configObj.page) {
+        if (!configObj.page) {
           throw new Error(
             'For web platform, a Page object must be provided in the config. ' +
             'Example: ActionFactory.create({ platform: "web", page })'
           );
         }
-        
+
         return new PlaywrightActions(configObj.page, configObj.browser);
       }
-      
+
       default:
         throw new Error(`Unsupported platform: ${platform}`);
     }

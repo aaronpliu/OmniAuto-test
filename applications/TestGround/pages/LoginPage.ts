@@ -19,6 +19,7 @@ export class LoginPage {
     await this.actions.navigateTo()
     // 使用 id: 前缀，同时兼容两套平台
     // Uses id: prefix, compatible with both platforms
+    await this.actions.waitForElement(by.id('usernameInput'), 10000);
     await this.actions.typeText(by.id('usernameInput'), username);
     await this.actions.typeText(by.id('passwordInput'), password);
     await this.actions.click(by.id('loginButton'));

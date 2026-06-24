@@ -53,6 +53,9 @@ show_help() {
     echo -e "  ${YELLOW}test:ios${NC}          运行 iOS 测试 (使用 Detox) / Run iOS tests (using Detox)"
     echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:ios"
     echo ""
+    echo -e "  ${YELLOW}test:ios:appium${NC}    运行 iOS 测试 (使用 Appium) / Run iOS tests (using Appium)"
+    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:ios:appium"
+    echo ""
     echo -e "  ${YELLOW}test:android${NC}      运行 Android 测试 (使用 Appium) / Run Android tests (using Appium)"
     echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:android"
     echo ""
@@ -101,6 +104,11 @@ show_help() {
     echo "  - Appium (可选，用于本地调试) / Appium (optional, for local debugging):"
     echo "                    npm install appium (项目中安装 / install in project)"
     echo "                    npm install -g appium (全局安装 / install globally)"
+    echo "  - Appium 驱动 / Appium drivers:"
+    echo "                    Android: appium driver install uiautomator2"
+    echo "                    iOS:     appium driver install xcuitest"
+    echo "  - iOS 测试 (Appium): 需要 Xcode + iOS 模拟器或真机"
+    echo "    iOS (Appium): Requires Xcode + iOS simulator or real device"
     echo "  - Node.js >= 22.22.0"
     echo ""
     echo -e "${CYAN}================================================================${NC}"
@@ -241,10 +249,19 @@ install_dependencies() {
     return 0
 }
 
-# 运行 iOS 测试
+# 运行 iOS 测试（Detox）
 run_ios_test() {
-    print_info "运行 iOS 测试..."
+    print_info "运行 iOS 测试（Detox）..."
     npm run test:mobile:ios
+    return $?
+}
+
+# 运行 iOS 测试（Appium）
+run_ios_appium_test() {
+    print_info "运行 iOS 测试（Appium）..."
+    print_info "请确保 Appium Server 已启动并可访问"
+    print_info "Please ensure Appium Server is running and accessible"
+    npm run test:mobile:ios:appium
     return $?
 }
 
@@ -353,7 +370,8 @@ MENU_ITEMS=(
     "安装依赖 / Install dependencies"
     "启动本地 Appium Server / Start local Appium Server"
     "停止本地 Appium Server / Stop local Appium Server"
-    "运行 iOS 测试 / Run iOS tests"
+    "运行 iOS 测试 (Detox) / Run iOS tests (Detox)"
+    "运行 iOS 测试 (Appium) / Run iOS tests (Appium)"
     "运行 Android 测试 / Run Android tests"
     "运行 Web 测试 / Run Web tests"
     "运行 API 测试 / Run API tests"
@@ -476,13 +494,21 @@ execute_menu_action() {
             ;;
         4)
             install_dependencies
+            if ! run_ios_appium_test; then
+                print_warning "iOS (Appium) 测试运行失败，返回菜单"
+                print_warning "iOS (Appium) test failed, returning to menu"
+                return 1
+            fi
+            ;;
+        5)
+            install_dependencies
             if ! run_android_test; then
                 print_warning "Android 测试运行失败，返回菜单"
                 print_warning "Android test failed, returning to menu"
                 return 1
             fi
             ;;
-        5)
+        6)
             install_dependencies
             if ! run_web_test; then
                 print_warning "Web 测试运行失败，返回菜单"
@@ -490,7 +516,7 @@ execute_menu_action() {
                 return 1
             fi
             ;;
-        6)
+        7)
             install_dependencies
             if ! run_api_test; then
                 print_warning "API 测试运行失败，返回菜单"
@@ -498,7 +524,7 @@ execute_menu_action() {
                 return 1
             fi
             ;;
-        7)
+        8)
             install_dependencies
             if ! run_all_tests; then
                 print_warning "测试运行失败，返回菜单"
@@ -506,21 +532,21 @@ execute_menu_action() {
                 return 1
             fi
             ;;
-        8)
+        9)
             if ! generate_report; then
                 print_warning "生成报告失败，返回菜单"
                 print_warning "Failed to generate report, returning to menu"
                 return 1
             fi
             ;;
-        9)
+        10)
             if ! clean_environment; then
                 print_warning "清理环境失败，返回菜单"
                 print_warning "Failed to clean environment, returning to menu"
                 return 1
             fi
             ;;
-        10)
+        11)
             print_info "退出程序 / Exiting program"
             exit 0
             ;;
@@ -583,6 +609,18 @@ main() {
                 if ! run_ios_test; then
                     print_error "iOS 测试运行失败"
                     print_error "iOS test failed"
+                    exit 1
+                fi
+                ;;
+            test:ios:appium)
+                if ! install_dependencies; then
+                    print_error "安装依赖失败"
+                    print_error "Failed to install dependencies"
+                    exit 1
+                fi
+                if ! run_ios_appium_test; then
+                    print_error "iOS (Appium) 测试运行失败"
+                    print_error "iOS (Appium) test failed"
                     exit 1
                 fi
                 ;;
@@ -650,7 +688,7 @@ main() {
                 ;;
             *)
                 print_error "未知命令: $1"
-                echo "可用命令: install, appium:start, appium:stop, test:ios, test:android, test:web, test:api, test:all, report, clean"
+                echo "可用命令: install, appium:start, appium:stop, test:ios, test:ios:appium, test:android, test:web, test:api, test:all, report, clean"
                 exit 1
                 ;;
         esac

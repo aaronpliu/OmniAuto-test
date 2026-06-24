@@ -45,10 +45,19 @@ export interface IActions {
 
 export type Platform = 'ios' | 'android' | 'web';
 
+/**
+ * iOS 自动化模式
+ * - 'detox': 使用 Detox 框架（默认，适用于 React Native 应用）
+ * - 'appium': 使用 Appium + XCUITest（适用于原生 iOS 应用）
+ */
+export type IosAutomationMode = 'detox' | 'appium';
+
 export interface ActionFactoryConfig {
   platform: Platform;
   capabilities?: Record<string, any>;
   browserType?: 'chromium' | 'firefox' | 'webkit';
   page?: any; // Playwright Page object for web platform
   browser?: any; // Playwright Browser object for web platform (optional)
+  /** iOS 自动化模式，默认 'detox' */
+  iosAutomationMode?: IosAutomationMode;
 }
