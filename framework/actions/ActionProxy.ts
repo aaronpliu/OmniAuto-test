@@ -191,6 +191,15 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
 
           return result;
         } catch (error: any) {
+          // 失败步骤自动截图
+          let screenshotPath = '';
+          try {
+            if (typeof (target as any).takeScreenshot === 'function') {
+              screenshotPath = await (target as any).takeScreenshot(`step_fail_${Date.now()}`);
+              logger.info(`[Step] 📸 失败截图已保存: ${screenshotPath}`);
+            }
+          } catch { /* 截图失败不影响步骤记录 */ }
+
           // 记录失败步骤到文件
           writeStepToFile({
             name: stepName,
@@ -198,6 +207,7 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
             start: startTime,
             stop: Date.now(),
             error: error.message,
+            screenshot: screenshotPath || undefined,
           });
           logger.info(`[Step] ✗ ${stepName}: ${error.message}`);
 

@@ -5,8 +5,8 @@
  * 直接写入 Allure JSON 结果文件，包含自动化收集的测试步骤。
  */
 import { createHash } from 'crypto';
-import { writeFileSync, existsSync, mkdirSync, readFileSync, unlinkSync } from 'fs';
-import { join } from 'path';
+import { writeFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, copyFileSync } from 'fs';
+import { join, basename } from 'path';
 
 const RESULTS_DIR = join(process.cwd(), 'artifacts', 'allure-results');
 
@@ -17,6 +17,7 @@ interface AllureStep {
   start: number;
   stop: number;
   statusDetails?: { message: string; trace: string };
+  attachments?: { name: string; type: string; source: string }[];
 }
 
 interface AllureTestResult {
@@ -43,19 +44,37 @@ function drainRecordedSteps(): AllureStep[] {
     if (!existsSync(filePath)) return [];
 
     const raw = readFileSync(filePath, 'utf-8');
-    unlinkSync(filePath); // 清空文件
+    unlinkSync(filePath);
 
     const steps: any[] = raw.trim().split('\n').filter(Boolean).map((l: string) => JSON.parse(l));
     console.log(`[AllureReporter] Read ${steps.length} steps from file`);
 
-    return steps.map((s: any) => ({
-      name: s.name,
-      status: s.status,
-      stage: 'finished' as const,
-      start: s.start,
-      stop: s.stop,
-      statusDetails: s.error ? { message: s.error, trace: '' } : undefined,
-    }));
+    return steps.map((s: any): AllureStep => {
+      const result: AllureStep = {
+        name: s.name,
+        status: s.status,
+        stage: 'finished',
+        start: s.start,
+        stop: s.stop,
+        statusDetails: s.error ? { message: s.error, trace: '' } : undefined,
+      };
+
+      // 处理失败步骤的截图附件
+      if (s.screenshot && existsSync(s.screenshot)) {
+        try {
+          const destName = `step-${basename(s.screenshot)}`;
+          const destPath = join(RESULTS_DIR, destName);
+          copyFileSync(s.screenshot, destPath);
+          result.attachments = [
+            { name: 'Step Screenshot', type: 'image/png', source: destName },
+          ];
+        } catch {
+          // 复制失败不影响步骤记录
+        }
+      }
+
+      return result;
+    });
   } catch (err) {
     console.log('[AllureReporter] Error reading steps:', err);
     return [];

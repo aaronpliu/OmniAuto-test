@@ -29,6 +29,6 @@ export class LoginPage {
   }
 
   async isVisible(): Promise<void> {
-    await this.actions.expectVisible(by.text('Logout'));
+    await this.actions.expectVisible(by.text('Logout1'));
   }
 }
