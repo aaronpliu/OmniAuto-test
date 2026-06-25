@@ -613,6 +613,38 @@ export class AppiumActions extends BaseActions {
     return path;
   }
 
+  /** 开始屏幕录制（基于 Appium 原生 API） */
+  async startRecording(timeLimit = 180, quality: 'low' | 'medium' | 'high' = 'medium', fps = 10): Promise<void> {
+    const driver = await this.getDriver();
+    logger.info('开始录屏...');
+    const opts: Record<string, any> = {
+      timeLimit,
+      videoQuality: quality,
+      videoFps: fps,
+      videoType: 'h264',
+    };
+    if (this.platform === 'android') {
+      opts.bitRate = 4000000;
+      opts.videoSize = '720x1280';
+    }
+    await driver.startRecordingScreen(opts);
+    logger.info('录屏已开始');
+  }
+
+  /** 停止屏幕录制并返回视频 Buffer */
+  async stopRecording(): Promise<Buffer | null> {
+    const driver = await this.getDriver();
+    logger.info('停止录屏...');
+    const base64 = await driver.stopRecordingScreen();
+    if (!base64) {
+      logger.warn('录屏返回空数据');
+      return null;
+    }
+    const buf = Buffer.from(base64, 'base64');
+    logger.info(`录屏完成，大小: ${(buf.length / 1024 / 1024).toFixed(2)} MB`);
+    return buf;
+  }
+
   async reload(): Promise<void> {
     logger.info('Reloading app');
     const driver = await this.getDriver();

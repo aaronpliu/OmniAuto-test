@@ -485,6 +485,17 @@ export class DetoxActions extends BaseActions {
     return path;
   }
 
+  /** Detox 不支持原生屏幕录制，此方法为占位 */
+  async startRecording(): Promise<void> {
+    logger.warn('Detox 不支持原生屏幕录制，请使用 Appium (XCUITest) 模式录制 iOS 测试');
+  }
+
+  /** Detox 不支持原生屏幕录制，此方法为占位 */
+  async stopRecording(): Promise<Buffer | null> {
+    logger.warn('Detox 不支持原生屏幕录制');
+    return null;
+  }
+
   async reload(): Promise<void> {
     logger.info('Reloading app');
     await device.reloadReactNative();

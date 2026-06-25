@@ -76,9 +76,24 @@ show_help() {
     echo ""
     echo -e "  ${YELLOW}-h, --help${NC}        显示此帮助信息 / Show this help message"
     echo ""
-    echo -e "${GREEN}不带参数运行 / Run without arguments:${NC}"
+    echo -e "${GREEN}不传参运行 / Run without arguments:${NC}"
     echo "  ./start.sh"
     echo "  将显示交互式菜单 / Will show interactive menu"
+    echo ""
+    echo -e "${GREEN}全局参数（适用于所有移动端测试）/ Global flags (for all mobile tests):${NC}"
+    echo "  --screenshot, --ss         启用失败截图（默认）"
+    echo "                              Enable screenshot on failure (default: on)"
+    echo "  --no-screenshot, --no-ss   禁用失败截图"
+    echo "                              Disable screenshot on failure"
+    echo "  --recording, --rec         启用测试录屏（默认关闭）"
+    echo "                              Enable test recording (default: off)"
+    echo "  --no-recording, --no-rec   禁用测试录屏"
+    echo "                              Disable test recording"
+    echo ""
+    echo -e "${BLUE}示例/Examples:${NC}"
+    echo "  ./start.sh test:android --recording"
+    echo "  ./start.sh test:ios:appium --no-screenshot --recording"
+    echo "  ./start.sh test:ios --recording --no-screenshot"
     echo ""
     echo -e "${GREEN}Appium 配置 / Appium Configuration:${NC}"
     echo "  本项目仅支持连接远程 Appium Server"
@@ -695,5 +710,40 @@ main() {
     fi
 }
 
-# 执行主函数
-main "$@"
+# ========== 全局参数解析 / Global Flag Parsing ==========
+# 在所有命令之前解析，提取并导出环境变量
+SCREENSHOT_ON_FAILURE=true
+VIDEO_RECORDING=false
+REMAINING_ARGS=()
+
+for arg in "$@"; do
+    case "$arg" in
+        --screenshot|--ss)
+            SCREENSHOT_ON_FAILURE=true
+            ;;
+        --no-screenshot|--no-ss)
+            SCREENSHOT_ON_FAILURE=false
+            ;;
+        --recording|--rec)
+            VIDEO_RECORDING=true
+            ;;
+        --no-recording|--no-rec)
+            VIDEO_RECORDING=false
+            ;;
+        *)
+            REMAINING_ARGS+=("$arg")
+            ;;
+    esac
+done
+
+export SCREENSHOT_ON_FAILURE
+export VIDEO_RECORDING
+
+# 如果传入了开关参数，打印当前配置
+if [ "$SCREENSHOT_ON_FAILURE" != true ] || [ "$VIDEO_RECORDING" = true ]; then
+    print_info "截图 / Screenshot: $([ "$SCREENSHOT_ON_FAILURE" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"
+    print_info "录屏 / Recording: $([ "$VIDEO_RECORDING" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"
+fi
+
+# 执行主函数（传入过滤后的参数）
+main "${REMAINING_ARGS[@]}"
