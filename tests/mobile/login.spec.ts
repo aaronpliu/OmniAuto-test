@@ -1,5 +1,6 @@
 import { describe, it, beforeAll, afterAll } from '@jest/globals';
 import { ActionFactory } from '@framework/actions';
+import { TestContext } from '@framework/utils/testContext';
 import { LoginPage } from '@applications/TestGround/pages/LoginPage';
 
 // This test runs on:
@@ -12,8 +13,9 @@ describe('Mobile Login Tests', () => {
   beforeAll(async () => {
     const platform = (process.env.TEST_PLATFORM || 'ios') as 'ios' | 'android';
     const actions = ActionFactory.create(platform);
+    // 注册 actions 实例到测试上下文，供生命周期钩子（截图/录屏）使用
+    TestContext.setActions(actions);
     loginPage = new LoginPage(actions);
-    // homePage = new HomePage(actions);
   });
 
   afterAll(async () => {
