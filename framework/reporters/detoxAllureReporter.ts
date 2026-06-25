@@ -1,9 +1,8 @@
 /**
  * Detox Allure Reporter
  *
- * Detox Jest 配置覆盖了 allure-jest/node 测试环境，
- * 导致 Allure 报告无数据生成。本 reporter 直接写入
- * Allure JSON 结果文件，不依赖 allure-jest 运行时。
+ * Detox 覆盖了 allure-jest/node 测试环境，本 reporter
+ * 直接写入 Allure JSON 结果文件，包含自动化收集的测试步骤。
  */
 import { createHash } from 'crypto';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -36,14 +35,13 @@ interface AllureTestResult {
   attachments: any[];
 }
 
-/** 从全局 StepCollector 读取当前测试的步骤 */
-function getRecordedSteps(): AllureStep[] {
+/** 从全局 StepCollector 读取并清空步骤 */
+function drainRecordedSteps(): AllureStep[] {
   try {
-    const key = '__OMNI_STEP_COLLECTOR__';
-    const collector = (globalThis as any)[key];
-    if (!collector || !collector.getSteps) return [];
-    const steps = collector.getSteps();
-    collector.clear(); // 读取后清空，避免重复
+    const collector = (globalThis as any)['__OMNI_STEP_COLLECTOR__'];
+    if (!collector || typeof collector.getSteps !== 'function') return [];
+    const steps: any[] = collector.getSteps();
+    collector.clear();
     return steps.map((s: any) => ({
       name: s.name,
       status: s.status,
@@ -73,6 +71,9 @@ class DetoxAllureReporter implements jest.Reporter {
   }
 
   onTestResult(_test: jest.Test, testResult: jest.TestResult): void {
+    // 在 for 循环之前一次性读取步骤，避免第一个用例取走全部步骤
+    const allSteps = drainRecordedSteps();
+
     for (const result of testResult.testResults) {
       const fullName = result.fullName || `${testResult.testFilePath}#${result.title}`;
       const uuid = this.generateUuid(fullName);
@@ -97,7 +98,7 @@ class DetoxAllureReporter implements jest.Reporter {
           { name: 'platform', value: process.env.TEST_PLATFORM || 'ios' },
         ],
         parameters: [],
-        steps: getRecordedSteps(),
+        steps: allSteps,
         attachments: [],
       };
 
@@ -109,7 +110,6 @@ class DetoxAllureReporter implements jest.Reporter {
   }
 
   onRunComplete(_contexts: Set<jest.Context>, _results: jest.AggregatedResult): void {
-    // 写入 container 文件
     const uuids = Array.from(this.results.keys());
     const containerUuid = this.generateUuid(`suite-${this.suiteCount}`);
     const container = {

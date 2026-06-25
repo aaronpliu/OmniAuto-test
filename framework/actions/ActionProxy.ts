@@ -9,6 +9,9 @@
  *   Detox 环境：使用全局 StepCollector，Reporter 写入 Allure JSON
  */
 import { BaseActions } from './BaseActions';
+import { Logger } from '../utils/logger';
+
+const logger = Logger.getInstance();
 
 // ================================================================
 //  全局步骤收集器
@@ -125,12 +128,14 @@ function buildStepName(method: string, args: unknown[]): string {
 
 async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>): Promise<T> {
   try {
-    const { allure } = require('allure-jest/node');
-    if (allure) {
-      return await allure.step(name, async () => await fn());
+    // allure-js-commons 的 step() 在 allure-jest/node 环境中自动关联当前测试
+    const { step } = require('allure-js-commons');
+    if (typeof step === 'function') {
+      return await (step as any)(name, async () => await fn());
     }
   } catch {
-    // Allure 不可用，直接执行
+    // Allure 运行时不可用（如 Detox 环境），降级为直接执行
+    logger.debug(`[StepProxy] allure runtime unavailable, step "${name}" logged via collector only`);
   }
   return await fn();
 }
