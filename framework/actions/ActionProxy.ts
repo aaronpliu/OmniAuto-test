@@ -148,6 +148,8 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>): Promis
 const SKIP_METHODS = new Set(['getDriver', 'buildDefaultCapabilities', 'getPlatform', 'selectorToAppiumString', 'resolveElement']);
 
 export function createActionProxy<T extends BaseActions>(actions: T): T {
+  logger.info(`[ActionProxy] Wrapping ${actions.constructor.name} — auto step recording enabled`);
+
   return new Proxy(actions, {
     get(target: T, prop: string | symbol, receiver: any) {
       const original = Reflect.get(target, prop, receiver);
@@ -166,7 +168,6 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
       return async function (...args: unknown[]): Promise<unknown> {
         const stepName = buildStepName(prop, args);
         const startTime = Date.now();
-        const collector = getStepCollector();
 
         try {
           const result = await wrapWithAllureStep(stepName, async () => {
@@ -174,16 +175,19 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
           });
 
           // 记录成功步骤
+          const collector = getStepCollector();
           collector.addStep({
             name: stepName,
             status: 'passed',
             start: startTime,
             stop: Date.now(),
           });
+          logger.debug(`[ActionProxy] ✓ ${stepName}`);
 
           return result;
         } catch (error: any) {
           // 记录失败步骤
+          const collector = getStepCollector();
           collector.addStep({
             name: stepName,
             status: 'failed',
@@ -191,6 +195,7 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
             stop: Date.now(),
             error: error.message,
           });
+          logger.debug(`[ActionProxy] ✗ ${stepName}: ${error.message}`);
 
           throw error;
         }

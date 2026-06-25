@@ -39,8 +39,12 @@ interface AllureTestResult {
 function drainRecordedSteps(): AllureStep[] {
   try {
     const collector = (globalThis as any)['__OMNI_STEP_COLLECTOR__'];
-    if (!collector || typeof collector.getSteps !== 'function') return [];
+    if (!collector || typeof collector.getSteps !== 'function') {
+      console.log('[AllureReporter] StepCollector not found on globalThis');
+      return [];
+    }
     const steps: any[] = collector.getSteps();
+    console.log(`[AllureReporter] Drained ${steps.length} steps from collector`);
     collector.clear();
     return steps.map((s: any) => ({
       name: s.name,
@@ -50,7 +54,8 @@ function drainRecordedSteps(): AllureStep[] {
       stop: s.stop,
       statusDetails: s.error ? { message: s.error, trace: '' } : undefined,
     }));
-  } catch {
+  } catch (err) {
+    console.log('[AllureReporter] Error reading steps:', err);
     return [];
   }
 }
