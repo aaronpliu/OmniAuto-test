@@ -97,8 +97,11 @@ class DetoxAllureReporter implements jest.Reporter {
   }
 
   onTestResult(_test: jest.Test, testResult: jest.TestResult): void {
-    // 在 for 循环之前一次性读取步骤，避免第一个用例取走全部步骤
+    console.log(`[AllureReporter] onTestResult called, tests: ${testResult.testResults.length}`);
+
+    // 在 for 循环之前一次性读取步骤
     const allSteps = drainRecordedSteps();
+    console.log(`[AllureReporter] Steps for this file: ${allSteps.length}`);
 
     for (const result of testResult.testResults) {
       const fullName = result.fullName || `${testResult.testFilePath}#${result.title}`;
