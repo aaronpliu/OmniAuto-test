@@ -59,6 +59,9 @@ show_help() {
     echo -e "  ${YELLOW}test:android${NC}      运行 Android 测试 (使用 Appium) / Run Android tests (using Appium)"
     echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:android"
     echo ""
+    echo -e "  ${YELLOW}test:android:detox${NC} 运行 Android 测试 (使用 Detox) / Run Android tests (using Detox)"
+    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:android:detox"
+    echo ""
     echo -e "  ${YELLOW}test:web${NC}          运行 Web 测试 (使用 Playwright) / Run Web tests (using Playwright)"
     echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:web"
     echo ""
@@ -280,6 +283,13 @@ run_ios_appium_test() {
     return $?
 }
 
+# 运行 Android 测试（Detox）
+run_android_detox_test() {
+    print_info "运行 Android 测试（Detox）..."
+    npm run test:mobile:android:detox
+    return $?
+}
+
 # 检测 Android 设备
 check_android_device() {
     print_info "检测 Android 设备..."
@@ -387,7 +397,8 @@ MENU_ITEMS=(
     "停止本地 Appium Server / Stop local Appium Server"
     "运行 iOS 测试 (Detox) / Run iOS tests (Detox)"
     "运行 iOS 测试 (Appium) / Run iOS tests (Appium)"
-    "运行 Android 测试 / Run Android tests"
+    "运行 Android 测试 (Appium) / Run Android tests (Appium)"
+    "运行 Android 测试 (Detox) / Run Android tests (Detox)"
     "运行 Web 测试 / Run Web tests"
     "运行 API 测试 / Run API tests"
     "运行所有测试 / Run all tests"
@@ -518,12 +529,20 @@ execute_menu_action() {
         5)
             install_dependencies
             if ! run_android_test; then
-                print_warning "Android 测试运行失败，返回菜单"
-                print_warning "Android test failed, returning to menu"
+                print_warning "Android (Appium) 测试运行失败，返回菜单"
+                print_warning "Android (Appium) test failed, returning to menu"
                 return 1
             fi
             ;;
         6)
+            install_dependencies
+            if ! run_android_detox_test; then
+                print_warning "Android (Detox) 测试运行失败，返回菜单"
+                print_warning "Android (Detox) test failed, returning to menu"
+                return 1
+            fi
+            ;;
+        7)
             install_dependencies
             if ! run_web_test; then
                 print_warning "Web 测试运行失败，返回菜单"
@@ -531,7 +550,7 @@ execute_menu_action() {
                 return 1
             fi
             ;;
-        7)
+        8)
             install_dependencies
             if ! run_api_test; then
                 print_warning "API 测试运行失败，返回菜单"
@@ -539,7 +558,7 @@ execute_menu_action() {
                 return 1
             fi
             ;;
-        8)
+        9)
             install_dependencies
             if ! run_all_tests; then
                 print_warning "测试运行失败，返回菜单"
@@ -547,21 +566,21 @@ execute_menu_action() {
                 return 1
             fi
             ;;
-        9)
+        10)
             if ! generate_report; then
                 print_warning "生成报告失败，返回菜单"
                 print_warning "Failed to generate report, returning to menu"
                 return 1
             fi
             ;;
-        10)
+        11)
             if ! clean_environment; then
                 print_warning "清理环境失败，返回菜单"
                 print_warning "Failed to clean environment, returning to menu"
                 return 1
             fi
             ;;
-        11)
+        12)
             print_info "退出程序 / Exiting program"
             exit 0
             ;;
@@ -651,6 +670,18 @@ main() {
                     exit 1
                 fi
                 ;;
+            test:android:detox)
+                if ! install_dependencies; then
+                    print_error "安装依赖失败"
+                    print_error "Failed to install dependencies"
+                    exit 1
+                fi
+                if ! run_android_detox_test; then
+                    print_error "Android (Detox) 测试运行失败"
+                    print_error "Android (Detox) test failed"
+                    exit 1
+                fi
+                ;;
             test:web)
                 if ! install_dependencies; then
                     print_error "安装依赖失败"
@@ -703,7 +734,7 @@ main() {
                 ;;
             *)
                 print_error "未知命令: $1"
-                echo "可用命令: install, appium:start, appium:stop, test:ios, test:ios:appium, test:android, test:web, test:api, test:all, report, clean"
+                echo "可用命令: install, appium:start, appium:stop, test:ios, test:ios:appium, test:android, test:android:detox, test:web, test:api, test:all, report, clean"
                 exit 1
                 ;;
         esac

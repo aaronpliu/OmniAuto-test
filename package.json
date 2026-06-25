@@ -9,6 +9,7 @@
     "test:mobile:ios": "TEST_PLATFORM=ios detox test --configuration ios.sim.debug",
     "test:mobile:ios:appium": "NODE_OPTIONS=--experimental-vm-modules TEST_PLATFORM=ios IOS_AUTOMATION_MODE=appium jest tests/mobile --config jest.ios.appium.config.js",
     "test:mobile:android": "NODE_OPTIONS=--experimental-vm-modules TEST_PLATFORM=android jest tests/mobile --config jest.android.config.js",
+    "test:mobile:android:detox": "TEST_PLATFORM=android ANDROID_AUTOMATION_MODE=detox detox test --configuration android.emu.debug --config jest.android.detox.config.js",
     "test:mobile": "npm run test:mobile:ios && npm run test:mobile:android",
     "test:web": "playwright test tests/web",
     "test:web:chromium": "playwright test tests/web --project=chromium --headed",

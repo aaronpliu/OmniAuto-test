@@ -2,7 +2,7 @@ import { BaseActions } from './BaseActions';
 import { DetoxActions } from './DetoxActions';
 import { AppiumActions } from './AppiumActions';
 import { PlaywrightActions } from './PlaywrightActions';
-import { Platform, ActionFactoryConfig, IosAutomationMode } from '../types/actions';
+import { Platform, ActionFactoryConfig, IosAutomationMode, AndroidAutomationMode } from '../types/actions';
 import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
@@ -37,6 +37,15 @@ function getIosAutomationMode(config?: ActionFactoryConfig): IosAutomationMode {
   return mode === 'appium' ? 'appium' : 'detox';
 }
 
+/**
+ * 获取 Android 自动化模式
+ * 优先级：参数 > 环境变量 ANDROID_AUTOMATION_MODE > 默认 'appium'
+ */
+function getAndroidAutomationMode(config?: ActionFactoryConfig): AndroidAutomationMode {
+  const mode = config?.androidAutomationMode || process.env.ANDROID_AUTOMATION_MODE || 'appium';
+  return mode === 'detox' ? 'detox' : 'appium';
+}
+
 export class ActionFactory {
   static create(config: Platform | ActionFactoryConfig): BaseActions {
     const configObj = typeof config === 'string' ? { platform: config } : config;
@@ -56,8 +65,13 @@ export class ActionFactory {
       }
 
       case 'android': {
-        const capabilities = configObj.capabilities;
-        return new AppiumActions(capabilities);
+        const androidMode = getAndroidAutomationMode(configObj);
+        if (androidMode === 'detox') {
+          logger.info('Android automation mode: Detox');
+          return new DetoxActions();
+        }
+        logger.info('Android automation mode: Appium (UiAutomator2)');
+        return new AppiumActions(configObj.capabilities);
       }
 
       case 'web': {
