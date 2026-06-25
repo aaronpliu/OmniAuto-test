@@ -137,11 +137,26 @@ function buildStepName(method: string, args: unknown[]): string {
 //  Allure step wrapper（Appium 环境，有 allure-js-commons 运行时）
 // ================================================================
 
-async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>): Promise<T> {
+async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target: any): Promise<T> {
   try {
-    const { step } = require('allure-js-commons');
+    const { step, attachment } = require('allure-js-commons');
     if (typeof step === 'function') {
-      return await (step as any)(name, async () => await fn());
+      return await (step as any)(name, async () => {
+        try {
+          return await fn();
+        } catch (innerErr: any) {
+          // 步骤失败时截屏并附加到当前 Allure step 上下文中
+          try {
+            if (typeof attachment === 'function' && typeof target.takeScreenshot === 'function') {
+              const path = await target.takeScreenshot(`step_fail_${Date.now()}`);
+              const fs = require('fs');
+              attachment('Step Failure Screenshot', fs.readFileSync(path), 'image/png');
+              logger.info(`[Step] 📸 截图已附加到 Allure step`);
+            }
+          } catch { /* 截图附加失败不影响步骤 */ }
+          throw innerErr;
+        }
+      });
     }
   } catch {
     // Allure 运行时不可用（如 Detox 环境），降级为直接执行
@@ -178,7 +193,7 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
         try {
           const result = await wrapWithAllureStep(stepName, async () => {
             return await original.apply(target, args);
-          });
+          }, target);
 
           // 记录成功步骤到文件
           writeStepToFile({
