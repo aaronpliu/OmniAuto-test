@@ -5,7 +5,7 @@
  * 直接写入 Allure JSON 结果文件，包含自动化收集的测试步骤。
  */
 import { createHash } from 'crypto';
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, existsSync, mkdirSync, readFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 const RESULTS_DIR = join(process.cwd(), 'artifacts', 'allure-results');
@@ -38,8 +38,6 @@ interface AllureTestResult {
 /** 从步骤文件中读取并清空（文件系统 IPC，兼容 Jest sandbox 隔离） */
 function drainRecordedSteps(): AllureStep[] {
   try {
-    const { readFileSync, existsSync, unlinkSync } = require('fs');
-    const { join } = require('path');
     const filePath = join(process.cwd(), 'artifacts', 'allure-results', '.pending-steps.jsonl');
 
     if (!existsSync(filePath)) return [];
