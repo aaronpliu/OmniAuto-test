@@ -126,12 +126,20 @@ async function captureScreenshotOnFailure(): Promise<void> {
 //  注册 Jest 全局钩子
 // ====================================================================
 
+// 延迟导入 clearStepsFile（避免循环依赖）
+let _clearStepsFile: (() => void) | null = null;
+function clearSteps() {
+  if (!_clearStepsFile) {
+    try {
+      _clearStepsFile = require('../actions/ActionProxy').clearStepsFile;
+    } catch { /* ignore */ }
+  }
+  try { _clearStepsFile?.(); } catch { /* ignore */ }
+}
+
 beforeEach(async () => {
-  // 清空上一条测试的步骤记录
-  try {
-    const collector = (globalThis as any)['__OMNI_STEP_COLLECTOR__'];
-    if (collector && collector.clear) collector.clear();
-  } catch { /* ignore */ }
+  // 清空上一条测试的步骤记录（文件系统）
+  clearSteps();
 
   if (isRecordingEnabled()) {
     await startRecording();

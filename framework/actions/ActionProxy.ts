@@ -2,52 +2,65 @@
  * ActionProxy — 自动步骤录制
  *
  * 用 Proxy 包装 BaseActions 实例，自动拦截每个方法调用，
- * 将操作记录为测试步骤，无需用户修改任何 Page Object 代码。
+ * 将操作记录为测试步骤。步骤记录到文件系统（artifacts/allure-results/），
+ * 由 Reporter 读取并写入 Allure JSON。
  *
- * 兼容模式：
- *   Appium 环境：同时使用 allure.step() 原生记录 + 全局 StepCollector
- *   Detox 环境：使用全局 StepCollector，Reporter 写入 Allure JSON
+ * 因为 Jest test sandbox 和 Reporter 不在同一 vm.Context，
+ * 不能依靠 globalThis 共享数据，改用文件系统作 IPC 桥梁。
  */
 import { BaseActions } from './BaseActions';
 import { Logger } from '../utils/logger';
+import { appendFileSync, unlinkSync, existsSync } from 'fs';
+import { join } from 'path';
 
 const logger = Logger.getInstance();
 
 // ================================================================
-//  全局步骤收集器
+//  步骤记录文件
 // ================================================================
 
-export interface StepRecord {
-  name: string;
-  status: 'passed' | 'failed' | 'broken';
-  start: number;
-  stop: number;
-  error?: string;
+const STEPS_DIR = join(process.cwd(), 'artifacts', 'allure-results');
+const STEPS_FILE_NAME = '.pending-steps.jsonl';
+let cachedStepsPath = '';
+
+function getStepsPath(): string {
+  if (!cachedStepsPath) {
+    cachedStepsPath = join(STEPS_DIR, STEPS_FILE_NAME);
+  }
+  return cachedStepsPath;
 }
 
-class StepCollector {
-  private steps: StepRecord[] = [];
-
-  addStep(step: StepRecord): void {
-    this.steps.push(step);
-  }
-
-  getSteps(): StepRecord[] {
-    return [...this.steps];
-  }
-
-  clear(): void {
-    this.steps = [];
+/** 将单条步骤追加写入文件 */
+function writeStepToFile(step: Record<string, unknown>): void {
+  try {
+    appendFileSync(getStepsPath(), JSON.stringify(step) + '\n');
+  } catch {
+    // 静默忽略写入失败
   }
 }
 
-/* 全局单例，Reporter 和 Proxy 共享 */
-export function getStepCollector(): StepCollector {
-  const key = '__OMNI_STEP_COLLECTOR__';
-  if (!(globalThis as any)[key]) {
-    (globalThis as any)[key] = new StepCollector();
+/** 清空步骤文件（在每个 test 开始时调用） */
+export function clearStepsFile(): void {
+  try {
+    const p = getStepsPath();
+    if (existsSync(p)) unlinkSync(p);
+  } catch {
+    // ignore
   }
-  return (globalThis as any)[key];
+}
+
+/** 读取并清空步骤文件（Reporter 调用） */
+export function drainStepsFile(): Record<string, unknown>[] {
+  const p = getStepsPath();
+  try {
+    if (!existsSync(p)) return [];
+    const fs = require('fs');
+    const raw = fs.readFileSync(p, 'utf-8');
+    unlinkSync(p);
+    return raw.trim().split('\n').filter(Boolean).map((l: string) => JSON.parse(l));
+  } catch {
+    return [];
+  }
 }
 
 // ================================================================
@@ -56,7 +69,6 @@ export function getStepCollector(): StepCollector {
 
 function selectorName(s: unknown): string {
   if (typeof s === 'string') {
-    // 截取 last part after : or /
     const short = s.includes(':') ? s.split(':').pop()! : s;
     return short.length > 30 ? short.substring(0, 27) + '...' : short;
   }
@@ -118,24 +130,21 @@ function buildStepName(method: string, args: unknown[]): string {
   else                                        parts.push(method);
 
   const name = parts.filter(Boolean).join(' ');
-  // 截断过长的步骤名
   return name.length > 100 ? name.substring(0, 97) + '...' : name;
 }
 
 // ================================================================
-//  Allure step wrapper（Appium 环境）
+//  Allure step wrapper（Appium 环境，有 allure-js-commons 运行时）
 // ================================================================
 
 async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>): Promise<T> {
   try {
-    // allure-js-commons 的 step() 在 allure-jest/node 环境中自动关联当前测试
     const { step } = require('allure-js-commons');
     if (typeof step === 'function') {
       return await (step as any)(name, async () => await fn());
     }
   } catch {
     // Allure 运行时不可用（如 Detox 环境），降级为直接执行
-    logger.debug(`[StepProxy] allure runtime unavailable, step "${name}" logged via collector only`);
   }
   return await fn();
 }
@@ -144,27 +153,24 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>): Promis
 //  Proxy 包装器
 // ================================================================
 
-/** 不需要记录为步骤的内部方法 */
 const SKIP_METHODS = new Set(['getDriver', 'buildDefaultCapabilities', 'getPlatform', 'selectorToAppiumString', 'resolveElement']);
 
 export function createActionProxy<T extends BaseActions>(actions: T): T {
   logger.info(`[ActionProxy] Wrapping ${actions.constructor.name} — auto step recording enabled`);
 
   return new Proxy(actions, {
-    get(target: T, prop: string | symbol, receiver: any) {
-      const original = Reflect.get(target, prop, receiver);
+    get(target: T, prop: string | symbol) {
+      const original = (target as any)[prop];
 
-      // 只包装原型上的异步函数
       if (typeof original !== 'function' || typeof prop !== 'string' || SKIP_METHODS.has(prop)) {
         return original;
       }
 
-      // 跳过构造函数、getter 等
       if (prop === 'constructor' || prop.startsWith('_')) {
         return original;
       }
 
-      // 返回包装后的函数
+      // 返回包装后的函数 — 每次调用都记录步骤到文件
       return async function (...args: unknown[]): Promise<unknown> {
         const stepName = buildStepName(prop, args);
         const startTime = Date.now();
@@ -174,28 +180,26 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
             return await original.apply(target, args);
           });
 
-          // 记录成功步骤
-          const collector = getStepCollector();
-          collector.addStep({
+          // 记录成功步骤到文件
+          writeStepToFile({
             name: stepName,
             status: 'passed',
             start: startTime,
             stop: Date.now(),
           });
-          logger.debug(`[ActionProxy] ✓ ${stepName}`);
+          logger.info(`[Step] ✓ ${stepName}`);
 
           return result;
         } catch (error: any) {
-          // 记录失败步骤
-          const collector = getStepCollector();
-          collector.addStep({
+          // 记录失败步骤到文件
+          writeStepToFile({
             name: stepName,
             status: 'failed',
             start: startTime,
             stop: Date.now(),
             error: error.message,
           });
-          logger.debug(`[ActionProxy] ✗ ${stepName}: ${error.message}`);
+          logger.info(`[Step] ✗ ${stepName}: ${error.message}`);
 
           throw error;
         }

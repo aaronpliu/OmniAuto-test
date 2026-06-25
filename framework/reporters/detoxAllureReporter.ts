@@ -35,17 +35,21 @@ interface AllureTestResult {
   attachments: any[];
 }
 
-/** 从全局 StepCollector 读取并清空步骤 */
+/** 从步骤文件中读取并清空（文件系统 IPC，兼容 Jest sandbox 隔离） */
 function drainRecordedSteps(): AllureStep[] {
   try {
-    const collector = (globalThis as any)['__OMNI_STEP_COLLECTOR__'];
-    if (!collector || typeof collector.getSteps !== 'function') {
-      console.log('[AllureReporter] StepCollector not found on globalThis');
-      return [];
-    }
-    const steps: any[] = collector.getSteps();
-    console.log(`[AllureReporter] Drained ${steps.length} steps from collector`);
-    collector.clear();
+    const { readFileSync, existsSync, unlinkSync } = require('fs');
+    const { join } = require('path');
+    const filePath = join(process.cwd(), 'artifacts', 'allure-results', '.pending-steps.jsonl');
+
+    if (!existsSync(filePath)) return [];
+
+    const raw = readFileSync(filePath, 'utf-8');
+    unlinkSync(filePath); // 清空文件
+
+    const steps: any[] = raw.trim().split('\n').filter(Boolean).map((l: string) => JSON.parse(l));
+    console.log(`[AllureReporter] Read ${steps.length} steps from file`);
+
     return steps.map((s: any) => ({
       name: s.name,
       status: s.status,
