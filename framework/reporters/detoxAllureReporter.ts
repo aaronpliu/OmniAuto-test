@@ -11,6 +11,15 @@ import { join } from 'path';
 
 const RESULTS_DIR = join(process.cwd(), 'artifacts', 'allure-results');
 
+interface AllureStep {
+  name: string;
+  status: 'passed' | 'failed' | 'broken' | 'skipped';
+  stage: 'finished';
+  start: number;
+  stop: number;
+  statusDetails?: { message: string; trace: string };
+}
+
 interface AllureTestResult {
   uuid: string;
   name: string;
@@ -23,8 +32,29 @@ interface AllureTestResult {
   stop: number;
   labels: { name: string; value: string }[];
   parameters: any[];
-  steps: any[];
+  steps: AllureStep[];
   attachments: any[];
+}
+
+/** 从全局 StepCollector 读取当前测试的步骤 */
+function getRecordedSteps(): AllureStep[] {
+  try {
+    const key = '__OMNI_STEP_COLLECTOR__';
+    const collector = (globalThis as any)[key];
+    if (!collector || !collector.getSteps) return [];
+    const steps = collector.getSteps();
+    collector.clear(); // 读取后清空，避免重复
+    return steps.map((s: any) => ({
+      name: s.name,
+      status: s.status,
+      stage: 'finished' as const,
+      start: s.start,
+      stop: s.stop,
+      statusDetails: s.error ? { message: s.error, trace: '' } : undefined,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 class DetoxAllureReporter implements jest.Reporter {
@@ -67,7 +97,7 @@ class DetoxAllureReporter implements jest.Reporter {
           { name: 'platform', value: process.env.TEST_PLATFORM || 'ios' },
         ],
         parameters: [],
-        steps: [],
+        steps: getRecordedSteps(),
         attachments: [],
       };
 

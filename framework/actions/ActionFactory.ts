@@ -2,6 +2,7 @@ import { BaseActions } from './BaseActions';
 import { DetoxActions } from './DetoxActions';
 import { AppiumActions } from './AppiumActions';
 import { PlaywrightActions } from './PlaywrightActions';
+import { createActionProxy } from './ActionProxy';
 import { Platform, ActionFactoryConfig, IosAutomationMode, AndroidAutomationMode } from '../types/actions';
 import { Logger } from '../utils/logger';
 
@@ -58,20 +59,20 @@ export class ActionFactory {
         const iosMode = getIosAutomationMode(configObj);
         if (iosMode === 'appium') {
           logger.info('iOS automation mode: Appium (XCUITest)');
-          return new AppiumActions(configObj.capabilities);
+          return createActionProxy(new AppiumActions(configObj.capabilities));
         }
         logger.info('iOS automation mode: Detox');
-        return new DetoxActions();
+        return createActionProxy(new DetoxActions());
       }
 
       case 'android': {
         const androidMode = getAndroidAutomationMode(configObj);
         if (androidMode === 'detox') {
           logger.info('Android automation mode: Detox');
-          return new DetoxActions();
+          return createActionProxy(new DetoxActions());
         }
         logger.info('Android automation mode: Appium (UiAutomator2)');
-        return new AppiumActions(configObj.capabilities);
+        return createActionProxy(new AppiumActions(configObj.capabilities));
       }
 
       case 'web': {
@@ -82,7 +83,7 @@ export class ActionFactory {
           );
         }
 
-        return new PlaywrightActions(configObj.page, configObj.browser);
+        return createActionProxy(new PlaywrightActions(configObj.page, configObj.browser));
       }
 
       default:

@@ -127,6 +127,12 @@ async function captureScreenshotOnFailure(): Promise<void> {
 // ====================================================================
 
 beforeEach(async () => {
+  // 清空上一条测试的步骤记录
+  try {
+    const collector = (globalThis as any)['__OMNI_STEP_COLLECTOR__'];
+    if (collector && collector.clear) collector.clear();
+  } catch { /* ignore */ }
+
   if (isRecordingEnabled()) {
     await startRecording();
   }
