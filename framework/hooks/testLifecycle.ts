@@ -14,21 +14,12 @@ import { Logger } from '../utils/logger';
 
 const logger = Logger.getInstance();
 
-// 动态获取 allure 实例（运行时可用，TypeScript 无法静态解析其类型）
-function getAllure(): any {
-  try {
-    return require('allure-jest/node').allure;
-  } catch {
-    return null;
-  }
-}
-
-/** 安全地附加文件到 Allure 报告 */
+/** 安全地附加文件到 Allure 报告（使用 allure-js-commons 原生 API） */
 function allureAttachment(name: string, content: Buffer, type: string): void {
   try {
-    const a = getAllure();
-    if (a) {
-      a.attachment(name, content, type);
+    const { attachment } = require('allure-js-commons');
+    if (typeof attachment === 'function') {
+      attachment(name, content, type);
     }
   } catch { /* ignore */ }
 }
