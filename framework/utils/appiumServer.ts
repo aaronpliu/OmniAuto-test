@@ -1,4 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
+import { createWriteStream, existsSync, mkdirSync, WriteStream } from 'fs';
+import { join } from 'path';
 import axios from 'axios';
 import { Logger } from '../utils/logger';
 
@@ -28,41 +30,50 @@ export class AppiumServer {
     }
   }
 
+  private logStream: WriteStream | null = null;
+
   /**
-   * 启动 Appium server
+   * 启动 Appium server（日志写入独立文件，不污染测试终端）
    */
   async start(): Promise<void> {
-    // 检查是否已在运行
     const running = await this.isRunning();
     if (running) {
       logger.info(`Appium server 已在端口 ${this.port} 运行`);
       return;
     }
 
-    logger.info(`正在启动 Appium server (${this.host}:${this.port})...`);
+    // 确保日志目录存在
+    const logDir = join(process.cwd(), 'artifacts', 'logs');
+    if (!existsSync(logDir)) {
+      mkdirSync(logDir, { recursive: true });
+    }
 
-    // 启动 Appium server
+    // Appium 日志文件
+    const logFile = join(logDir, `appium-server-${Date.now()}.log`);
+    this.logStream = createWriteStream(logFile, { flags: 'a' });
+
+    logger.info(`正在启动 Appium server (${this.host}:${this.port})...`);
+    logger.info(`Appium 日志: ${logFile}`);
+
     this.process = spawn('appium', [
       '--port', this.port.toString(),
       '--address', this.host,
       '--allow-insecure', 'chromedriver_autodownload',
-      '--relaxed-security'
+      '--relaxed-security',
+      '--log-level', 'info',
     ], {
       detached: false,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    // 监听输出
+    // 将 stdout 写入日志文件
     if (this.process.stdout) {
-      this.process.stdout.on('data', (data: Buffer) => {
-        logger.debug(`Appium: ${data.toString().trim()}`);
-      });
+      this.process.stdout.pipe(this.logStream);
     }
 
+    // 将 stderr 也写入同一日志文件
     if (this.process.stderr) {
-      this.process.stderr.on('data', (data: Buffer) => {
-        logger.error(`Appium Error: ${data.toString().trim()}`);
-      });
+      this.process.stderr.pipe(this.logStream);
     }
 
     // 等待 server 就绪
@@ -94,18 +105,16 @@ export class AppiumServer {
   async stop(): Promise<void> {
     if (this.process && !this.process.killed) {
       logger.info(`正在停止 Appium server (PID: ${this.process.pid})...`);
-      
+
       this.process.kill('SIGTERM');
-      
-      // 等待进程结束
+
       await new Promise<void>((resolve) => {
         if (this.process) {
           this.process.on('close', () => {
             logger.info('Appium server 已停止');
             resolve();
           });
-          
-          // 超时强制终止
+
           setTimeout(() => {
             if (this.process && !this.process.killed) {
               this.process.kill('SIGKILL');
@@ -117,10 +126,16 @@ export class AppiumServer {
           resolve();
         }
       });
-      
+
       this.process = null;
     } else {
       logger.info('Appium server 未运行或已停止');
+    }
+
+    // 关闭日志文件流
+    if (this.logStream) {
+      this.logStream.end();
+      this.logStream = null;
     }
   }
 
