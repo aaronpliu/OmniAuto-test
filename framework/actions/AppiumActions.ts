@@ -231,6 +231,7 @@ export class AppiumActions extends BaseActions {
         port,
         path: '/',
         capabilities: this.capabilities,
+        logLevel: 'warn',   // 抑制 WebdriverIO 的 COMMAND/DATA/RESULT info 日志
       });
 
       logger.info('✓ Connected to Appium Server');
