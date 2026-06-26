@@ -3,6 +3,7 @@ import { DetoxActions } from './DetoxActions';
 import { AppiumActions } from './AppiumActions';
 import { PlaywrightActions } from './PlaywrightActions';
 import { createActionProxy } from './ActionProxy';
+import { TestContext } from '../utils/testContext';
 import { Platform, ActionFactoryConfig, IosAutomationMode, AndroidAutomationMode } from '../types/actions';
 import { Logger } from '../utils/logger';
 
@@ -57,22 +58,22 @@ export class ActionFactory {
     switch (platform) {
       case 'ios': {
         const iosMode = getIosAutomationMode(configObj);
-        if (iosMode === 'appium') {
-          logger.info('iOS automation mode: Appium (XCUITest)');
-          return createActionProxy(new AppiumActions(configObj.capabilities));
-        }
-        logger.info('iOS automation mode: Detox');
-        return createActionProxy(new DetoxActions());
+        const actions = iosMode === 'appium'
+          ? createActionProxy(new AppiumActions(configObj.capabilities))
+          : createActionProxy(new DetoxActions());
+        logger.info(`iOS automation mode: ${iosMode === 'appium' ? 'Appium (XCUITest)' : 'Detox'}`);
+        TestContext.setActions(actions);
+        return actions;
       }
 
       case 'android': {
         const androidMode = getAndroidAutomationMode(configObj);
-        if (androidMode === 'detox') {
-          logger.info('Android automation mode: Detox');
-          return createActionProxy(new DetoxActions());
-        }
-        logger.info('Android automation mode: Appium (UiAutomator2)');
-        return createActionProxy(new AppiumActions(configObj.capabilities));
+        const actions = androidMode === 'detox'
+          ? createActionProxy(new DetoxActions())
+          : createActionProxy(new AppiumActions(configObj.capabilities));
+        logger.info(`Android automation mode: ${androidMode === 'detox' ? 'Detox' : 'Appium (UiAutomator2)'}`);
+        TestContext.setActions(actions);
+        return actions;
       }
 
       case 'web': {
@@ -82,8 +83,9 @@ export class ActionFactory {
             'Example: ActionFactory.create({ platform: "web", page })'
           );
         }
-
-        return createActionProxy(new PlaywrightActions(configObj.page, configObj.browser));
+        const actions = createActionProxy(new PlaywrightActions(configObj.page, configObj.browser));
+        TestContext.setActions(actions);
+        return actions;
       }
 
       default:
