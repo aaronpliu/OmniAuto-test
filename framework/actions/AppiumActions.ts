@@ -4,6 +4,7 @@ import { Selector } from '../types/actions';
 import { Logger } from '../utils/logger';
 import { config } from '../utils/config';
 import { parseSelector } from '../utils/SelectorBuilder';
+import { resizeScreenshot } from '../utils/imageResizer';
 
 const logger = Logger.getInstance();
 
@@ -611,7 +612,8 @@ export class AppiumActions extends BaseActions {
     const driver = await this.getDriver();
     const path = `artifacts/screenshots/${name}_${Date.now()}.png`;
     await driver.saveScreenshot(path);
-    return path;
+    // 缩放截图至适合 Web 报告查看的尺寸
+    return await resizeScreenshot(path);
   }
 
   /** 开始屏幕录制（基于 Appium 原生 API） */

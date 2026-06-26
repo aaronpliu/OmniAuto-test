@@ -1,6 +1,7 @@
 import { device, element, by, expect as detoxExpect } from 'detox';
 import { BaseActions } from './BaseActions';
 import { Logger } from '../utils/logger';
+import { resizeScreenshot } from '../utils/imageResizer';
 import { parseSelector, SelectorType } from '../utils/SelectorBuilder';
 
 const logger = Logger.getInstance();
@@ -482,7 +483,7 @@ export class DetoxActions extends BaseActions {
   async takeScreenshot(name: string): Promise<string> {
     logger.debug(`Taking screenshot: ${name}`);
     const path = await device.takeScreenshot(name);
-    return path;
+    return await resizeScreenshot(path);
   }
 
   /** Detox 不支持原生屏幕录制，此方法为占位 */
