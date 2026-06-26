@@ -36,6 +36,28 @@ interface AllureTestResult {
   attachments: any[];
 }
 
+/** 从附件文件中读取测试级截图并复制到 allure-results */
+function drainTestAttachments(): { name: string; type: string; source: string }[] {
+  try {
+    const filePath = join(process.cwd(), 'artifacts', 'allure-results', '.pending-attach.jsonl');
+    if (!existsSync(filePath)) return [];
+    const raw = readFileSync(filePath, 'utf-8');
+    unlinkSync(filePath);
+
+    const attachments: { name: string; type: string; source: string }[] = [];
+    raw.trim().split('\n').filter(Boolean).forEach((line: string) => {
+      const item = JSON.parse(line);
+      if (item.screenshot && existsSync(item.screenshot)) {
+        const destName = `failure-${basename(item.screenshot)}`;
+        const destPath = join(RESULTS_DIR, destName);
+        copyFileSync(item.screenshot, destPath);
+        attachments.push({ name: 'Failure Screenshot', type: 'image/png', source: destName });
+      }
+    });
+    return attachments;
+  } catch { return []; }
+}
+
 /** 从步骤文件中读取并清空（文件系统 IPC，兼容 Jest sandbox 隔离） */
 function drainRecordedSteps(): AllureStep[] {
   try {
@@ -99,14 +121,19 @@ class DetoxAllureReporter implements jest.Reporter {
   onTestResult(_test: jest.Test, testResult: jest.TestResult): void {
     console.log(`[AllureReporter] onTestResult called, tests: ${testResult.testResults.length}`);
 
-    // 在 for 循环之前一次性读取步骤
+    // 一次性读取步骤
     const allSteps = drainRecordedSteps();
     console.log(`[AllureReporter] Steps for this file: ${allSteps.length}`);
+
+    // 一次性读取测试级截图附件
+    const testAttachments = drainTestAttachments();
 
     for (const result of testResult.testResults) {
       const fullName = result.fullName || `${testResult.testFilePath}#${result.title}`;
       const uuid = this.generateUuid(fullName);
       const startTime = this.testStartTimes.get(testResult.testFilePath) || Date.now();
+      const isSkipped = result.status === 'skipped' || result.status === 'pending' || result.status === 'disabled';
+      const isFailed = result.status === 'failed';
 
       const allureResult: AllureTestResult = {
         uuid,
@@ -127,8 +154,8 @@ class DetoxAllureReporter implements jest.Reporter {
           { name: 'platform', value: process.env.TEST_PLATFORM || 'ios' },
         ],
         parameters: [],
-        steps: allSteps,
-        attachments: [],
+        steps: isSkipped ? [] : allSteps,
+        attachments: isFailed ? testAttachments : [],
       };
 
       this.results.set(uuid, allureResult);

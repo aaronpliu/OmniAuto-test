@@ -104,9 +104,18 @@ async function captureScreenshotOnFailure(): Promise<void> {
     const screenshotPath = await actions.takeScreenshot(`failure_${Date.now()}`);
     logger.info(`[截图] 已保存: ${screenshotPath}`);
 
+    // Appium 模式：通过 allure-js-commons 附加到报告
     const fs = require('fs');
     const buf = fs.readFileSync(screenshotPath);
     allureAttachment('Failure Screenshot / 失败截图', buf, 'image/png');
+
+    // Detox 模式：通过文件系统传给 Reporter
+    try {
+      const { join } = require('path');
+      const attachFile = join(process.cwd(), 'artifacts', 'allure-results', '.pending-attach.jsonl');
+      fs.appendFileSync(attachFile, JSON.stringify({ screenshot: screenshotPath }) + '\n');
+    } catch { /* ignore */ }
+
     logger.info('[截图] 已附加到 Allure 报告');
   } catch (err: any) {
     logger.warn(`[截图] 失败: ${err.message}`);
@@ -117,15 +126,16 @@ async function captureScreenshotOnFailure(): Promise<void> {
 //  注册 Jest 全局钩子
 // ====================================================================
 
-// 延迟导入 clearStepsFile（避免循环依赖）
-let _clearStepsFile: (() => void) | null = null;
 function clearSteps() {
-  if (!_clearStepsFile) {
-    try {
-      _clearStepsFile = require('../actions/ActionProxy').clearStepsFile;
-    } catch { /* ignore */ }
-  }
-  try { _clearStepsFile?.(); } catch { /* ignore */ }
+  try {
+    // 清空步骤文件
+    const { join } = require('path');
+    const { existsSync, unlinkSync } = require('fs');
+    const stepsFile = join(process.cwd(), 'artifacts', 'allure-results', '.pending-steps.jsonl');
+    const attachFile = join(process.cwd(), 'artifacts', 'allure-results', '.pending-attach.jsonl');
+    if (existsSync(stepsFile)) unlinkSync(stepsFile);
+    if (existsSync(attachFile)) unlinkSync(attachFile);
+  } catch { /* ignore */ }
 }
 
 beforeEach(async () => {
