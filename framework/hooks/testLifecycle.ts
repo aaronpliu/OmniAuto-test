@@ -117,17 +117,26 @@ async function captureScreenshotOnFailure(): Promise<void> {
   logger.info(`[截图] 测试失败，正在截屏: ${testName}`);
 
   try {
-    const screenshotPath = await actions.takeScreenshot(`failure_${Date.now()}`);
+    let screenshotPath = await actions.takeScreenshot(`failure_${Date.now()}`);
+
+    // 将截图复制到永久目录（Detox 截图可能在 /tmp 中，Reporter 读取前会被清理）
+    const fs = require('fs');
+    const { join, basename } = require('path');
+    const permDir = join(process.cwd(), 'artifacts', 'screenshots');
+    if (!fs.existsSync(permDir)) fs.mkdirSync(permDir, { recursive: true });
+    const permPath = join(permDir, `failure_${basename(screenshotPath)}`);
+    if (screenshotPath !== permPath) {
+      fs.copyFileSync(screenshotPath, permPath);
+      screenshotPath = permPath;
+    }
     logger.info(`[截图] 已保存: ${screenshotPath}`);
 
     // Appium 模式：通过 allure-js-commons 附加到报告
-    const fs = require('fs');
     const buf = fs.readFileSync(screenshotPath);
     allureAttachment('Failure Screenshot / 失败截图', buf, 'image/png');
 
     // Detox 模式：通过文件系统传给 Reporter
     try {
-      const { join } = require('path');
       const attachFile = join(process.cwd(), 'artifacts', 'allure-results', '.pending-attach.jsonl');
       fs.appendFileSync(attachFile, JSON.stringify({ screenshot: screenshotPath }) + '\n');
     } catch { /* ignore */ }
