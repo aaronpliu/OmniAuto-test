@@ -39,6 +39,7 @@ const tmpFile = join(tmpdir(), 'omni-menu-choice');
         description: i === items.length - 1 ? '退出程序' : `选项 ${i + 1}`,
       })),
       pageSize: 12,
+      loop: false,
     });
     writeFileSync(tmpFile, String(index));
   } catch {
