@@ -42,19 +42,27 @@ function getTestName(): string {
   }
 }
 
-/** 判断当前测试是否失败（兼容 Detox 和 Appium 测试环境） */
+/** 判断当前测试是否失败：检查步骤文件中是否有失败步骤 */
 function isTestFailed(): boolean {
+  // 方式1: expect.getState（Appium 环境有效）
   try {
     const state = expect.getState() as any;
-    logger.info(`[Lifecycle] expect.getState: suppressedErrors=${state.suppressedErrors?.length||0} errors=${state.errors?.length||0} assertionCalls=${state.assertionCalls||0}`);
     if (state.suppressedErrors?.length > 0) return true;
     if (state.errors?.length > 0) return true;
   } catch { /* ignore */ }
 
-  // Jasmine 方式检测（兼容 Detox 环境）
+  // 方式2: 检查步骤文件中是否有失败步骤（Detox/Appium 通用）
   try {
-    const jasmineEnv = (globalThis as any).jasmine;
-    if (jasmineEnv?.currentTest?.failedExpectations?.length > 0) return true;
+    const { join } = require('path');
+    const { readFileSync, existsSync } = require('fs');
+    const stepsFile = join(process.cwd(), 'artifacts', 'allure-results', '.pending-steps.jsonl');
+    if (existsSync(stepsFile)) {
+      const raw = readFileSync(stepsFile, 'utf-8');
+      const hasFailed = raw.split('\n').some((l: string) => {
+        try { return JSON.parse(l).status === 'failed'; } catch { return false; }
+      });
+      if (hasFailed) return true;
+    }
   } catch { /* ignore */ }
 
   return false;
