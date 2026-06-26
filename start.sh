@@ -597,14 +597,20 @@ main() {
 
     # 如果没有参数，显示交互式菜单
     if [ $# -eq 0 ]; then
+        MENU_CMD="node cli/menu.js"
         while true; do
-            # 处理键盘选择（结果存储在全局变量 MENU_SELECTION 中）
-            handle_menu_selection
+            if command -v node &> /dev/null && [ -f "cli/menu.js" ]; then
+                # Node.js 交互式菜单（支持方向键）
+                MENU_SELECTION=$($MENU_CMD 2>/dev/tty)
+            else
+                # 降级：纯 bash 键盘选择
+                handle_menu_selection
+            fi
 
             # 执行选中的操作
             execute_menu_action $MENU_SELECTION
 
-            # 操作完成后暂停，等待用户按键
+            # 操作完成后暂停
             echo ""
             read -rs -n1 -p "按任意键返回菜单... / Press any key to return to menu..."
             echo ""
