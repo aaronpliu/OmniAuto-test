@@ -599,12 +599,14 @@ main() {
     if [ $# -eq 0 ]; then
         MENU_TMP=$(dirname "$(mktemp -u)")/omni-menu-choice 2>/dev/null || MENU_TMP=/tmp/omni-menu-choice
         while true; do
+            MENU_SELECTION=""
             if command -v node &> /dev/null && [ -f "cli/menu.js" ]; then
                 # Node.js 交互式菜单（支持方向键）
-                node cli/menu.js
-                MENU_SELECTION=$(cat "$MENU_TMP" 2>/dev/null)
-            else
-                # 降级：纯 bash 键盘选择
+                node cli/menu.js 2>/dev/null && MENU_SELECTION=$(cat "$MENU_TMP" 2>/dev/null)
+            fi
+
+            # 降级：Node.js 不可用或失败时使用纯 bash 键盘选择
+            if [ -z "$MENU_SELECTION" ]; then
                 handle_menu_selection
             fi
 
