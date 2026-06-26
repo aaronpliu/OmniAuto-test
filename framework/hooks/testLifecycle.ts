@@ -131,17 +131,13 @@ async function captureScreenshotOnFailure(): Promise<void> {
     }
     logger.info(`[截图] 已保存: ${screenshotPath}`);
 
-    // Appium 模式：通过 allure-js-commons 附加到报告
-    const buf = fs.readFileSync(screenshotPath);
-    allureAttachment('Failure Screenshot / 失败截图', buf, 'image/png');
-
-    // Detox 模式：通过文件系统传给 Reporter
+    // 通过文件系统传给 Reporter（Detox / Appium 通用）
     try {
       const attachFile = join(process.cwd(), 'artifacts', 'allure-results', '.pending-attach.jsonl');
       fs.appendFileSync(attachFile, JSON.stringify({ screenshot: screenshotPath }) + '\n');
     } catch { /* ignore */ }
 
-    logger.info('[截图] 已附加到 Allure 报告');
+    logger.info('[截图] 测试级截图已记录');
   } catch (err: any) {
     logger.warn(`[截图] 失败: ${err.message}`);
   }
