@@ -42,13 +42,21 @@ function getTestName(): string {
   }
 }
 
-/** 判断当前测试是否失败 */
+/** 判断当前测试是否失败（兼容 Detox 和 Appium 测试环境） */
 function isTestFailed(): boolean {
   try {
     const state = expect.getState() as any;
+    logger.info(`[Lifecycle] expect.getState: suppressedErrors=${state.suppressedErrors?.length||0} errors=${state.errors?.length||0} assertionCalls=${state.assertionCalls||0}`);
     if (state.suppressedErrors?.length > 0) return true;
     if (state.errors?.length > 0) return true;
   } catch { /* ignore */ }
+
+  // Jasmine 方式检测（兼容 Detox 环境）
+  try {
+    const jasmineEnv = (globalThis as any).jasmine;
+    if (jasmineEnv?.currentTest?.failedExpectations?.length > 0) return true;
+  } catch { /* ignore */ }
+
   return false;
 }
 
@@ -148,7 +156,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  logger.info('[Lifecycle] afterEach running...');
   const failed = isTestFailed();
+  logger.info(`[Lifecycle] testFailed=${failed}`);
 
   // 1) 失败截图
   if (failed) {
