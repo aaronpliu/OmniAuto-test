@@ -8,7 +8,8 @@
  */
 const { select } = require('@inquirer/prompts');
 const { writeFileSync } = require('fs');
-const { join } = require('os');
+const { tmpdir } = require('os');
+const { join } = require('path');
 
 const items = [
   '安装依赖 / Install dependencies',
@@ -26,7 +27,7 @@ const items = [
   '退出 / Exit',
 ];
 
-const tmpFile = join(require('os').tmpdir(), 'omni-menu-choice');
+const tmpFile = join(tmpdir(), 'omni-menu-choice');
 
 (async () => {
   try {
