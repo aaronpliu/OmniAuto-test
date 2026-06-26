@@ -141,7 +141,8 @@ class DetoxAllureReporter implements jest.Reporter {
         fullName,
         historyId: createHash('md5').update(fullName).digest('hex'),
         status: this.mapStatus(result.status),
-        statusDetails: result.failureMessages?.length
+        // 有步骤时错误已在步骤中展示，测试级别不重复
+        statusDetails: (!isSkipped && allSteps.length === 0 && result.failureMessages?.length)
           ? { message: result.failureMessages[0], trace: result.failureMessages.join('\n') }
           : undefined,
         stage: 'finished',
