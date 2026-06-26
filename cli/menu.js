@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
  * OmniAutoTest Interactive Menu
- * 使用 @inquirer/prompts 提供方向键选择，输出选中项的索引
+ * 使用 @inquirer/prompts 提供方向键选择
  *
  * 用法: node cli/menu.js
- * 输出: 选中项的索引号（0-based）到 stdout
+ * 结果写入 /tmp/omni-menu-choice（供 start.sh 读取）
  */
 const { select } = require('@inquirer/prompts');
+const { writeFileSync } = require('fs');
+const { join } = require('os');
 
 const items = [
   '安装依赖 / Install dependencies',
@@ -24,6 +26,8 @@ const items = [
   '退出 / Exit',
 ];
 
+const tmpFile = join(require('os').tmpdir(), 'omni-menu-choice');
+
 (async () => {
   try {
     const index = await select({
@@ -35,10 +39,9 @@ const items = [
       })),
       pageSize: 12,
     });
-    // 输出选中的索引，start.sh 捕获
-    console.log(index);
+    writeFileSync(tmpFile, String(index));
   } catch {
-    // 用户按 Ctrl+C 退出
-    console.log(String(items.length - 1)); // 默认输出 "退出" 的索引
+    // 用户按 Ctrl+C → 选 "退出"
+    writeFileSync(tmpFile, String(items.length - 1));
   }
 })();

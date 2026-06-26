@@ -597,11 +597,12 @@ main() {
 
     # 如果没有参数，显示交互式菜单
     if [ $# -eq 0 ]; then
-        MENU_CMD="node cli/menu.js"
+        MENU_TMP=$(dirname "$(mktemp -u)")/omni-menu-choice 2>/dev/null || MENU_TMP=/tmp/omni-menu-choice
         while true; do
             if command -v node &> /dev/null && [ -f "cli/menu.js" ]; then
                 # Node.js 交互式菜单（支持方向键）
-                MENU_SELECTION=$($MENU_CMD 2>/dev/tty)
+                node cli/menu.js
+                MENU_SELECTION=$(cat "$MENU_TMP" 2>/dev/null)
             else
                 # 降级：纯 bash 键盘选择
                 handle_menu_selection
