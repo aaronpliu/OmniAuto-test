@@ -103,7 +103,7 @@ show_help() {
     echo "  This project only supports connecting to remote Appium Servers"
     echo "  请在配置文件中设置 Appium Server 地址"
     echo "  Please set Appium Server address in configuration file"
-    echo "  配置文件位置 / Configuration file location: configs/development.json"
+    echo "  配置文件位置 / Configuration file location: configs/environments/development.json"
     echo ""
     echo -e "${GREEN}本地调试 / Local Debugging:${NC}"
     echo "  可以使用以下命令启动本地 Appium Server:"

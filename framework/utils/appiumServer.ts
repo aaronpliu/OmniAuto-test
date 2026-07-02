@@ -3,6 +3,7 @@ import { createWriteStream, existsSync, mkdirSync, WriteStream } from 'fs';
 import { join } from 'path';
 import axios from 'axios';
 import { Logger } from '../utils/logger';
+import { mobileConfig } from './mobileConfig';
 
 const logger = Logger.getInstance();
 
@@ -166,8 +167,9 @@ let appiumServerInstance: AppiumServer | null = null;
 
 export function getAppiumServer(): AppiumServer {
   if (!appiumServerInstance) {
-    const port = parseInt(process.env.APPIUM_PORT || '4723', 10);
-    const host = process.env.APPIUM_HOST || '0.0.0.0';
+    const serverConfig = mobileConfig.getAppiumServerConfig();
+    const port = parseInt(process.env.APPIUM_PORT || String(serverConfig.port) || '4723', 10);
+    const host = process.env.APPIUM_HOST || serverConfig.host || '0.0.0.0';
     appiumServerInstance = new AppiumServer(port, host);
   }
   return appiumServerInstance;

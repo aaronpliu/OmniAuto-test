@@ -486,14 +486,20 @@ export class DetoxActions extends BaseActions {
     return await resizeScreenshot(path);
   }
 
-  /** Detox 不支持原生屏幕录制，此方法为占位 */
+  /**
+   * Detox 录屏由 artifacts video 插件接管（configs/mobile.config.js detox.artifacts.plugins.video），
+   * 此方法为接口兼容占位，实际录屏产物（.mp4）由 DetoxAllureReporter 在 onRunComplete 收集。
+   */
   async startRecording(): Promise<void> {
-    logger.warn('Detox 不支持原生屏幕录制，请使用 Appium (XCUITest) 模式录制 iOS 测试');
+    logger.debug('[Detox] 录屏由 artifacts video 插件接管，startRecording 为 no-op');
   }
 
-  /** Detox 不支持原生屏幕录制，此方法为占位 */
+  /**
+   * Detox 录屏由 artifacts video 插件接管，此方法为接口兼容占位。
+   * 实际录屏产物（.mp4）由 DetoxAllureReporter 在 onRunComplete 从 artifacts/detox 收集。
+   */
   async stopRecording(): Promise<Buffer | null> {
-    logger.warn('Detox 不支持原生屏幕录制');
+    logger.debug('[Detox] 录屏由 artifacts video 插件接管，stopRecording 为 no-op');
     return null;
   }
 

@@ -11,3 +11,5 @@ export {
 
 export { TestContext } from './testContext';
 export { ScreenRecorder, createScreenRecorder, getScreenRecorder } from './screenRecorder';
+export { mobileConfig, MobileConfigLoader } from './mobileConfig';
+export { unifiedConfig, UnifiedConfigLoader } from './unifiedConfig';

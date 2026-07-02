@@ -4,5 +4,5 @@ module.exports = {
   ...baseConfig,
   testMatch: ['**/tests/api/**/*.spec.ts'],
   testEnvironment: 'allure-jest/node',
-  setupFilesAfterSetup: ['<rootDir>/framework/hooks/apiSetup.ts']
+  setupFilesAfterEnv: ['<rootDir>/framework/hooks/apiSetup.ts']
 };

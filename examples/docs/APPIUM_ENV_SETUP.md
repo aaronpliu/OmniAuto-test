@@ -130,7 +130,7 @@ IOS_APP_PATH=./apps/ios/MyApp.app
 
 ### Step 3: Configure Appium Server
 
-Configure the Appium Server address in `configs/development.json`:
+Configure the Appium Server address in `configs/mobile.config.js`:
 
 ```json
 {
@@ -332,7 +332,7 @@ Use environment variables in your CI/CD pipeline:
 1. ✅ Review [.env.example](file:///.env.example) for all available options
 2. ✅ Copy to `.env` and configure for your environment
 3. ✅ Read [ENV_SETUP_GUIDE.md](file:///ENV_SETUP_GUIDE.md) for detailed instructions
-4. ✅ Configure Appium Server in `configs/development.json`
+4. ✅ Configure Appium Server in `configs/mobile.config.js`
 5. ✅ Run tests: `npm run test:mobile:android` or `npm run test:mobile:ios`
 
 ---

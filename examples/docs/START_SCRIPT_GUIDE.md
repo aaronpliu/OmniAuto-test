@@ -119,7 +119,7 @@ TEST_PLATFORM=android
 ```
 
 **配置 Appium Server**:
-在 `configs/development.json` 中配置 Appium Server 地址：
+在 `configs/mobile.config.js` 中配置 Appium Server 地址：
 ```json
 {
   "test": {
@@ -285,7 +285,7 @@ If you run the script without any arguments, it will show an interactive menu:
 ./start.sh install
 
 # 2. 确保已配置 Appium Server 地址
-#    编辑 configs/development.json
+#    编辑 configs/mobile.config.js
 
 # 3. 确保 Android 设备已连接
 adb devices

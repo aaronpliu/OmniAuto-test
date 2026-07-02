@@ -1,49 +1,37 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/**
+ * Playwright 配置 —— 参数来源：configs/web.config.js
+ * 优先级：环境变量 > configs/web.config.js > Playwright 默认值
+ */
+const webConfig = require('./configs/web.config.js');
+
+// 将 web.config.js 中的 projects 定义展开为 Playwright 所需格式
+const projects = webConfig.projects.map((p: any) => ({
+  name: p.name,
+  use: {
+    ...(p.device ? devices[p.device] : {}),
+    ...(p.viewport ? { viewport: p.viewport } : {}),
+  },
+}));
+
 export default defineConfig({
   testDir: './tests/web',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html'],
-    ['allure-playwright']
-  ],
+  retries: webConfig.retries,
+  workers: webConfig.workers,
+  reporter: webConfig.reporter,
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    baseURL: process.env.BASE_URL || webConfig.baseURL,
+    trace: webConfig.trace,
+    screenshot: webConfig.screenshot,
+    video: webConfig.video,
   },
-  projects: [
-    {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 1920, height: 1080 },
-      }
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] }
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] }
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] }
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] }
-    }
-  ],
-  outputDir: 'artifacts/test-results/',
-  timeout: 60000,
+  projects,
+  outputDir: webConfig.outputDir,
+  timeout: webConfig.timeout,
   expect: {
-    timeout: 10000
-  }
+    timeout: webConfig.expectTimeout,
+  },
 });

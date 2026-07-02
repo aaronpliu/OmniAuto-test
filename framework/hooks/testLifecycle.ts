@@ -33,6 +33,25 @@ function isRecordingEnabled(): boolean {
   return process.env.VIDEO_RECORDING === 'true';
 }
 
+/**
+ * 检测当前是否为 Detox 模式。
+ * Detox 模式下录屏由 Detox artifacts video 插件接管（写入 artifacts/detox/），
+ * testLifecycle 不需要调用 startRecording/stopRecording（避免 no-op 噪音）。
+ * Appium 模式下录屏仍走 actions.startRecording/stopRecording buffer 链路。
+ */
+function isDetoxMode(): boolean {
+  const platform = process.env.TEST_PLATFORM || 'ios';
+  if (platform === 'ios') {
+    // iOS 默认 Detox，仅 IOS_AUTOMATION_MODE=appium 时为 Appium
+    return process.env.IOS_AUTOMATION_MODE !== 'appium';
+  }
+  if (platform === 'android') {
+    // Android 默认 Appium，仅 ANDROID_AUTOMATION_MODE=detox 时为 Detox
+    return process.env.ANDROID_AUTOMATION_MODE === 'detox';
+  }
+  return false;
+}
+
 /** 获取当前测试展示名 */
 function getTestName(): string {
   try {
@@ -74,6 +93,7 @@ function isTestFailed(): boolean {
 
 async function startRecording(): Promise<void> {
   if (!isRecordingEnabled()) return;
+  if (isDetoxMode()) return; // Detox 录屏由 artifacts video 插件接管
 
   const actions = TestContext.getActions();
   if (!actions || typeof actions.startRecording !== 'function') return;
@@ -88,6 +108,7 @@ async function startRecording(): Promise<void> {
 
 async function stopRecording(): Promise<void> {
   if (!isRecordingEnabled()) return;
+  if (isDetoxMode()) return; // Detox 录屏由 artifacts video 插件接管
 
   const actions = TestContext.getActions();
   if (!actions || typeof actions.stopRecording !== 'function') return;

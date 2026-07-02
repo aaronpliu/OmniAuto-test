@@ -51,7 +51,7 @@ IOS_AUTOMATION_NAME=XCUITest
 
 #### Option A: Connect to Remote Appium Server
 
-Configure the Appium Server address in `configs/development.json`:
+Configure the Appium Server address in `configs/mobile.config.js`:
 
 ```json
 {

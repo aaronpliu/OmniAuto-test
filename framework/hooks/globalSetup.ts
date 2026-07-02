@@ -1,5 +1,6 @@
 import { Logger } from '../utils/logger';
 import { config } from '../utils/config';
+import { mobileConfig } from '../utils/mobileConfig';
 import { getAppiumServer } from '../utils/appiumServer';
 import { getDeviceDetector } from '../utils/deviceDetector';
 import { getIOSDeviceDetector } from '../utils/iosDeviceDetector';
@@ -83,17 +84,17 @@ export default async function globalSetup() {
       logger.warn('测试可能会失败，请确保 Xcode 已安装且有可用的 iOS 模拟器');
     }
 
-    // 从配置文件读取 iOS 应用路径
+    // 从统一移动端配置读取 iOS 应用路径
     try {
-      const envConfig = config.getConfig();
-      if (envConfig.applications && envConfig.applications.iosApp) {
+      const apps = mobileConfig.getApplications();
+      if (apps.iosApp) {
         const path = require('path');
-        const appPath = path.resolve(process.cwd(), envConfig.applications.iosApp);
+        const appPath = path.resolve(process.cwd(), apps.iosApp);
         process.env.IOS_APP_PATH = appPath;
-        logger.info(`使用配置文件中的 iOS 应用路径: ${appPath}`);
+        logger.info(`使用统一配置中的 iOS 应用路径: ${appPath}`);
       }
     } catch (error) {
-      logger.warn('无法从配置文件读取 iOS 应用路径');
+      logger.warn('无法从统一移动端配置读取 iOS 应用路径');
     }
   }
 
