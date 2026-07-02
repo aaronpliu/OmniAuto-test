@@ -104,12 +104,14 @@ Page objects import `by` from `@framework/utils` and are completely platform-agn
 
 ### Jest Configs
 
+All Jest configs live in `configs/jest/`. `base.config.js` holds shared settings (ts-jest, moduleNameMapper, transform); platform configs extend it via `require('./base.config')`. `rootDir` is explicitly set to the project root so all `<rootDir>/...` paths resolve correctly.
+
 | Config | Platform | TestEnvironment | Reporter | `testLifecycle` |
 |--------|----------|-----------------|----------|-----------------|
-| `jest.ios.config.js` | iOS Detox | `detox/runners/jest/...` | Custom Allure | ✅ |
-| `jest.ios.appium.config.js` | iOS Appium | `allure-jest/node` | Built-in | ✅ |
-| `jest.android.config.js` | Android Appium | `allure-jest/node` | Built-in | ✅ |
-| `jest.android.detox.config.js` | Android Detox | `detox/runners/jest/...` | Custom Allure | ✅ |
+| `configs/jest/ios.detox.config.js` | iOS Detox | `detox/runners/jest/...` | Custom Allure | ✅ |
+| `configs/jest/ios.appium.config.js` | iOS Appium | `allure-jest/node` | Built-in | ✅ |
+| `configs/jest/android.appium.config.js` | Android Appium | `allure-jest/node` | Built-in | ✅ |
+| `configs/jest/android.detox.config.js` | Android Detox | `detox/runners/jest/...` | Custom Allure | ✅ |
 
 ### Appium Server
 
@@ -123,6 +125,6 @@ Page objects import `by` from `@framework/utils` and are completely platform-agn
 - `framework/utils/deviceDetector.ts` — Detects Android devices via `adb devices`
 - `framework/utils/screenRecorder.ts` — Standalone utility for Appium screen recording
 
-### .detoxrc.json
+### .detoxrc.js
 
-Defines Detox configurations: `ios.sim.debug` / `ios.sim.release` (iPhone 17 Pro) and `android.emu.debug` / `android.emu.release` (Pixel 10 Pro XL). Binary paths point to `applications/TestGround/`. CLI artifacts include `onFailure` screenshot plugin.
+Entry point for Detox CLI. Requires `configs/mobile.config.js` and exports its `detox` section. Defines Detox configurations: `ios.sim.debug` / `ios.sim.release` (iPhone 17 Pro) and `android.emu.debug` / `android.emu.release` (Pixel 10 Pro XL). Binary paths point to `applications/TestGround/`. Artifacts plugins (screenshot `onFailure`, video, log) are configured in the top-level `artifacts` field with `keepOnlyFailedTestsArtifacts: true`.

@@ -67,9 +67,11 @@ Custom Jest reporter for Detox mode (since Detox overrides `allure-jest/node` te
 
 ## Jest Configs
 
+All Jest configs are in `configs/jest/`. `base.config.js` holds shared settings; platform configs extend it.
+
 | Config | Platform | Test Environment | Reporter |
 |--------|----------|-----------------|----------|
-| `jest.ios.config.js` | iOS Detox | `detox/runners/jest/testEnvironment` | Custom Allure |
-| `jest.ios.appium.config.js` | iOS Appium | `allure-jest/node` | Built-in |
-| `jest.android.config.js` | Android Appium | `allure-jest/node` | Built-in |
-| `jest.android.detox.config.js` | Android Detox | `detox/runners/jest/testEnvironment` | Custom Allure |
+| `configs/jest/ios.detox.config.js` | iOS Detox | `detox/runners/jest/testEnvironment` | Custom Allure |
+| `configs/jest/ios.appium.config.js` | iOS Appium | `allure-jest/node` | Built-in |
+| `configs/jest/android.appium.config.js` | Android Appium | `allure-jest/node` | Built-in |
+| `configs/jest/android.detox.config.js` | Android Detox | `detox/runners/jest/testEnvironment` | Custom Allure |

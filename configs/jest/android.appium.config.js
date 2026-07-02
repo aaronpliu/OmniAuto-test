@@ -1,4 +1,4 @@
-const baseConfig = require('./jest.config');
+const baseConfig = require('./base.config');
 
 module.exports = {
   ...baseConfig,
@@ -11,6 +11,6 @@ module.exports = {
   globalTeardown: '<rootDir>/framework/hooks/globalTeardown.ts',
   testEnvironmentOptions: {
     ...baseConfig.testEnvironmentOptions,
-    platform: 'ios'
+    platform: 'android'
   }
 };
