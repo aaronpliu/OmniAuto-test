@@ -16,7 +16,7 @@
  *     });
  *   }
  */
-import { Logger } from './logger';
+import { Logger } from "./logger";
 
 const logger = Logger.getInstance();
 
@@ -68,7 +68,8 @@ export function stepSync<T>(name: string, fn: () => T): T {
  */
 async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>): Promise<T> {
   try {
-    const { allure } = require('allure-jest/node');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional runtime dependency
+    const { allure } = require("allure-jest/node");
     return await allure.step(name, async () => {
       return await fn();
     });
@@ -83,7 +84,8 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>): Promis
  */
 function wrapWithAllureStepSync<T>(name: string, fn: () => T): T {
   try {
-    const { allure } = require('allure-jest/node');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional runtime dependency
+    const { allure } = require("allure-jest/node");
     return allure.step(name, () => {
       return fn();
     });
@@ -99,7 +101,8 @@ function wrapWithAllureStepSync<T>(name: string, fn: () => T): T {
  */
 export function addLog(message: string): void {
   try {
-    const { allure } = require('allure-jest/node');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional runtime dependency
+    const { allure } = require("allure-jest/node");
     allure.step(message, () => {
       // 空步骤，仅用于在报告中显示日志
     });

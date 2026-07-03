@@ -1,5 +1,5 @@
-import { BaseActions } from '@framework/actions/BaseActions';
-import { by } from '@framework/utils';
+import { BaseActions } from "@framework/actions/BaseActions";
+import { by } from "@framework/utils";
 
 /**
  * HomePage — 同时兼容 Detox (iOS) 和 Appium (Android)
@@ -13,19 +13,19 @@ export class HomePage {
   }
 
   async isVisible(): Promise<void> {
-    await this.actions.expectVisible(by.id('home-screen'));
+    await this.actions.expectVisible(by.id("home-screen"));
   }
 
   async getWelcomeMessage(): Promise<string> {
-    return await this.actions.getText(by.id('welcome-message'));
+    return await this.actions.getText(by.id("welcome-message"));
   }
 
   async navigateToProfile(): Promise<void> {
-    await this.actions.click(by.id('profile-button'));
+    await this.actions.click(by.id("profile-button"));
   }
 
   async logout(): Promise<void> {
-    await this.actions.click(by.id('logout-button'));
-    await this.actions.waitForElement(by.id('login-screen'), 10000);
+    await this.actions.click(by.id("logout-button"));
+    await this.actions.waitForElement(by.id("login-screen"), 10000);
   }
 }

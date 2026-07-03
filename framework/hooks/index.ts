@@ -1,2 +1,2 @@
-export * from './globalSetup';
-export * from './globalTeardown';
+export * from "./globalSetup";
+export * from "./globalTeardown";

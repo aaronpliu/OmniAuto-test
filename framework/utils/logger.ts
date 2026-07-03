@@ -1,6 +1,6 @@
-import winston from 'winston';
-import * as path from 'path';
-import * as fs from 'fs';
+import winston from "winston";
+import * as path from "path";
+import * as fs from "fs";
 
 export class Logger {
   private static instance: Logger;
@@ -8,41 +8,47 @@ export class Logger {
 
   private constructor() {
     // Ensure logs directory exists
-    const logsDir = path.join(process.cwd(), 'artifacts', 'logs');
+    const logsDir = path.join(process.cwd(), "artifacts", "logs");
     if (!fs.existsSync(logsDir)) {
       fs.mkdirSync(logsDir, { recursive: true });
     }
 
-    const logFile = path.join(logsDir, `test-${new Date().toISOString().replace(/[:.]/g, '-')}.log`);
+    const logFile = path.join(
+      logsDir,
+      `test-${new Date().toISOString().replace(/[:.]/g, "-")}.log`
+    );
 
     this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || 'info',
+      level: process.env.LOG_LEVEL || "info",
       format: winston.format.combine(
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
         winston.format.errors({ stack: true }),
         winston.format.splat(),
         winston.format.json()
       ),
-      defaultMeta: { service: 'test-automation' },
+      defaultMeta: { service: "test-automation" },
       transports: [
         // Console output
         new winston.transports.Console({
           format: winston.format.combine(
             winston.format.colorize(),
             winston.format.printf(({ timestamp, level, message, ...meta }) => {
-              return `${timestamp} [${level.toUpperCase()}]: ${message} ${
-                Object.keys(meta).length ? JSON.stringify(meta) : ''
+              const ts = String(timestamp ?? "");
+              const lvl = String(level ?? "").toUpperCase();
+              const msg = String(message ?? "");
+              return `${ts} [${lvl}]: ${msg} ${
+                Object.keys(meta).length ? JSON.stringify(meta) : ""
               }`;
             })
-          )
+          ),
         }),
         // File output
-        new winston.transports.File({ 
+        new winston.transports.File({
           filename: logFile,
           maxsize: 5242880, // 5MB
-          maxFiles: 5
-        })
-      ]
+          maxFiles: 5,
+        }),
+      ],
     });
   }
 

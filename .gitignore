@@ -59,3 +59,4 @@ applications/TestGround/android-app/*
 !applications/TestGround/android-app/.gitkeep
 applications/TestGround/ios-app/*
 !applications/TestGround/ios-app/.gitkeep
+applications/3in1

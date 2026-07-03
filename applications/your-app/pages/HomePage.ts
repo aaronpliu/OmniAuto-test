@@ -1,4 +1,4 @@
-import { BaseActions } from '@framework/actions/BaseActions';
+import { BaseActions } from "@framework/actions/BaseActions";
 
 export class HomePage {
   private actions: BaseActions;
@@ -8,19 +8,19 @@ export class HomePage {
   }
 
   async isVisible(): Promise<void> {
-    await this.actions.expectVisible('home-screen');
+    await this.actions.expectVisible("home-screen");
   }
 
   async getWelcomeMessage(): Promise<string> {
-    return await this.actions.getText('welcome-message');
+    return await this.actions.getText("welcome-message");
   }
 
   async navigateToProfile(): Promise<void> {
-    await this.actions.click('profile-button');
+    await this.actions.click("profile-button");
   }
 
   async logout(): Promise<void> {
-    await this.actions.click('logout-button');
-    await this.actions.waitForElement('login-screen', 10000);
+    await this.actions.click("logout-button");
+    await this.actions.waitForElement("login-screen", 10000);
   }
 }

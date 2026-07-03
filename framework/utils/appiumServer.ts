@@ -1,9 +1,9 @@
-import { spawn, ChildProcess } from 'child_process';
-import { createWriteStream, existsSync, mkdirSync, WriteStream } from 'fs';
-import { join } from 'path';
-import axios from 'axios';
-import { Logger } from '../utils/logger';
-import { mobileConfig } from './mobileConfig';
+import { spawn, ChildProcess } from "child_process";
+import { createWriteStream, existsSync, mkdirSync, WriteStream } from "fs";
+import { join } from "path";
+import axios from "axios";
+import { Logger } from "../utils/logger";
+import { mobileConfig } from "./mobileConfig";
 
 const logger = Logger.getInstance();
 
@@ -11,8 +11,8 @@ export class AppiumServer {
   private process: ChildProcess | null = null;
   private port: number;
   private host: string;
-  
-  constructor(port: number = 4723, host: string = '0.0.0.0') {
+
+  constructor(port: number = 4723, host: string = "0.0.0.0") {
     this.port = port;
     this.host = host;
   }
@@ -23,7 +23,7 @@ export class AppiumServer {
   async isRunning(): Promise<boolean> {
     try {
       const response = await axios.get(`http://localhost:${this.port}/status`, {
-        timeout: 3000
+        timeout: 3000,
       });
       return response.status === 200;
     } catch (error) {
@@ -44,28 +44,36 @@ export class AppiumServer {
     }
 
     // 确保日志目录存在
-    const logDir = join(process.cwd(), 'artifacts', 'logs');
+    const logDir = join(process.cwd(), "artifacts", "logs");
     if (!existsSync(logDir)) {
       mkdirSync(logDir, { recursive: true });
     }
 
     // Appium 日志文件
     const logFile = join(logDir, `appium-server-${Date.now()}.log`);
-    this.logStream = createWriteStream(logFile, { flags: 'a' });
+    this.logStream = createWriteStream(logFile, { flags: "a" });
 
     logger.info(`正在启动 Appium server (${this.host}:${this.port})...`);
     logger.info(`Appium 日志: ${logFile}`);
 
-    this.process = spawn('appium', [
-      '--port', this.port.toString(),
-      '--address', this.host,
-      '--allow-insecure', 'chromedriver_autodownload',
-      '--relaxed-security',
-      '--log-level', 'info',
-    ], {
-      detached: false,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    this.process = spawn(
+      "appium",
+      [
+        "--port",
+        this.port.toString(),
+        "--address",
+        this.host,
+        "--allow-insecure",
+        "chromedriver_autodownload",
+        "--relaxed-security",
+        "--log-level",
+        "info",
+      ],
+      {
+        detached: false,
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
 
     // 将 stdout 写入日志文件
     if (this.process.stdout) {
@@ -88,7 +96,7 @@ export class AppiumServer {
    */
   private async waitForReady(timeout: number = 30000): Promise<void> {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < timeout) {
       const running = await this.isRunning();
       if (running) {
@@ -107,19 +115,19 @@ export class AppiumServer {
     if (this.process && !this.process.killed) {
       logger.info(`正在停止 Appium server (PID: ${this.process.pid})...`);
 
-      this.process.kill('SIGTERM');
+      this.process.kill("SIGTERM");
 
       await new Promise<void>((resolve) => {
         if (this.process) {
-          this.process.on('close', () => {
-            logger.info('Appium server 已停止');
+          this.process.on("close", () => {
+            logger.info("Appium server 已停止");
             resolve();
           });
 
           setTimeout(() => {
             if (this.process && !this.process.killed) {
-              this.process.kill('SIGKILL');
-              logger.warn('Appium server 已强制终止');
+              this.process.kill("SIGKILL");
+              logger.warn("Appium server 已强制终止");
             }
             resolve();
           }, 5000);
@@ -130,7 +138,7 @@ export class AppiumServer {
 
       this.process = null;
     } else {
-      logger.info('Appium server 未运行或已停止');
+      logger.info("Appium server 未运行或已停止");
     }
 
     // 关闭日志文件流
@@ -158,7 +166,7 @@ export class AppiumServer {
    * 睡眠函数
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
@@ -168,8 +176,8 @@ let appiumServerInstance: AppiumServer | null = null;
 export function getAppiumServer(): AppiumServer {
   if (!appiumServerInstance) {
     const serverConfig = mobileConfig.getAppiumServerConfig();
-    const port = parseInt(process.env.APPIUM_PORT || String(serverConfig.port) || '4723', 10);
-    const host = process.env.APPIUM_HOST || serverConfig.host || '0.0.0.0';
+    const port = parseInt(process.env.APPIUM_PORT || String(serverConfig.port) || "4723", 10);
+    const host = process.env.APPIUM_HOST || serverConfig.host || "0.0.0.0";
     appiumServerInstance = new AppiumServer(port, host);
   }
   return appiumServerInstance;

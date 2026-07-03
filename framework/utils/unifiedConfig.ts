@@ -1,6 +1,6 @@
-import * as path from 'path';
-import { Logger } from './logger';
-import { WebConfig, ApiConfig, FrameworkBehaviorConfig } from '../types/config';
+import * as path from "path";
+import { Logger } from "./logger";
+import { WebConfig, ApiConfig, FrameworkBehaviorConfig } from "../types/config";
 
 const logger = Logger.getInstance();
 
@@ -40,8 +40,9 @@ export class UnifiedConfigLoader {
       return this.raw;
     }
     try {
-      this.raw = require(path.resolve(process.cwd(), 'configs', 'index.js')) as RawPlatformConfigs;
-      logger.debug('Unified platform configs loaded from configs/index.js');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic config path resolved at runtime
+      this.raw = require(path.resolve(process.cwd(), "configs", "index.js")) as RawPlatformConfigs;
+      logger.debug("Unified platform configs loaded from configs/index.js");
     } catch (error) {
       logger.warn(`Failed to load configs/index.js: ${(error as Error).message}`);
       this.raw = { mobile: {}, web: {}, api: {}, framework: {} };
@@ -56,16 +57,16 @@ export class UnifiedConfigLoader {
   getWebConfig(): WebConfig {
     const raw = this.load().web || {};
     return {
-      baseURL: process.env.BASE_URL || raw.baseURL || 'http://localhost:3000',
+      baseURL: process.env.BASE_URL || raw.baseURL || "http://localhost:3000",
       timeout: raw.timeout ?? 60000,
       expectTimeout: raw.expectTimeout ?? 10000,
       retries: raw.retries ?? (process.env.CI ? 2 : 0),
       workers: raw.workers ?? (process.env.CI ? 1 : undefined),
-      trace: raw.trace ?? 'on-first-retry',
-      screenshot: raw.screenshot ?? 'only-on-failure',
-      video: raw.video ?? 'retain-on-failure',
-      outputDir: raw.outputDir || path.resolve(process.cwd(), 'artifacts', 'test-results'),
-      reporter: raw.reporter || [['html'], ['allure-playwright']],
+      trace: raw.trace ?? "on-first-retry",
+      screenshot: raw.screenshot ?? "only-on-failure",
+      video: raw.video ?? "retain-on-failure",
+      outputDir: raw.outputDir || path.resolve(process.cwd(), "artifacts", "test-results"),
+      reporter: raw.reporter || [["html"], ["allure-playwright"]],
       projects: raw.projects || [],
     };
   }
@@ -77,11 +78,13 @@ export class UnifiedConfigLoader {
   getApiConfig(): ApiConfig {
     const raw = this.load().api || {};
     return {
-      timeout: process.env.API_TIMEOUT ? parseInt(process.env.API_TIMEOUT, 10) : (raw.timeout ?? 30000),
-      headers: raw.headers || { 'Content-Type': 'application/json' },
+      timeout: process.env.API_TIMEOUT
+        ? parseInt(process.env.API_TIMEOUT, 10)
+        : (raw.timeout ?? 30000),
+      headers: raw.headers || { "Content-Type": "application/json" },
       retryAttempts: raw.retryAttempts ?? 0,
       retryDelay: raw.retryDelay ?? 1000,
-      baseURL: raw.baseURL || '',
+      baseURL: raw.baseURL || "",
     };
   }
 
@@ -96,20 +99,20 @@ export class UnifiedConfigLoader {
     return {
       screenshotOnFailure:
         process.env.SCREENSHOT_ON_FAILURE !== undefined
-          ? process.env.SCREENSHOT_ON_FAILURE !== 'false'
-          : raw.screenshotOnFailure ?? true,
+          ? process.env.SCREENSHOT_ON_FAILURE !== "false"
+          : (raw.screenshotOnFailure ?? true),
       videoRecording:
         process.env.VIDEO_RECORDING !== undefined
-          ? process.env.VIDEO_RECORDING === 'true'
-          : raw.videoRecording ?? false,
+          ? process.env.VIDEO_RECORDING === "true"
+          : (raw.videoRecording ?? false),
       headless:
         process.env.HEADLESS !== undefined
-          ? process.env.HEADLESS === 'true'
-          : raw.headless ?? false,
+          ? process.env.HEADLESS === "true"
+          : (raw.headless ?? false),
       allureEnabled:
         process.env.ALLURE_ENABLED !== undefined
-          ? process.env.ALLURE_ENABLED !== 'false'
-          : raw.allureEnabled ?? true,
+          ? process.env.ALLURE_ENABLED !== "false"
+          : (raw.allureEnabled ?? true),
     };
   }
 }

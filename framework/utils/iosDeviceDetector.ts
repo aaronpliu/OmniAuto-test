@@ -1,6 +1,6 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { Logger } from './logger';
+import { exec } from "child_process";
+import { promisify } from "util";
+import { Logger } from "./logger";
 
 const execAsync = promisify(exec);
 const logger = Logger.getInstance();
@@ -19,21 +19,21 @@ export class IOSDeviceDetector {
    */
   async detectSimulators(): Promise<IOSDeviceInfo[]> {
     try {
-      logger.info('正在检测 iOS 模拟器...');
+      logger.info("正在检测 iOS 模拟器...");
 
-      const { stdout } = await execAsync('xcrun simctl list devices available --json');
-      const data = JSON.parse(stdout);
+      const { stdout } = await execAsync("xcrun simctl list devices available --json");
+      const data = JSON.parse(stdout) as { devices: Record<string, any[]> };
 
       const devices: IOSDeviceInfo[] = [];
 
       // 解析 simctl 输出（按 runtime 分组）
       for (const runtime of Object.keys(data.devices)) {
         for (const device of data.devices[runtime]) {
-          if (device.isAvailable && device.state === 'Booted') {
+          if (device.isAvailable && device.state === "Booted") {
             devices.push({
               udid: device.udid,
               name: device.name,
-              version: runtime.replace('com.apple.CoreSimulator.SimRuntime.iOS', ''),
+              version: runtime.replace("com.apple.CoreSimulator.SimRuntime.iOS", ""),
               isSimulator: true,
               state: device.state,
             });
@@ -49,7 +49,7 @@ export class IOSDeviceDetector {
               devices.push({
                 udid: device.udid,
                 name: device.name,
-                version: runtime.replace('com.apple.CoreSimulator.SimRuntime.iOS', ''),
+                version: runtime.replace("com.apple.CoreSimulator.SimRuntime.iOS", ""),
                 isSimulator: true,
                 state: device.state,
               });
@@ -59,8 +59,8 @@ export class IOSDeviceDetector {
       }
 
       logger.info(`检测到 ${devices.length} 个 iOS 模拟器`);
-      devices.forEach(d => {
-        logger.info(`  - ${d.name} (iOS ${d.version}) [${d.state || 'unknown'}] UDID: ${d.udid}`);
+      devices.forEach((d) => {
+        logger.info(`  - ${d.name} (iOS ${d.version}) [${d.state || "unknown"}] UDID: ${d.udid}`);
       });
 
       return devices;
@@ -75,9 +75,11 @@ export class IOSDeviceDetector {
    */
   async detectRealDevices(): Promise<IOSDeviceInfo[]> {
     try {
-      logger.info('正在检测 iOS 真机...');
+      logger.info("正在检测 iOS 真机...");
 
-      const { stdout } = await execAsync('xcrun xctrace list devices --json 2>/dev/null || xcrun devicectl list devices --json 2>/dev/null');
+      const { stdout } = await execAsync(
+        "xcrun xctrace list devices --json 2>/dev/null || xcrun devicectl list devices --json 2>/dev/null"
+      );
 
       const devices: IOSDeviceInfo[] = [];
       const data = JSON.parse(stdout);
@@ -85,11 +87,11 @@ export class IOSDeviceDetector {
       // xctrace 格式
       if (data.devices) {
         for (const device of data.devices) {
-          if (device.platform === 'ios' && !device.isSimulator) {
+          if (device.platform === "ios" && !device.isSimulator) {
             devices.push({
               udid: device.udid || device.hardwareProperties?.udid,
               name: device.name || device.modelName,
-              version: device.osVersionNumber || 'Unknown',
+              version: device.osVersionNumber || "Unknown",
               isSimulator: false,
             });
           }
@@ -97,7 +99,7 @@ export class IOSDeviceDetector {
       }
 
       logger.info(`检测到 ${devices.length} 个 iOS 真机`);
-      devices.forEach(d => {
+      devices.forEach((d) => {
         logger.info(`  - ${d.name} (iOS ${d.version}) UDID: ${d.udid}`);
       });
 
@@ -128,7 +130,7 @@ export class IOSDeviceDetector {
 
     // 如果指定了优先设备
     if (preferredUdid) {
-      const preferred = devices.find(d => d.udid === preferredUdid);
+      const preferred = devices.find((d) => d.udid === preferredUdid);
       if (preferred) {
         logger.info(`使用指定的设备: ${preferred.name} (${preferred.udid})`);
         return preferred;
@@ -137,14 +139,14 @@ export class IOSDeviceDetector {
     }
 
     // 优先选择已启动的模拟器
-    const bootedSimulators = devices.filter(d => d.isSimulator && d.state === 'Booted');
+    const bootedSimulators = devices.filter((d) => d.isSimulator && d.state === "Booted");
     if (bootedSimulators.length > 0) {
       logger.info(`自动选择已启动的模拟器: ${bootedSimulators[0].name}`);
       return bootedSimulators[0];
     }
 
     // 其次选择真机
-    const realDevices = devices.filter(d => !d.isSimulator);
+    const realDevices = devices.filter((d) => !d.isSimulator);
     if (realDevices.length > 0) {
       logger.info(`自动选择真机: ${realDevices[0].name}`);
       return realDevices[0];
@@ -162,8 +164,8 @@ export class IOSDeviceDetector {
     try {
       logger.info(`正在启动模拟器 ${udid}...`);
       await execAsync(`xcrun simctl boot ${udid} 2>/dev/null || true`);
-      await execAsync('open -a Simulator 2>/dev/null || true');
-      logger.info('模拟器已启动');
+      await execAsync("open -a Simulator 2>/dev/null || true");
+      logger.info("模拟器已启动");
     } catch (error: any) {
       logger.warn(`启动模拟器失败: ${error.message}`);
     }
@@ -176,13 +178,13 @@ export class IOSDeviceDetector {
     process.env.IOS_DEVICE_NAME = device.name;
     process.env.IOS_PLATFORM_VERSION = device.version;
     process.env.IOS_UDID = device.udid;
-    process.env.IOS_DEVICE_TYPE = device.isSimulator ? 'simulator' : 'real';
+    process.env.IOS_DEVICE_TYPE = device.isSimulator ? "simulator" : "real";
 
     logger.info(`iOS 环境变量已设置:
       IOS_DEVICE_NAME=${device.name}
       IOS_PLATFORM_VERSION=${device.version}
       IOS_UDID=${device.udid}
-      IOS_DEVICE_TYPE=${device.isSimulator ? 'simulator' : 'real'}
+      IOS_DEVICE_TYPE=${device.isSimulator ? "simulator" : "real"}
     `);
   }
 
@@ -194,10 +196,10 @@ export class IOSDeviceDetector {
 
     if (devices.length === 0) {
       throw new Error(
-        '未检测到可用的 iOS 设备或模拟器，请确保：\n' +
-        '1. Xcode 已安装\n' +
-        '2. 至少有一个 iOS 模拟器\n' +
-        '3. 或已连接 iOS 真机并信任此电脑'
+        "未检测到可用的 iOS 设备或模拟器，请确保：\n" +
+          "1. Xcode 已安装\n" +
+          "2. 至少有一个 iOS 模拟器\n" +
+          "3. 或已连接 iOS 真机并信任此电脑"
       );
     }
 
@@ -205,14 +207,14 @@ export class IOSDeviceDetector {
     const selected = this.selectDevice(devices, preferredUdid);
 
     if (!selected) {
-      throw new Error('iOS 设备选择失败');
+      throw new Error("iOS 设备选择失败");
     }
 
     // 如果是模拟器且未启动，则启动它
-    if (selected.isSimulator && selected.state !== 'Booted') {
+    if (selected.isSimulator && selected.state !== "Booted") {
       await this.bootSimulator(selected.udid);
       // 等待模拟器启动
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
 
     // 设置环境变量

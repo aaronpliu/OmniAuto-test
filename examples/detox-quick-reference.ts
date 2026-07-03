@@ -1,11 +1,11 @@
 /**
  * DetoxActions Quick Reference
- * 
+ *
  * Quick guide to using flexible selectors in DetoxActions
  */
 
-import { DetoxActions } from '../framework/actions/DetoxActions';
-import { by, element } from 'detox';
+import { DetoxActions } from "../framework/actions/DetoxActions";
+import { by, element } from "detox";
 
 const actions = new DetoxActions();
 
@@ -14,28 +14,23 @@ const actions = new DetoxActions();
 // ============================================
 
 // Example usage within an async function:
-async function exampleUsage() {
+async function _exampleUsage() {
   // 1️⃣ STRING SELECTOR (Backward Compatible)
   //    Uses by.id() automatically
-  await actions.click('loginButton');
+  await actions.click("loginButton");
 
   // 2️⃣ STATIC HELPERS
-  await actions.click(DetoxActions.byId('loginBtn'));        // By test ID
-  await actions.click(DetoxActions.byText('Submit'));        // By text
-  await actions.click(DetoxActions.byLabel('Menu'));         // By label
-  await actions.scroll(DetoxActions.byType('UIScrollView')); // By type
+  await actions.click(DetoxActions.byId("loginBtn")); // By test ID
+  await actions.click(DetoxActions.byText("Submit")); // By text
+  await actions.click(DetoxActions.byLabel("Menu")); // By label
+  await actions.scroll(DetoxActions.byType("UIScrollView")); // By type
 
   // 3️⃣ DIRECT MATCHERS
-  await actions.click(element(by.text('OK')));
-  await actions.expectVisible(element(by.label('Welcome')));
+  await actions.click(element(by.text("OK")));
+  await actions.expectVisible(element(by.label("Welcome")));
 
   // 4️⃣ COMBINED MATCHERS
-  await actions.click(
-    DetoxActions.byAll(
-      by.id('btn'),
-      by.text('Submit')
-    )
-  );
+  await actions.click(DetoxActions.byAll(by.id("btn"), by.text("Submit")));
 }
 
 // ============================================
@@ -116,8 +111,6 @@ await actions.setLocation(latitude: number, longitude: number);
 // ============================================
 // TYPE DEFINITION
 // ============================================
-
-type DetoxSelector = string | ReturnType<typeof element>;
 
 // String → by.id()
 // NativeElement → use directly

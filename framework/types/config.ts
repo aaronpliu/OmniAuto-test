@@ -23,7 +23,7 @@ export interface EnvironmentConfig {
 
 export interface FrameworkConfig {
   environment: string;
-  platform: 'ios' | 'android' | 'web';
+  platform: "ios" | "android" | "web";
   headless: boolean;
   screenshotOnFailure: boolean;
   videoRecording: boolean;
@@ -104,7 +104,7 @@ export interface AppiumIosCapabilitiesConfig {
   bundleId: string;
   app: string;
   udid: string;
-  deviceType: 'simulator' | 'real';
+  deviceType: "simulator" | "real";
   xcodeSigningId: string;
   xcodeOrgId: string;
   capabilities: Record<string, any>;

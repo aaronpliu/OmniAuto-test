@@ -1,6 +1,6 @@
-import { Browser, Page } from 'playwright';
-import { BaseActions } from './BaseActions';
-import { Logger } from '../utils/logger';
+import { Browser, Page } from "playwright";
+import { BaseActions } from "./BaseActions";
+import { Logger } from "../utils/logger";
 
 // 声明 DOM 类型 (仅在浏览器环境可用)
 declare const window: any;
@@ -39,9 +39,9 @@ export class PlaywrightActions extends BaseActions {
 
   async longPress(selector: string, duration = 1000): Promise<void> {
     logger.debug(`Long pressing element: ${selector} for ${duration}ms`);
-    await this.page.dispatchEvent(selector, 'mousedown');
+    await this.page.dispatchEvent(selector, "mousedown");
     await this.page.waitForTimeout(duration);
-    await this.page.dispatchEvent(selector, 'mouseup');
+    await this.page.dispatchEvent(selector, "mouseup");
   }
 
   // Input
@@ -52,28 +52,28 @@ export class PlaywrightActions extends BaseActions {
 
   async clearText(selector: string): Promise<void> {
     logger.debug(`Clearing text from element: ${selector}`);
-    await this.page.fill(selector, '');
+    await this.page.fill(selector, "");
   }
 
   async getText(selector: string): Promise<string> {
     logger.debug(`Getting text from element: ${selector}`);
-    return await this.page.textContent(selector) || '';
+    return (await this.page.textContent(selector)) || "";
   }
 
   // Assertions
   async waitForElement(selector: string, timeout = 10000): Promise<void> {
     logger.debug(`Waiting for element: ${selector}`);
-    await this.page.waitForSelector(selector, { state: 'visible', timeout });
+    await this.page.waitForSelector(selector, { state: "visible", timeout });
   }
 
   async expectVisible(selector: string): Promise<void> {
     logger.debug(`Expecting element visible: ${selector}`);
-    await this.page.waitForSelector(selector, { state: 'visible' });
+    await this.page.waitForSelector(selector, { state: "visible" });
   }
 
   async expectNotVisible(selector: string): Promise<void> {
     logger.debug(`Expecting element not visible: ${selector}`);
-    await this.page.waitForSelector(selector, { state: 'hidden' });
+    await this.page.waitForSelector(selector, { state: "hidden" });
   }
 
   async expectText(selector: string, text: string): Promise<void> {
@@ -94,7 +94,7 @@ export class PlaywrightActions extends BaseActions {
 
   async expectEnabled(selector: string): Promise<void> {
     logger.debug(`Expecting element enabled: ${selector}`);
-    const isDisabled = await this.page.getAttribute(selector, 'disabled');
+    const isDisabled = await this.page.getAttribute(selector, "disabled");
     if (isDisabled !== null) {
       throw new Error(`Element ${selector} is disabled`);
     }
@@ -102,17 +102,19 @@ export class PlaywrightActions extends BaseActions {
 
   async expectDisabled(selector: string): Promise<void> {
     logger.debug(`Expecting element disabled: ${selector}`);
-    const isDisabled = await this.page.getAttribute(selector, 'disabled');
+    const isDisabled = await this.page.getAttribute(selector, "disabled");
     if (isDisabled === null) {
       throw new Error(`Element ${selector} is enabled`);
     }
   }
 
   // Gestures
-  async swipe(direction: 'up' | 'down' | 'left' | 'right', distance?: number): Promise<void> {
+  async swipe(direction: "up" | "down" | "left" | "right", distance?: number): Promise<void> {
     logger.debug(`Swiping ${direction}`);
-    const box = await this.page.locator('body').boundingBox();
-    if (!box) throw new Error('Could not get body dimensions');
+    const box = await this.page.locator("body").boundingBox();
+    if (!box) {
+      throw new Error("Could not get body dimensions");
+    }
 
     const startX = box.width / 2;
     const startY = box.height / 2;
@@ -122,16 +124,16 @@ export class PlaywrightActions extends BaseActions {
     let endY = startY;
 
     switch (direction) {
-      case 'up':
+      case "up":
         endY = startY - swipeDistance;
         break;
-      case 'down':
+      case "down":
         endY = startY + swipeDistance;
         break;
-      case 'left':
+      case "left":
         endX = startX - swipeDistance;
         break;
-      case 'right':
+      case "right":
         endX = startX + swipeDistance;
         break;
     }
@@ -151,9 +153,9 @@ export class PlaywrightActions extends BaseActions {
     logger.debug(`Pinching with scale: ${scale}`);
     // Pinch gesture simulation for web
     await this.page.evaluate((s: number) => {
-      const event = new (window as any).WheelEvent('wheel', {
+      const event = new window.WheelEvent("wheel", {
         deltaY: s * 100,
-        ctrlKey: true
+        ctrlKey: true,
       });
       document.dispatchEvent(event);
     }, scale);
@@ -168,37 +170,39 @@ export class PlaywrightActions extends BaseActions {
   }
 
   async reload(): Promise<void> {
-    logger.info('Reloading page');
+    logger.info("Reloading page");
     await this.page.reload();
   }
 
   async back(): Promise<void> {
-    logger.info('Going back');
+    logger.info("Going back");
     await this.page.goBack();
   }
 
   async close(): Promise<void> {
-    logger.info('Closing browser');
+    logger.info("Closing browser");
     if (this.browser) {
       await this.browser.close();
     }
   }
 
   // Device
-  async setOrientation(orientation: 'portrait' | 'landscape'): Promise<void> {
+  async setOrientation(orientation: "portrait" | "landscape"): Promise<void> {
     logger.info(`Setting orientation to: ${orientation}`);
     const viewport = this.page.viewportSize();
-    if (!viewport) return;
+    if (!viewport) {
+      return;
+    }
 
-    if (orientation === 'portrait') {
-      await this.page.setViewportSize({ 
+    if (orientation === "portrait") {
+      await this.page.setViewportSize({
         width: Math.min(viewport.width, viewport.height),
-        height: Math.max(viewport.width, viewport.height)
+        height: Math.max(viewport.width, viewport.height),
       });
     } else {
-      await this.page.setViewportSize({ 
+      await this.page.setViewportSize({
         width: Math.max(viewport.width, viewport.height),
-        height: Math.min(viewport.width, viewport.height)
+        height: Math.min(viewport.width, viewport.height),
       });
     }
   }
@@ -206,7 +210,7 @@ export class PlaywrightActions extends BaseActions {
   async setLocation(latitude: number, longitude: number): Promise<void> {
     logger.info(`Setting location to: ${latitude}, ${longitude}`);
     const context = this.page.context();
-    await context.grantPermissions(['geolocation']);
+    await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude, longitude });
     await this.page.reload();
   }

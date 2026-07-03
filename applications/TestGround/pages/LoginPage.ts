@@ -1,5 +1,5 @@
-import { BaseActions } from '@framework/actions/BaseActions';
-import { by } from '@framework/utils';
+import { BaseActions } from "@framework/actions/BaseActions";
+import { by } from "@framework/utils";
 
 /**
  * LoginPage — 同时兼容 Detox (iOS) 和 Appium (Android)
@@ -16,19 +16,19 @@ export class LoginPage {
   }
 
   async login(username: string, password: string): Promise<void> {
-    await this.actions.navigateTo()
-    await this.actions.waitForElement(by.id('usernameInput'), 10000);
-    await this.actions.typeText(by.id('usernameInput'), username);
-    await this.actions.typeText(by.id('passwordInput'), password);
-    await this.actions.click(by.id('loginButton'));
-    await this.actions.waitForElement(by.id('logoutButton'), 10000);
+    await this.actions.navigateTo();
+    await this.actions.waitForElement(by.id("usernameInput"), 10000);
+    await this.actions.typeText(by.id("usernameInput"), username);
+    await this.actions.typeText(by.id("passwordInput"), password);
+    await this.actions.click(by.id("loginButton"));
+    await this.actions.waitForElement(by.id("logoutButton"), 10000);
   }
 
   async expectLoginError(message: string): Promise<void> {
-    await this.actions.expectText(by.id('loginError'), message);
+    await this.actions.expectText(by.id("loginError"), message);
   }
 
   async isVisible(): Promise<void> {
-    await this.actions.expectVisible(by.text('Logout'));
+    await this.actions.expectVisible(by.text("Logout"));
   }
 }

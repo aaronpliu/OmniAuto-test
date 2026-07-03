@@ -1,7 +1,7 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { Logger } from '../utils/logger';
-import { config } from '../utils/config';
-import { unifiedConfig } from '../utils/unifiedConfig';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import { Logger } from "../utils/logger";
+import { config } from "../utils/config";
+import { unifiedConfig } from "../utils/unifiedConfig";
 
 const logger = Logger.getInstance();
 
@@ -13,7 +13,7 @@ export class ApiClient {
     this.client = axios.create({
       baseURL: baseURL || config.getApiBaseUrl() || apiConfig.baseURL,
       timeout: apiConfig.timeout,
-      headers: apiConfig.headers
+      headers: apiConfig.headers,
     });
 
     this.setupInterceptors();
@@ -71,10 +71,10 @@ export class ApiClient {
   }
 
   setAuthToken(token: string): void {
-    this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    this.client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
   }
 
   clearAuthToken(): void {
-    delete this.client.defaults.headers.common['Authorization'];
+    delete this.client.defaults.headers.common["Authorization"];
   }
 }

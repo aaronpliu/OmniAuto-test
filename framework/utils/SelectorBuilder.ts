@@ -54,31 +54,37 @@ export function className(value: string): string {
 
 // ========== 选择器解析 / Selector Parser ==========
 
-export type SelectorType = 'id' | 'text' | 'label' | 'xpath' | 'css' | 'class' | 'raw';
+export type SelectorType = "id" | "text" | "label" | "xpath" | "css" | "class" | "raw";
 
 /**
  * 解析选择器，返回类型和值
  * Parse selector and return type and value
  */
 export function parseSelector(selector: string): { type: SelectorType; value: string } {
-  const idx = selector.indexOf(':');
+  const idx = selector.indexOf(":");
   // 需要至少1个字符的前缀，且冒号不能在末尾
   // Need at least 1 char prefix, and colon can't be at the end
   if (idx > 0 && idx < selector.length - 1) {
     const prefix = selector.substring(0, idx);
     const value = selector.substring(idx + 1);
     switch (prefix) {
-      case 'id':    return { type: 'id',    value };
-      case 'text':  return { type: 'text',  value };
-      case 'label': return { type: 'label', value };
-      case 'xpath': return { type: 'xpath', value };
-      case 'css':   return { type: 'css',   value };
-      case 'class': return { type: 'class', value };
+      case "id":
+        return { type: "id", value };
+      case "text":
+        return { type: "text", value };
+      case "label":
+        return { type: "label", value };
+      case "xpath":
+        return { type: "xpath", value };
+      case "css":
+        return { type: "css", value };
+      case "class":
+        return { type: "class", value };
     }
   }
   // 无前缀，按纯字符串处理（Accessibility ID）
   // No prefix, treat as raw string (Accessibility ID)
-  return { type: 'raw', value: selector };
+  return { type: "raw", value: selector };
 }
 
 // ========== 导出默认对象（模拟 Detox 的 by API） ==========
@@ -94,10 +100,10 @@ export function parseSelector(selector: string): { type: SelectorType; value: st
  *   await actions.click(by.text('Submit'));
  */
 export const by = {
-  id:    (value: string) => id(value),
-  text:  (value: string) => text(value),
+  id: (value: string) => id(value),
+  text: (value: string) => text(value),
   label: (value: string) => label(value),
   xpath: (value: string) => xpath(value),
-  css:   (value: string) => css(value),
+  css: (value: string) => css(value),
   class: (value: string) => className(value),
 };

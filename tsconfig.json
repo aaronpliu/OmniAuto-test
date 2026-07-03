@@ -26,11 +26,8 @@
     "framework/**/*",
     "applications/**/*",
     "tests/**/*",
-    "examples/**/*"
+    "examples/**/*",
+    "configs/**/*"
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "artifacts"
-  ]
+  "exclude": ["node_modules", "dist", "artifacts"]
 }

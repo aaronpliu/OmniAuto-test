@@ -7,7 +7,7 @@ export interface TestContext {
 }
 
 export interface TestResult {
-  status: 'passed' | 'failed' | 'skipped';
+  status: "passed" | "failed" | "skipped";
   duration: number;
   error?: Error;
   screenshots: string[];
