@@ -12,6 +12,7 @@ import { BaseActions } from "./BaseActions";
 import { Logger } from "../utils/logger";
 import { appendFileSync, unlinkSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { isPlatformSelector, resolvePlatformSelector } from "../utils/SelectorBuilder";
 
 const logger = Logger.getInstance();
 
@@ -75,6 +76,12 @@ export function drainStepsFile(): Record<string, unknown>[] {
 // ================================================================
 
 function selectorName(s: unknown): string {
+  // PlatformSelector: 按当前平台解析后显示
+  if (isPlatformSelector(s)) {
+    const platform = (process.env.TEST_PLATFORM || "ios").toLowerCase() as "ios" | "android";
+    const resolved = resolvePlatformSelector(s, platform);
+    return selectorName(resolved);
+  }
   if (typeof s === "string") {
     const short = s.includes(":") ? s.split(":").pop()! : s;
     return short.length > 30 ? short.substring(0, 27) + "..." : short;

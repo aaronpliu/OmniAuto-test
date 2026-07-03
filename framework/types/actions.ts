@@ -1,15 +1,31 @@
 /**
- * Generic selector type that allows each platform to define its own selector format
- * This follows the Open/Closed Principle - open for extension, closed for modification
+ * 基础选择器值（不含平台分支，避免递归）
+ * Base selector value (without platform branching, to avoid recursion)
  */
-export type TSelector = string | object;
+export type SelectorValue = string | object;
 
 /**
- * @deprecated Use `TSelector` instead. Retained for backward compatibility with
- * existing imports (e.g. BaseActions, AppiumActions); will be removed in a future release.
+ * 平台特定选择器：同一元素在 iOS 和 Android 上可使用不同定位方式
+ * Platform-specific selector: same element can use different locators on iOS/Android
+ *
+ * 用法 / Usage:
+ *   by.platform({ ios: by.id('btn'), android: by.text('登录') })
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention -- backward-compat alias, name intentionally kept
-export type Selector = TSelector;
+export type PlatformSelector = {
+  ios: SelectorValue;
+  android: SelectorValue;
+};
+
+/**
+ * Generic selector type that allows each platform to define its own selector format
+ * This follows the Open/Closed Principle - open for extension, closed for modification
+ *
+ * 支持三种形式 / Supports three forms:
+ * - string: "id:login", "text:Submit", or plain "loginButton"
+ * - object: WebdriverIO.Element, Detox NativeElement, Detox matcher, etc.
+ * - PlatformSelector: { ios: ..., android: ... } for platform-specific locators
+ */
+export type TSelector = SelectorValue | PlatformSelector;
 
 export interface IActions {
   // Navigation

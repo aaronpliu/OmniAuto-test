@@ -20,6 +20,8 @@
  *   await actions.click(by.text('Submit'));
  */
 
+import { PlatformSelector, SelectorValue } from "../types/actions";
+
 // ========== 选择器构建函数 / Selector Builder Functions ==========
 
 /** 按 Accessibility ID / Test ID 选择 */
@@ -50,6 +52,16 @@ export function css(value: string): string {
 /** 按类名选择 / Select by class name */
 export function className(value: string): string {
   return `class:${value}`;
+}
+
+/**
+ * 创建平台特定选择器 / Create a platform-specific selector
+ *
+ * 用法 / Usage:
+ *   by.platform({ ios: by.id('btn'), android: by.text('登录') })
+ */
+export function platform(selectors: PlatformSelector): PlatformSelector {
+  return selectors;
 }
 
 // ========== 选择器解析 / Selector Parser ==========
@@ -87,6 +99,36 @@ export function parseSelector(selector: string): { type: SelectorType; value: st
   return { type: "raw", value: selector };
 }
 
+// ========== 平台特定选择器 / Platform-Specific Selector ==========
+
+/**
+ * 类型守卫：判断是否为 PlatformSelector（{ ios, android } 对象）
+ * Type guard: checks if selector is a PlatformSelector ({ ios, android } object)
+ *
+ * 精确匹配同时拥有 ios 和 android 两个键的普通对象，
+ * 不会误判 WebdriverIO.Element、Detox NativeElement 或 Detox matcher。
+ */
+export function isPlatformSelector(selector: unknown): selector is PlatformSelector {
+  return (
+    typeof selector === "object" &&
+    selector !== null &&
+    !Array.isArray(selector) &&
+    "ios" in selector &&
+    "android" in selector
+  );
+}
+
+/**
+ * 解析 PlatformSelector，返回当前平台对应的选择器值
+ * Resolve a PlatformSelector to the selector value for the given platform
+ */
+export function resolvePlatformSelector(
+  selector: PlatformSelector,
+  platform: "ios" | "android"
+): SelectorValue {
+  return platform === "ios" ? selector.ios : selector.android;
+}
+
 // ========== 导出默认对象（模拟 Detox 的 by API） ==========
 // Export default object (mimics Detox's by API)
 
@@ -106,4 +148,5 @@ export const by = {
   xpath: (value: string) => xpath(value),
   css: (value: string) => css(value),
   class: (value: string) => className(value),
+  platform: (selectors: PlatformSelector): PlatformSelector => platform(selectors),
 };

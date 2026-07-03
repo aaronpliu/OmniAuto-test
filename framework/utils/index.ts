@@ -1,4 +1,16 @@
-export { id, text, label, xpath, css, className, parseSelector, by } from "./SelectorBuilder";
+export {
+  id,
+  text,
+  label,
+  xpath,
+  css,
+  className,
+  parseSelector,
+  isPlatformSelector,
+  resolvePlatformSelector,
+  platform,
+  by,
+} from "./SelectorBuilder";
 
 export { TestContext } from "./testContext";
 export { ScreenRecorder, createScreenRecorder, getScreenRecorder } from "./screenRecorder";

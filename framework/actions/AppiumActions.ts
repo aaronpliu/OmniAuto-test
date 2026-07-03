@@ -1,18 +1,22 @@
 import { remote, RemoteOptions } from "webdriverio";
 import { BaseActions } from "./BaseActions";
-import { Selector } from "../types/actions";
+import { TSelector } from "../types/actions";
 import { Logger } from "../utils/logger";
 import { mobileConfig } from "../utils/mobileConfig";
-import { parseSelector } from "../utils/SelectorBuilder";
+import {
+  parseSelector,
+  isPlatformSelector,
+  resolvePlatformSelector,
+} from "../utils/SelectorBuilder";
 import { resizeScreenshot } from "../utils/imageResizer";
 
 const logger = Logger.getInstance();
 
 /**
  * Appium-specific selector type
- * Extends the base Selector type with WebdriverIO Element support
+ * Extends the base TSelector type with WebdriverIO Element support
  */
-export type AppiumSelector = Selector | WebdriverIO.Element;
+export type AppiumSelector = TSelector | WebdriverIO.Element;
 
 export class AppiumActions extends BaseActions {
   private driver: WebdriverIO.Browser | null = null;
@@ -65,6 +69,12 @@ export class AppiumActions extends BaseActions {
     driver: WebdriverIO.Browser,
     selector: AppiumSelector
   ): Promise<WebdriverIO.Element> {
+    // PlatformSelector: { ios: ..., android: ... } — 按 this.platform 解析
+    if (isPlatformSelector(selector)) {
+      const resolved = resolvePlatformSelector(selector, this.platform);
+      return this.resolveElement(driver, resolved as AppiumSelector);
+    }
+
     // If it's already a WebdriverIO element, return it
     if (typeof selector !== "string" && typeof selector !== "number" && !Array.isArray(selector)) {
       if ("isExisting" in selector) {

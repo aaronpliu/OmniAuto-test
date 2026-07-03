@@ -2,9 +2,17 @@ import { device, element, by, expect as detoxExpect } from "detox";
 import { BaseActions } from "./BaseActions";
 import { Logger } from "../utils/logger";
 import { resizeScreenshot } from "../utils/imageResizer";
-import { parseSelector } from "../utils/SelectorBuilder";
+import {
+  parseSelector,
+  isPlatformSelector,
+  resolvePlatformSelector,
+} from "../utils/SelectorBuilder";
 
 const logger = Logger.getInstance();
+
+// 模块级平台变量，由 DetoxActions 构造函数设置
+// Module-level platform variable, set by DetoxActions constructor
+let currentPlatform: "ios" | "android" = "ios";
 
 /**
  * Detox-specific selector type
@@ -59,6 +67,12 @@ function selectorToDetoxMatcher(selector: string): any {
 
 // Helper function to resolve selector to NativeElement
 function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
+  // PlatformSelector: { ios: ..., android: ... } — 按当前平台解析
+  if (isPlatformSelector(selector)) {
+    const resolved = resolvePlatformSelector(selector, currentPlatform);
+    return resolveElement(resolved as DetoxSelector);
+  }
+
   // Case 1: Already a NativeElement (wrapped with element())
   if (isNativeElement(selector)) {
     return selector;
@@ -92,6 +106,16 @@ function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
 }
 
 export class DetoxActions extends BaseActions {
+  private platform: "ios" | "android";
+
+  constructor() {
+    super();
+    const p = (process.env.TEST_PLATFORM || "ios").toLowerCase();
+    this.platform = p === "android" ? "android" : "ios";
+    currentPlatform = this.platform;
+    logger.debug(`[DetoxActions] platform = ${this.platform}`);
+  }
+
   // Navigation
   async navigateTo(_url?: string): Promise<void> {
     logger.info("Launching app with Detox");
@@ -511,7 +535,6 @@ export class DetoxActions extends BaseActions {
     let combined = firstMatcher;
     for (const matcher of additionalMatchers) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- Detox matcher type is dynamic
-      combined = combined.and(matcher);
       combined = combined.and(matcher);
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- Detox matcher type is dynamic
