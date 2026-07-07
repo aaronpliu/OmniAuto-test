@@ -93,10 +93,30 @@ show_help() {
     echo "  --no-recording, --no-rec   禁用测试录屏"
     echo "                              Disable test recording"
     echo ""
+    echo -e "${GREEN}测试目标筛选 / Test Target Filtering:${NC}"
+    echo "  在子命令后追加文件/目录/模式，透传给底层 Jest/Detox/Playwright："
+    echo "  Append file/dir/pattern after subcommand (passed through to Jest/Detox/Playwright):"
+    echo ""
+    echo -e "  ${YELLOW}指定文件 / Specific files:${NC}"
+    echo "    ./start.sh test:android tests/mobile/TestGround/login.spec.ts"
+    echo "    ./start.sh test:android tests/mobile/login.spec.ts tests/mobile/3in1/home.spec.ts"
+    echo ""
+    echo -e "  ${YELLOW}指定目录 / Specific directory:${NC}"
+    echo "    ./start.sh test:android tests/mobile/TestGround"
+    echo "    ./start.sh test:android tests/mobile/TestGround/"
+    echo ""
+    echo -e "  ${YELLOW}匹配模式 / Pattern matching:${NC}"
+    echo "    Jest/Detox (正则):  ./start.sh test:android --testPathPattern=login"
+    echo "    Jest/Detox (裸参数): ./start.sh test:android login"
+    echo "    Playwright (文件名): ./start.sh test:web login"
+    echo "    Playwright (title):  ./start.sh test:web -g \"用户登录\""
+    echo ""
     echo -e "${BLUE}示例/Examples:${NC}"
     echo "  ./start.sh test:android --recording"
     echo "  ./start.sh test:ios:appium --no-screenshot --recording"
     echo "  ./start.sh test:ios --recording --no-screenshot"
+    echo "  ./start.sh test:android tests/mobile/TestGround --recording"
+    echo "  ./start.sh test:ios tests/mobile/login.spec.ts --no-screenshot"
     echo ""
     echo -e "${GREEN}Appium 配置 / Appium Configuration:${NC}"
     echo "  本项目仅支持连接远程 Appium Server"
@@ -268,25 +288,28 @@ install_dependencies() {
 }
 
 # 运行 iOS 测试（Detox）
+# 透传位置参数：文件/目录/匹配模式，如 tests/mobile/TestGround/login.spec.ts
 run_ios_test() {
     print_info "运行 iOS 测试（Detox）..."
-    npm run test:mobile:ios
+    npm run test:mobile:ios -- "$@"
     return $?
 }
 
 # 运行 iOS 测试（Appium）
+# 透传位置参数：文件/目录/匹配模式
 run_ios_appium_test() {
     print_info "运行 iOS 测试（Appium）..."
     print_info "请确保 Appium Server 已启动并可访问"
     print_info "Please ensure Appium Server is running and accessible"
-    npm run test:mobile:ios:appium
+    npm run test:mobile:ios:appium -- "$@"
     return $?
 }
 
 # 运行 Android 测试（Detox）
+# 透传位置参数：文件/目录/匹配模式
 run_android_detox_test() {
     print_info "运行 Android 测试（Detox）..."
-    npm run test:mobile:android:detox
+    npm run test:mobile:android:detox -- "$@"
     return $?
 }
 
@@ -329,34 +352,37 @@ check_android_device() {
 }
 
 # 运行 Android 测试
+# 透传位置参数：文件/目录/匹配模式
 run_android_test() {
     print_info "运行 Android 测试..."
-    
+
     # 先检测 Android 设备
     if ! check_android_device; then
         return 1
     fi
-    
+
     # 运行测试
     print_info "正在连接远程 Appium Server..."
     print_info "Connecting to remote Appium Server..."
     print_info "请确保 Appium Server 已启动并可访问"
     print_info "Please ensure Appium Server is running and accessible"
-    npm run test:mobile:android
+    npm run test:mobile:android -- "$@"
     return $?
 }
 
 # 运行 Web 测试
+# 透传位置参数：文件名子串过滤 / -g <title-正则>
 run_web_test() {
     print_info "运行 Web 测试..."
-    npm run test:web
+    npm run test:web -- "$@"
     return $?
 }
 
 # 运行 API 测试
+# 透传位置参数：文件/目录/匹配模式
 run_api_test() {
     print_info "运行 API 测试..."
-    npm run test:api
+    npm run test:api -- "$@"
     return $?
 }
 
@@ -649,7 +675,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_ios_test; then
+                if ! run_ios_test "${@:2}"; then
                     print_error "iOS 测试运行失败"
                     print_error "iOS test failed"
                     exit 1
@@ -661,7 +687,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_ios_appium_test; then
+                if ! run_ios_appium_test "${@:2}"; then
                     print_error "iOS (Appium) 测试运行失败"
                     print_error "iOS (Appium) test failed"
                     exit 1
@@ -673,7 +699,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_android_test; then
+                if ! run_android_test "${@:2}"; then
                     print_error "Android 测试运行失败"
                     print_error "Android test failed"
                     exit 1
@@ -685,7 +711,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_android_detox_test; then
+                if ! run_android_detox_test "${@:2}"; then
                     print_error "Android (Detox) 测试运行失败"
                     print_error "Android (Detox) test failed"
                     exit 1
@@ -697,7 +723,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_web_test; then
+                if ! run_web_test "${@:2}"; then
                     print_error "Web 测试运行失败"
                     print_error "Web test failed"
                     exit 1
@@ -709,7 +735,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_api_test; then
+                if ! run_api_test "${@:2}"; then
                     print_error "API 测试运行失败"
                     print_error "API test failed"
                     exit 1
