@@ -7,6 +7,8 @@
     "postinstall": "node scripts/postinstall.js",
     "prepare": "husky",
     "build": "tsc",
+    "test:smoke:ios": "TEST_PLATFORM=ios detox test --configuration ios.sim.debug --config configs/jest/ios.detox.config.js",
+    "report:smoke": "ts-node framework/reporters/smokeHtmlGenerator.ts",
     "test:mobile:ios": "TEST_PLATFORM=ios detox test --configuration ios.sim.debug",
     "test:mobile:ios:appium": "NODE_OPTIONS=--experimental-vm-modules TEST_PLATFORM=ios IOS_AUTOMATION_MODE=appium jest tests/mobile --config configs/jest/ios.appium.config.js",
     "test:mobile:android": "NODE_OPTIONS=--experimental-vm-modules TEST_PLATFORM=android jest tests/mobile --config configs/jest/android.appium.config.js",

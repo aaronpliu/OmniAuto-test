@@ -13,7 +13,8 @@ module.exports = {
   // Detox reporter + 自定义 Allure reporter
   reporters: [
     'default',
-    '<rootDir>/framework/reporters/detoxAllureReporter.ts'
+    '<rootDir>/framework/reporters/detoxAllureReporter.ts',
+    '<rootDir>/configs/jest/smokeReportReporter.js'
   ],
   setupFilesAfterEnv: [
     '<rootDir>/framework/hooks/testLifecycle.ts'
