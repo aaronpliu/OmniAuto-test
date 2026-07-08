@@ -1,121 +1,120 @@
 /**
  * Web Actions Quick Reference (Playwright)
- * 
+ *
  * Quick guide to using ActionFactory and PlaywrightActions for web testing
  */
 
-import { test } from '@playwright/test';
-import { ActionFactory, PlaywrightActions } from '../framework/actions';
+import { test } from "@playwright/test";
+import { ActionFactory, PlaywrightActions } from "../framework/actions";
 
 // ============================================
 // QUICK REFERENCE: CREATING WEB ACTIONS
 // ============================================
 
-test.describe('Web Actions Examples', () => {
-  
+test.describe("Web Actions Examples", () => {
   // 1️⃣ USING ACTIONFACTORY.CREATEFORWEB (Recommended)
-  test('using createForWeb helper', async ({ page }) => {
+  test("using createForWeb helper", async ({ page }) => {
     const actions = ActionFactory.createForWeb(page);
-    await actions.navigateTo('https://example.com');
+    await actions.navigateTo("https://example.com");
   });
 
   // 2️⃣ USING ACTIONFACTORY.CREATE WITH CONFIG
-  test('using create with config object', async ({ page, browser }) => {
+  test("using create with config object", async ({ page, browser }) => {
     const actions = ActionFactory.create({
-      platform: 'web',
+      platform: "web",
       page,
-      browser // optional
+      browser, // optional
     });
-    await actions.navigateTo('https://example.com');
+    await actions.navigateTo("https://example.com");
   });
 
   // 3️⃣ DIRECT INSTANTIATION (Also valid)
-  test('using direct instantiation', async ({ page }) => {
+  test("using direct instantiation", async ({ page }) => {
     const actions = new PlaywrightActions(page);
-    await actions.navigateTo('https://example.com');
+    await actions.navigateTo("https://example.com");
   });
 
   // ============================================
   // COMMON PATTERNS
   // ============================================
 
-  test('basic interactions', async ({ page }) => {
+  test("basic interactions", async ({ page }) => {
     const actions = ActionFactory.createForWeb(page);
-    
+
     // Navigation
-    await actions.navigateTo('https://yourapp.com');
-    
+    await actions.navigateTo("https://yourapp.com");
+
     // Input
-    await actions.typeText('#username', 'testuser');
-    await actions.typeText('#password', 'secret123');
-    
+    await actions.typeText("#username", "testuser");
+    await actions.typeText("#password", "secret123");
+
     // Click
-    await actions.click('#login-button');
-    
+    await actions.click("#login-button");
+
     // Assertions
-    await actions.waitForElement('#dashboard');
-    await actions.expectVisible('#welcome-message');
-    await actions.expectText('#user-name', 'Test User');
+    await actions.waitForElement("#dashboard");
+    await actions.expectVisible("#welcome-message");
+    await actions.expectText("#user-name", "Test User");
   });
 
-  test('advanced interactions', async ({ page }) => {
+  test("advanced interactions", async ({ page }) => {
     const actions = ActionFactory.createForWeb(page);
-    
+
     // Double click
-    await actions.doubleClick('.item');
-    
+    await actions.doubleClick(".item");
+
     // Long press simulation
-    await actions.longPress('.menu-item', 1500);
-    
+    await actions.longPress(".menu-item", 1500);
+
     // Get text
-    const title = await actions.getText('h1');
-    console.log('Page title:', title);
-    
+    const title = await actions.getText("h1");
+    console.log("Page title:", title);
+
     // Check enabled/disabled
-    await actions.expectEnabled('#submit-btn');
-    await actions.expectDisabled('#cancel-btn');
+    await actions.expectEnabled("#submit-btn");
+    await actions.expectDisabled("#cancel-btn");
   });
 
-  test('gestures and scrolling', async ({ page }) => {
+  test("gestures and scrolling", async ({ page }) => {
     const actions = ActionFactory.createForWeb(page);
-    
+
     // Swipe (simulated with mouse)
-    await actions.swipe('up', 200);
-    await actions.swipe('down', 100);
-    
+    await actions.swipe("up", 200);
+    await actions.swipe("down", 100);
+
     // Scroll to element
-    await actions.scroll('#footer');
-    
+    await actions.scroll("#footer");
+
     // Pinch zoom simulation
     await actions.pinch(1.5);
   });
 
-  test('device emulation', async ({ page }) => {
+  test("device emulation", async ({ page }) => {
     const actions = ActionFactory.createForWeb(page);
-    
+
     // Set orientation
-    await actions.setOrientation('landscape');
-    
+    await actions.setOrientation("landscape");
+
     // Set geolocation (requires permission)
     await actions.setLocation(37.7749, -122.4194); // San Francisco
-    
+
     // Take screenshot
-    const path = await actions.takeScreenshot('dashboard');
-    console.log('Screenshot saved to:', path);
+    const path = await actions.takeScreenshot("dashboard");
+    console.log("Screenshot saved to:", path);
   });
 
-  test('navigation controls', async ({ page }) => {
+  test("navigation controls", async ({ page }) => {
     const actions = ActionFactory.createForWeb(page);
-    
-    await actions.navigateTo('https://example.com/page1');
-    await actions.navigateTo('https://example.com/page2');
-    
+
+    await actions.navigateTo("https://example.com/page1");
+    await actions.navigateTo("https://example.com/page2");
+
     // Go back
     await actions.back();
-    
+
     // Reload
     await actions.reload();
-    
+
     // Close browser
     // await actions.close(); // Usually not needed in tests
   });
@@ -167,24 +166,24 @@ test.describe('Web Actions Examples', () => {
   // CROSS-PLATFORM CONSISTENCY
   // ============================================
 
-  test('same code works across platforms', async ({ page }) => {
+  test("same code works across platforms", async ({ page }) => {
     // This same test structure can be used for mobile!
     // Just change how you create the actions:
-    
+
     // For Web:
     const webActions = ActionFactory.createForWeb(page);
-    
+
     // For iOS:
     // const iosActions = ActionFactory.createForMobile('ios');
-    
+
     // For Android:
     // const androidActions = ActionFactory.createForMobile('android');
-    
+
     // Then use the same methods:
-    await webActions.navigateTo('https://example.com');
-    await webActions.typeText('#email', 'user@example.com');
-    await webActions.click('#submit');
-    await webActions.expectVisible('#success');
+    await webActions.navigateTo("https://example.com");
+    await webActions.typeText("#email", "user@example.com");
+    await webActions.click("#submit");
+    await webActions.expectVisible("#success");
   });
 });
 

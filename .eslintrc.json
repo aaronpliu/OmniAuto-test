@@ -21,10 +21,7 @@
     "project": ["./tsconfig.json"],
     "tsconfigRootDir": "."
   },
-  "plugins": [
-    "@typescript-eslint",
-    "prettier"
-  ],
+  "plugins": ["@typescript-eslint", "prettier"],
   "rules": {
     "prettier/prettier": [
       "error",
@@ -53,11 +50,13 @@
       "error",
       {
         "selector": "variable",
-        "format": ["camelCase", "UPPER_CASE"]
+        "format": ["camelCase", "UPPER_CASE"],
+        "leadingUnderscore": "allow"
       },
       {
         "selector": "function",
-        "format": ["camelCase"]
+        "format": ["camelCase"],
+        "leadingUnderscore": "allow"
       },
       {
         "selector": "class",
@@ -65,13 +64,11 @@
       },
       {
         "selector": "interface",
-        "format": ["PascalCase"],
-        "prefix": ["I"]
+        "format": ["PascalCase"]
       },
       {
         "selector": "typeAlias",
-        "format": ["PascalCase"],
-        "prefix": ["T"]
+        "format": ["PascalCase"]
       },
       {
         "selector": "enum",
@@ -101,7 +98,12 @@
   },
   "overrides": [
     {
-      "files": ["tests/**/*.ts", "tests/**/*.tsx", "**/*.spec.ts", "**/*.test.ts"],
+      "files": [
+        "tests/**/*.ts",
+        "tests/**/*.tsx",
+        "**/*.spec.ts",
+        "**/*.test.ts"
+      ],
       "env": {
         "jest": true,
         "mocha": true
@@ -119,7 +121,8 @@
     {
       "files": ["**/*.d.ts"],
       "rules": {
-        "@typescript-eslint/no-explicit-any": "off"
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/naming-convention": "off"
       }
     },
     {

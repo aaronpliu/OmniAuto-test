@@ -20,7 +20,6 @@ Complete reference file with all available environment variables including:
 - Parallel testing setup
 - Cloud service integration (BrowserStack, Sauce Labs, LambdaTest)
 - Performance tuning options
-- Docker configuration
 
 **Usage:**
 ```bash
@@ -129,18 +128,28 @@ IOS_BUNDLE_ID=com.example.myapp
 IOS_APP_PATH=./apps/ios/MyApp.app
 ```
 
-### Step 3: Start Appium Server
+### Step 3: Configure Appium Server
 
-**Using Docker (Recommended):**
-```bash
-npm run appium:start
-# or
-docker-compose up -d
+Configure the Appium Server address in `configs/mobile.config.js`:
+
+```json
+{
+  "platform": "android",
+  "test": {
+    "appium": {
+      "host": "your-appium-server.com",
+      "port": 4723
+    }
+  }
+}
 ```
 
-**Using Local Installation:**
+**Or for local debugging:**
 ```bash
+# Install Appium
 npm install -g appium
+
+# Start Appium server
 appium
 ```
 
@@ -188,14 +197,17 @@ LOG_PATH=./artifacts/logs
 ```
 
 ### Parallel Testing
+
+Configure multiple Appium Server instances for parallel testing:
+
 ```env
 # Terminal 1
+APPIUM_HOST=appium-server-1.com
 APPIUM_PORT=4723
 
 # Terminal 2
+APPIUM_HOST=appium-server-2.com
 APPIUM_PORT=4724
-
-# docker-compose already configured for both ports
 ```
 
 ---
@@ -264,11 +276,11 @@ APPIUM_PORT=4724
 # Check server status
 curl http://localhost:4723/wd/hub/status
 
-# Restart Docker containers
-docker-compose restart
+# If using local Appium, check if it's running
+ps aux | grep appium
 
-# View logs
-docker-compose logs -f appium1
+# If using remote Appium, check network connectivity
+ping your-appium-server.com
 ```
 
 **Device not found:**
@@ -292,12 +304,6 @@ aapt dump badging app.apk | grep "package\|launchable-activity"
 ---
 
 ## Integration with Existing Setup
-
-### Docker Compose
-The `.env.example` includes Docker-specific variables that work seamlessly with the existing [docker-compose.yml](file:///docker-compose.yml):
-- Two Appium instances (ports 4723, 4724)
-- Shared volume for apps
-- Network configuration
 
 ### Test Framework
 Environment variables are automatically loaded by the AppiumActions class:
@@ -326,7 +332,7 @@ Use environment variables in your CI/CD pipeline:
 1. ✅ Review [.env.example](file:///.env.example) for all available options
 2. ✅ Copy to `.env` and configure for your environment
 3. ✅ Read [ENV_SETUP_GUIDE.md](file:///ENV_SETUP_GUIDE.md) for detailed instructions
-4. ✅ Start Appium server: `npm run appium:start`
+4. ✅ Configure Appium Server in `configs/mobile.config.js`
 5. ✅ Run tests: `npm run test:mobile:android` or `npm run test:mobile:ios`
 
 ---
@@ -336,7 +342,6 @@ Use environment variables in your CI/CD pipeline:
 - **[.env.example](file:///.env.example)** - Complete variable reference (236 lines)
 - **[.env.minimal](file:///.env.minimal)** - Quick-start template (52 lines)
 - **[ENV_SETUP_GUIDE.md](file:///ENV_SETUP_GUIDE.md)** - Comprehensive setup guide (416 lines)
-- **[docker-compose.yml](file:///docker-compose.yml)** - Docker configuration
 - **[AppiumActions.ts](file:///framework/actions/AppiumActions.ts)** - Implementation using env vars
 
 ---

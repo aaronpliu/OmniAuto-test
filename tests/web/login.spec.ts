@@ -1,42 +1,22 @@
 import { test, expect } from '@playwright/test';
-import { PlaywrightActions, ActionFactory } from '@framework/actions';
 
-// Web tests can use PlaywrightActions directly or via ActionFactory
-test.describe('Web Login Tests', () => {
-  test('should login successfully with valid credentials (using ActionFactory)', async ({ page }) => {
-    // Using ActionFactory for consistent API across platforms
-    const actions = ActionFactory.createForWeb(page);
-    await actions.navigateTo('https://yourapp.com');
-    
-    await actions.typeText('#username', 'testuser');
-    await actions.typeText('#password', 'password123');
-    await actions.click('#login-button');
-    
-    await actions.waitForElement('#home-screen', 10000);
-    await expect(page).toHaveURL('/home');
-  });
-
-  test('should show error with invalid credentials (direct instantiation)', async ({ page }) => {
-    // Direct instantiation also works
-    const actions = new PlaywrightActions(page);
-    await actions.navigateTo('https://yourapp.com');
-    
-    await actions.typeText('#username', 'wronguser');
-    await actions.typeText('#password', 'wrongpass');
-    await actions.click('#login-button');
-    
-    await actions.expectText('.error-message', 'Invalid credentials');
-  });
-
-  test('should demonstrate ActionFactory.create with config object', async ({ page, browser }) => {
-    // Using ActionFactory.create with full config object
-    const actions = ActionFactory.create({ 
-      platform: 'web', 
-      page,
-      browser // optional
-    });
-    
-    await actions.navigateTo('https://yourapp.com');
-    await actions.expectVisible('#login-form');
-  });
+test('test', async ({ page }) => {
+  await page.goto('http://localhost:3000/');
+  await page.getByRole('textbox', { name: 'usernameInput' }).click();
+  await page.getByRole('textbox', { name: 'usernameInput' }).fill('admin');
+  await page.getByRole('textbox', { name: 'passwordInput' }).click();
+  await page.getByRole('textbox', { name: 'passwordInput' }).fill('123456');
+  await page.getByRole('button', { name: 'loginButton' }).click();
+  await page.getByLabel('navCalculator').click();
+  await page.getByRole('button', { name: 'calcDigit_8' }).click();
+  await page.getByRole('button', { name: 'calcDigit_8' }).click();
+  await page.getByRole('button', { name: 'calcDigit_8' }).click();
+  await page.getByRole('button', { name: 'calcAdd' }).click();
+  await page.getByRole('button', { name: 'calcDigit_1' }).click();
+  await page.getByRole('button', { name: 'calcDigit_2' }).click();
+  await page.getByRole('button', { name: 'calcDigit_3' }).click();
+  await page.getByRole('button', { name: 'calcMultiply' }).click();
+  await page.getByRole('button', { name: 'calcDigit_9' }).click();
+  await page.getByRole('button', { name: 'calcEquals' }).click();
+  await expect(page.getByLabel('calcDisplay')).toContainText('9099');
 });

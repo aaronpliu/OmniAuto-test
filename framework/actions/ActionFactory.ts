@@ -1,9 +1,16 @@
-import { BaseActions } from './BaseActions';
-import { DetoxActions } from './DetoxActions';
-import { AppiumActions } from './AppiumActions';
-import { PlaywrightActions } from './PlaywrightActions';
-import { Platform, ActionFactoryConfig } from '../types/actions';
-import { Logger } from '../utils/logger';
+import { BaseActions } from "./BaseActions";
+import { DetoxActions } from "./DetoxActions";
+import { AppiumActions } from "./AppiumActions";
+import { PlaywrightActions } from "./PlaywrightActions";
+import { createActionProxy } from "./ActionProxy";
+import { TestContext } from "../utils/testContext";
+import {
+  Platform,
+  ActionFactoryConfig,
+  IosAutomationMode,
+  AndroidAutomationMode,
+} from "../types/actions";
+import { Logger } from "../utils/logger";
 
 const logger = Logger.getInstance();
 
@@ -28,47 +35,82 @@ export function isPlaywrightActions(actions: BaseActions): actions is Playwright
   return actions instanceof PlaywrightActions;
 }
 
+/**
+ * 获取 iOS 自动化模式
+ * 优先级：参数 > 环境变量 IOS_AUTOMATION_MODE > 默认 'detox'
+ */
+function getIosAutomationMode(config?: ActionFactoryConfig): IosAutomationMode {
+  const mode = config?.iosAutomationMode || process.env.IOS_AUTOMATION_MODE || "detox";
+  return mode === "appium" ? "appium" : "detox";
+}
+
+/**
+ * 获取 Android 自动化模式
+ * 优先级：参数 > 环境变量 ANDROID_AUTOMATION_MODE > 默认 'appium'
+ */
+function getAndroidAutomationMode(config?: ActionFactoryConfig): AndroidAutomationMode {
+  const mode = config?.androidAutomationMode || process.env.ANDROID_AUTOMATION_MODE || "appium";
+  return mode === "detox" ? "detox" : "appium";
+}
+
 export class ActionFactory {
   static create(config: Platform | ActionFactoryConfig): BaseActions {
-    const platform = typeof config === 'string' ? config : config.platform;
-    
+    const configObj = typeof config === "string" ? { platform: config } : config;
+    const platform = configObj.platform;
+
     logger.info(`Creating actions for platform: ${platform}`);
 
     switch (platform) {
-      case 'ios':
-        return new DetoxActions();
-      
-      case 'android': {
-        // AppiumActions will automatically build capabilities from environment variables
-        // if none are provided, making it consistent with DetoxActions behavior
-        const capabilities = typeof config === 'object' ? config.capabilities : undefined;
-        return new AppiumActions(capabilities);
+      case "ios": {
+        const iosMode = getIosAutomationMode(configObj);
+        const actions =
+          iosMode === "appium"
+            ? createActionProxy(new AppiumActions(configObj.capabilities))
+            : createActionProxy(new DetoxActions());
+        logger.info(`iOS automation mode: ${iosMode === "appium" ? "Appium (XCUITest)" : "Detox"}`);
+        TestContext.setActions(actions);
+        return actions;
       }
-      
-      case 'web': {
-        // For web, PlaywrightActions requires a Page object
-        const configObj = typeof config === 'object' ? config : null;
-        
-        if (!configObj || !configObj.page) {
+
+      case "android": {
+        const androidMode = getAndroidAutomationMode(configObj);
+        const actions =
+          androidMode === "detox"
+            ? createActionProxy(new DetoxActions())
+            : createActionProxy(new AppiumActions(configObj.capabilities));
+        logger.info(
+          `Android automation mode: ${androidMode === "detox" ? "Detox" : "Appium (UiAutomator2)"}`
+        );
+        TestContext.setActions(actions);
+        return actions;
+      }
+
+      case "web": {
+        if (!configObj.page) {
           throw new Error(
-            'For web platform, a Page object must be provided in the config. ' +
-            'Example: ActionFactory.create({ platform: "web", page })'
+            "For web platform, a Page object must be provided in the config. " +
+              'Example: ActionFactory.create({ platform: "web", page })'
           );
         }
-        
-        return new PlaywrightActions(configObj.page, configObj.browser);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- page/browser typed as any in ActionFactoryConfig
+        const actions = createActionProxy(new PlaywrightActions(configObj.page, configObj.browser));
+        TestContext.setActions(actions);
+        return actions;
       }
-      
+
       default:
-        throw new Error(`Unsupported platform: ${platform}`);
+        throw new Error(`Unsupported platform: ${String(platform)}`);
     }
   }
 
-  static createForMobile(platform: 'ios' | 'android', capabilities?: Record<string, any>): BaseActions {
+  static createForMobile(
+    platform: "ios" | "android",
+    capabilities?: Record<string, any>
+  ): BaseActions {
     return this.create({ platform, capabilities });
   }
 
   static createForWeb(page: any, browser?: any): BaseActions {
-    return this.create({ platform: 'web', page, browser });
+    return this.create({ platform: "web", page, browser });
   }
 }

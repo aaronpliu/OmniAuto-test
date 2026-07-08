@@ -1,6 +1,12 @@
-import { Browser, Page } from 'playwright';
-import { BaseActions } from './BaseActions';
-import { Logger } from '../utils/logger';
+import { Browser, Page } from "playwright";
+import { BaseActions } from "./BaseActions";
+import { TSelector } from "../types/actions";
+import { Logger } from "../utils/logger";
+import { parseSelector, isPlatformSelector } from "../utils/SelectorBuilder";
+
+// 声明 DOM 类型 (仅在浏览器环境可用)
+declare const window: any;
+declare const document: any;
 
 const logger = Logger.getInstance();
 
@@ -14,6 +20,42 @@ export class PlaywrightActions extends BaseActions {
     this.browser = browser;
   }
 
+  /**
+   * 将 TSelector 解析为 Playwright 选择器字符串
+   * Resolve TSelector to a Playwright selector string
+   *
+   * Web 平台不支持 PlatformSelector，收到时抛错。
+   * Web platform does not support PlatformSelector; throws on receipt.
+   */
+  private resolveSelector(selector: TSelector): string {
+    if (isPlatformSelector(selector)) {
+      throw new Error(
+        "PlatformSelector { ios, android } is not supported on web platform. " +
+          "Use a plain string or prefixed selector (e.g. by.id('...'), by.css('...'))."
+      );
+    }
+    if (typeof selector === "string") {
+      const { type, value } = parseSelector(selector);
+      switch (type) {
+        case "id":
+          return `#${value}`;
+        case "text":
+          return `text=${value}`;
+        case "label":
+          return `[aria-label="${value}"]`;
+        case "xpath":
+          return `xpath=${value}`;
+        case "css":
+          return value;
+        case "class":
+          return `.${value}`;
+        case "raw":
+          return value;
+      }
+    }
+    throw new Error(`Unsupported selector type for Playwright: ${typeof selector}`);
+  }
+
   // Navigation
   async navigateTo(url?: string): Promise<void> {
     if (url) {
@@ -23,92 +65,107 @@ export class PlaywrightActions extends BaseActions {
   }
 
   // Element interactions
-  async click(selector: string): Promise<void> {
-    logger.debug(`Clicking element: ${selector}`);
-    await this.page.click(selector);
+  async click(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Clicking element: ${sel}`);
+    await this.page.click(sel);
   }
 
-  async doubleClick(selector: string): Promise<void> {
-    logger.debug(`Double clicking element: ${selector}`);
-    await this.page.dblclick(selector);
+  async doubleClick(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Double clicking element: ${sel}`);
+    await this.page.dblclick(sel);
   }
 
-  async longPress(selector: string, duration = 1000): Promise<void> {
-    logger.debug(`Long pressing element: ${selector} for ${duration}ms`);
-    await this.page.dispatchEvent(selector, 'mousedown');
+  async longPress(selector: TSelector, duration = 1000): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Long pressing element: ${sel} for ${duration}ms`);
+    await this.page.dispatchEvent(sel, "mousedown");
     await this.page.waitForTimeout(duration);
-    await this.page.dispatchEvent(selector, 'mouseup');
+    await this.page.dispatchEvent(sel, "mouseup");
   }
 
   // Input
-  async typeText(selector: string, text: string): Promise<void> {
-    logger.debug(`Typing text into element: ${selector}`);
-    await this.page.fill(selector, text);
+  async typeText(selector: TSelector, text: string): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Typing text into element: ${sel}`);
+    await this.page.fill(sel, text);
   }
 
-  async clearText(selector: string): Promise<void> {
-    logger.debug(`Clearing text from element: ${selector}`);
-    await this.page.fill(selector, '');
+  async clearText(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Clearing text from element: ${sel}`);
+    await this.page.fill(sel, "");
   }
 
-  async getText(selector: string): Promise<string> {
-    logger.debug(`Getting text from element: ${selector}`);
-    return await this.page.textContent(selector) || '';
+  async getText(selector: TSelector): Promise<string> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Getting text from element: ${sel}`);
+    return (await this.page.textContent(sel)) || "";
   }
 
   // Assertions
-  async waitForElement(selector: string, timeout = 10000): Promise<void> {
-    logger.debug(`Waiting for element: ${selector}`);
-    await this.page.waitForSelector(selector, { state: 'visible', timeout });
+  async waitForElement(selector: TSelector, timeout = 10000): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Waiting for element: ${sel}`);
+    await this.page.waitForSelector(sel, { state: "visible", timeout });
   }
 
-  async expectVisible(selector: string): Promise<void> {
-    logger.debug(`Expecting element visible: ${selector}`);
-    await this.page.waitForSelector(selector, { state: 'visible' });
+  async expectVisible(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element visible: ${sel}`);
+    await this.page.waitForSelector(sel, { state: "visible" });
   }
 
-  async expectNotVisible(selector: string): Promise<void> {
-    logger.debug(`Expecting element not visible: ${selector}`);
-    await this.page.waitForSelector(selector, { state: 'hidden' });
+  async expectNotVisible(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element not visible: ${sel}`);
+    await this.page.waitForSelector(sel, { state: "hidden" });
   }
 
-  async expectText(selector: string, text: string): Promise<void> {
-    logger.debug(`Expecting text in element: ${selector}`);
-    const actualText = await this.page.textContent(selector);
+  async expectText(selector: TSelector, text: string): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting text in element: ${sel}`);
+    const actualText = await this.page.textContent(sel);
     if (actualText !== text) {
       throw new Error(`Expected text "${text}" but got "${actualText}"`);
     }
   }
 
-  async expectContainsText(selector: string, text: string): Promise<void> {
-    logger.debug(`Expecting element contains text: ${selector}`);
-    const actualText = await this.page.textContent(selector);
+  async expectContainsText(selector: TSelector, text: string): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element contains text: ${sel}`);
+    const actualText = await this.page.textContent(sel);
     if (!actualText?.includes(text)) {
       throw new Error(`Expected text to contain "${text}" but got "${actualText}"`);
     }
   }
 
-  async expectEnabled(selector: string): Promise<void> {
-    logger.debug(`Expecting element enabled: ${selector}`);
-    const isDisabled = await this.page.getAttribute(selector, 'disabled');
+  async expectEnabled(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element enabled: ${sel}`);
+    const isDisabled = await this.page.getAttribute(sel, "disabled");
     if (isDisabled !== null) {
-      throw new Error(`Element ${selector} is disabled`);
+      throw new Error(`Element ${sel} is disabled`);
     }
   }
 
-  async expectDisabled(selector: string): Promise<void> {
-    logger.debug(`Expecting element disabled: ${selector}`);
-    const isDisabled = await this.page.getAttribute(selector, 'disabled');
+  async expectDisabled(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element disabled: ${sel}`);
+    const isDisabled = await this.page.getAttribute(sel, "disabled");
     if (isDisabled === null) {
-      throw new Error(`Element ${selector} is enabled`);
+      throw new Error(`Element ${sel} is enabled`);
     }
   }
 
   // Gestures
-  async swipe(direction: 'up' | 'down' | 'left' | 'right', distance?: number): Promise<void> {
+  async swipe(direction: "up" | "down" | "left" | "right", distance?: number): Promise<void> {
     logger.debug(`Swiping ${direction}`);
-    const box = await this.page.locator('body').boundingBox();
-    if (!box) throw new Error('Could not get body dimensions');
+    const box = await this.page.locator("body").boundingBox();
+    if (!box) {
+      throw new Error("Could not get body dimensions");
+    }
 
     const startX = box.width / 2;
     const startY = box.height / 2;
@@ -118,16 +175,16 @@ export class PlaywrightActions extends BaseActions {
     let endY = startY;
 
     switch (direction) {
-      case 'up':
+      case "up":
         endY = startY - swipeDistance;
         break;
-      case 'down':
+      case "down":
         endY = startY + swipeDistance;
         break;
-      case 'left':
+      case "left":
         endX = startX - swipeDistance;
         break;
-      case 'right':
+      case "right":
         endX = startX + swipeDistance;
         break;
     }
@@ -138,18 +195,19 @@ export class PlaywrightActions extends BaseActions {
     await this.page.mouse.up();
   }
 
-  async scroll(toSelector: string): Promise<void> {
-    logger.debug(`Scrolling to element: ${toSelector}`);
-    await this.page.locator(toSelector).scrollIntoViewIfNeeded();
+  async scroll(toSelector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(toSelector);
+    logger.debug(`Scrolling to element: ${sel}`);
+    await this.page.locator(sel).scrollIntoViewIfNeeded();
   }
 
   async pinch(scale: number): Promise<void> {
     logger.debug(`Pinching with scale: ${scale}`);
     // Pinch gesture simulation for web
     await this.page.evaluate((s: number) => {
-      const event = new (window as any).WheelEvent('wheel', {
+      const event = new window.WheelEvent("wheel", {
         deltaY: s * 100,
-        ctrlKey: true
+        ctrlKey: true,
       });
       document.dispatchEvent(event);
     }, scale);
@@ -164,37 +222,39 @@ export class PlaywrightActions extends BaseActions {
   }
 
   async reload(): Promise<void> {
-    logger.info('Reloading page');
+    logger.info("Reloading page");
     await this.page.reload();
   }
 
   async back(): Promise<void> {
-    logger.info('Going back');
+    logger.info("Going back");
     await this.page.goBack();
   }
 
   async close(): Promise<void> {
-    logger.info('Closing browser');
+    logger.info("Closing browser");
     if (this.browser) {
       await this.browser.close();
     }
   }
 
   // Device
-  async setOrientation(orientation: 'portrait' | 'landscape'): Promise<void> {
+  async setOrientation(orientation: "portrait" | "landscape"): Promise<void> {
     logger.info(`Setting orientation to: ${orientation}`);
     const viewport = this.page.viewportSize();
-    if (!viewport) return;
+    if (!viewport) {
+      return;
+    }
 
-    if (orientation === 'portrait') {
-      await this.page.setViewportSize({ 
+    if (orientation === "portrait") {
+      await this.page.setViewportSize({
         width: Math.min(viewport.width, viewport.height),
-        height: Math.max(viewport.width, viewport.height)
+        height: Math.max(viewport.width, viewport.height),
       });
     } else {
-      await this.page.setViewportSize({ 
+      await this.page.setViewportSize({
         width: Math.max(viewport.width, viewport.height),
-        height: Math.min(viewport.width, viewport.height)
+        height: Math.min(viewport.width, viewport.height),
       });
     }
   }
@@ -202,7 +262,7 @@ export class PlaywrightActions extends BaseActions {
   async setLocation(latitude: number, longitude: number): Promise<void> {
     logger.info(`Setting location to: ${latitude}, ${longitude}`);
     const context = this.page.context();
-    await context.grantPermissions(['geolocation']);
+    await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude, longitude });
     await this.page.reload();
   }

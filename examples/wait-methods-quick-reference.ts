@@ -1,10 +1,10 @@
 /**
  * Wait Methods Quick Reference
- * 
+ *
  * Quick guide to choosing the right wait strategy in DetoxActions
  */
 
-import { DetoxActions } from '../framework/actions/DetoxActions';
+import { DetoxActions } from "../framework/actions/DetoxActions";
 
 const actions = new DetoxActions();
 
@@ -37,72 +37,67 @@ What are you waiting for?
 // 1️⃣ WAIT FOR PAGE LOAD
 async function waitForPageLoad() {
   // Wait for main sections
-  await actions.waitForAllElements([
-    'header',
-    'content',
-    'footer'
-  ]);
+  await actions.waitForAllElements(["header", "content", "footer"]);
 }
 
 // 2️⃣ WAIT FOR LOADING STATE
 async function waitForLoadingComplete() {
   // Show loading
-  await actions.click('submit');
-  
+  await actions.click("submit");
+
   // Wait for spinner
-  await actions.waitForElement('loadingSpinner', 3000);
-  
+  await actions.waitForElement("loadingSpinner", 3000);
+
   // Wait for spinner to disappear
-  await actions.waitForElementToDisappear('loadingSpinner', 10000);
-  
+  await actions.waitForElementToDisappear("loadingSpinner", 10000);
+
   // Wait for result
-  await actions.waitForElement('result');
+  await actions.waitForElement("result");
 }
 
 // 3️⃣ WAIT FOR FORM VALIDATION
 async function waitForFormReady() {
   // Fill form
-  await actions.typeText('email', 'user@test.com');
-  await actions.typeText('password', 'secret');
-  
+  await actions.typeText("email", "user@test.com");
+  await actions.typeText("password", "secret");
+
   // Wait for submit button to enable
-  await actions.waitForElementToBeEnabled('submitButton');
-  
+  await actions.waitForElementToBeEnabled("submitButton");
+
   // Submit
-  await actions.click('submitButton');
+  await actions.click("submitButton");
 }
 
 // 4️⃣ WAIT FOR DYNAMIC CONTENT
 async function waitForDynamicData() {
   // Wait for loading text
-  await actions.waitForText('status', 'Loading...');
-  
+  await actions.waitForText("status", "Loading...");
+
   // Wait for actual data
-  await actions.waitForText('username', 'John Doe', 10000);
-  
+  await actions.waitForText("username", "John Doe", 10000);
+
   // Verify element visible
-  await actions.waitForElement('userProfile');
+  await actions.waitForElement("userProfile");
 }
 
 // 5️⃣ HANDLE MULTIPLE OUTCOMES
 async function handleMultipleOutcomes() {
   // Trigger action
-  await actions.click('process');
-  
+  await actions.click("process");
+
   // Wait for any outcome
-  const outcomeIndex = await actions.waitForAnyElement([
-    'successMessage',
-    'errorMessage',
-    'warningMessage'
-  ], 10000);
-  
+  const outcomeIndex = await actions.waitForAnyElement(
+    ["successMessage", "errorMessage", "warningMessage"],
+    10000
+  );
+
   // Handle based on outcome
   if (outcomeIndex === 0) {
-    console.log('Success!');
+    console.log("Success!");
   } else if (outcomeIndex === 1) {
-    console.log('Error occurred');
+    console.log("Error occurred");
   } else {
-    console.log('Warning shown');
+    console.log("Warning shown");
   }
 }
 
@@ -110,9 +105,9 @@ async function handleMultipleOutcomes() {
 async function scrollToFindItem() {
   // Scroll down until finding item
   await actions.waitForElementWhileScrolling(
-    DetoxActions.byText('Target Item'),
-    DetoxActions.byType('UIScrollView'),
-    'down',
+    DetoxActions.byText("Target Item"),
+    DetoxActions.byType("UIScrollView"),
+    "down",
     100,
     15000
   );
@@ -121,10 +116,10 @@ async function scrollToFindItem() {
 // 7️⃣ CUSTOM WAIT WITH RETRY
 async function customWaitExample() {
   // Wait with custom settings
-  await actions.waitForElementWithRetry('dynamicElement', {
-    condition: 'visible',
+  await actions.waitForElementWithRetry("dynamicElement", {
+    condition: "visible",
     timeout: 8000,
-    pollingInterval: 200
+    pollingInterval: 200,
   });
 }
 
@@ -261,42 +256,38 @@ await actions.waitForElement(element(by.label('Menu')));
 // ============================================
 
 async function completeLoginFlowExample() {
-  console.log('🚀 Starting login flow test...\n');
-  
+  console.log("🚀 Starting login flow test...\n");
+
   // 1. Enter credentials
-  console.log('1️⃣ Entering credentials...');
-  await actions.typeText('emailInput', 'user@example.com');
-  await actions.typeText('passwordInput', 'password123');
-  
+  console.log("1️⃣ Entering credentials...");
+  await actions.typeText("emailInput", "user@example.com");
+  await actions.typeText("passwordInput", "password123");
+
   // 2. Submit form
-  console.log('2️⃣ Submitting form...');
-  await actions.click('loginButton');
-  
+  console.log("2️⃣ Submitting form...");
+  await actions.click("loginButton");
+
   // 3. Wait for loading state
-  console.log('3️⃣ Waiting for loading...');
-  await actions.waitForElement('loadingSpinner', 3000);
-  console.log('   ✓ Loading spinner appeared');
-  
+  console.log("3️⃣ Waiting for loading...");
+  await actions.waitForElement("loadingSpinner", 3000);
+  console.log("   ✓ Loading spinner appeared");
+
   // 4. Wait for loading to complete
-  console.log('4️⃣ Waiting for load completion...');
-  await actions.waitForElementToDisappear('loadingSpinner', 10000);
-  console.log('   ✓ Loading complete');
-  
+  console.log("4️⃣ Waiting for load completion...");
+  await actions.waitForElementToDisappear("loadingSpinner", 10000);
+  console.log("   ✓ Loading complete");
+
   // 5. Wait for dashboard to load
-  console.log('5️⃣ Waiting for dashboard...');
-  await actions.waitForAllElements([
-    'dashboardHeader',
-    'userProfile',
-    'navigationMenu'
-  ], 8000);
-  console.log('   ✓ Dashboard loaded');
-  
+  console.log("5️⃣ Waiting for dashboard...");
+  await actions.waitForAllElements(["dashboardHeader", "userProfile", "navigationMenu"], 8000);
+  console.log("   ✓ Dashboard loaded");
+
   // 6. Verify welcome message
-  console.log('6️⃣ Verifying welcome message...');
-  await actions.waitForText('welcomeMessage', 'Welcome', 5000);
-  console.log('   ✓ Welcome message displayed');
-  
-  console.log('\n✅ Login flow test PASSED!');
+  console.log("6️⃣ Verifying welcome message...");
+  await actions.waitForText("welcomeMessage", "Welcome", 5000);
+  console.log("   ✓ Welcome message displayed");
+
+  console.log("\n✅ Login flow test PASSED!");
 }
 
 export {

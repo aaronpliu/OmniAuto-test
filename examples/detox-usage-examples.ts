@@ -1,11 +1,11 @@
 /**
  * DetoxActions Usage Examples
- * 
+ *
  * This file demonstrates how to use the enhanced DetoxActions with flexible selector strategies.
  */
 
-import { by } from 'detox';
-import { DetoxActions } from '../framework/actions/DetoxActions';
+import { by } from "detox";
+import { DetoxActions } from "../framework/actions/DetoxActions";
 
 // Initialize DetoxActions
 const actions = new DetoxActions();
@@ -17,16 +17,16 @@ const actions = new DetoxActions();
 
 async function exampleWithStringSelectors() {
   // Click an element by its testID
-  await actions.click('loginButton');
-  
+  await actions.click("loginButton");
+
   // Type text into an input field by testID
-  await actions.typeText('usernameInput', 'john.doe');
-  
+  await actions.typeText("usernameInput", "john.doe");
+
   // Wait for an element to be visible
-  await actions.waitForElement('welcomeMessage', 5000);
-  
+  await actions.waitForElement("welcomeMessage", 5000);
+
   // Assert element is visible
-  await actions.expectVisible('dashboard');
+  await actions.expectVisible("dashboard");
 }
 
 // ============================================
@@ -36,19 +36,19 @@ async function exampleWithStringSelectors() {
 
 async function exampleWithStaticHelpers() {
   // Match by text content
-  const submitButton = DetoxActions.byText('Submit');
+  const submitButton = DetoxActions.byText("Submit");
   await actions.click(submitButton);
-  
+
   // Match by accessibility label
-  const menuButton = DetoxActions.byLabel('Open Menu');
+  const menuButton = DetoxActions.byLabel("Open Menu");
   await actions.click(menuButton);
-  
+
   // Match by native type
-  const scrollView = DetoxActions.byType('UIScrollView');
+  const scrollView = DetoxActions.byType("UIScrollView");
   await actions.scroll(scrollView);
-  
+
   // Match by test ID using helper
-  const loginBtn = DetoxActions.byId('loginButton');
+  const loginBtn = DetoxActions.byId("loginButton");
   await actions.click(loginBtn);
 }
 
@@ -60,20 +60,20 @@ async function exampleWithStaticHelpers() {
 async function exampleWithDirectMatchers() {
   // Match by text with regex
   await actions.click(element(by.text(/Submit \d+/)));
-  
+
   // Match by label with regex
   await actions.expectVisible(element(by.label(/Welcome.*/)));
-  
+
   // Combine matchers using .and()
-  const specificButton = element(by.text('Submit').and(by.id('submitButton')));
+  const specificButton = element(by.text("Submit").and(by.id("submitButton")));
   await actions.click(specificButton);
-  
+
   // Match with ancestor
-  const nestedElement = element(by.id('child').withAncestor(by.id('parent')));
+  const nestedElement = element(by.id("child").withAncestor(by.id("parent")));
   await actions.expectVisible(nestedElement);
-  
+
   // Match with descendant
-  const parentWithChild = element(by.id('parent').withDescendant(by.id('child')));
+  const parentWithChild = element(by.id("parent").withDescendant(by.id("child")));
   await actions.expectVisible(parentWithChild);
 }
 
@@ -84,101 +84,98 @@ async function exampleWithDirectMatchers() {
 
 async function exampleWithByAll() {
   // Find element that matches BOTH id='button' AND text='Submit'
-  const submitBtn = DetoxActions.byAll(
-    by.id('button'),
-    by.text('Submit')
-  );
+  const submitBtn = DetoxActions.byAll(by.id("button"), by.text("Submit"));
   await actions.click(submitBtn);
-  
+
   // Find element matching id, text, AND label
   const complexElement = DetoxActions.byAll(
-    by.id('input'),
-    by.label('Username'),
-    by.type('UITextField')
+    by.id("input"),
+    by.label("Username"),
+    by.type("UITextField")
   );
-  await actions.typeText(complexElement, 'testuser');
+  await actions.typeText(complexElement, "testuser");
 }
 
 // ============================================
 // PRACTICAL EXAMPLES
 // ============================================
 
-async function practicalExample1_LoginForm() {
+export async function practicalExample1LoginForm() {
   // Scenario: Login form where elements don't have testIDs
-  
+
   // Method 1: Match by placeholder text
-  const emailInput = element(by.text('Enter your email'));
-  await actions.typeText(emailInput, 'user@example.com');
-  
+  const emailInput = element(by.text("Enter your email"));
+  await actions.typeText(emailInput, "user@example.com");
+
   // Method 2: Match by accessibility label
-  const passwordInput = DetoxActions.byLabel('Password field');
-  await actions.typeText(passwordInput, 'secret123');
-  
+  const passwordInput = DetoxActions.byLabel("Password field");
+  await actions.typeText(passwordInput, "secret123");
+
   // Method 3: Match button by text
-  const loginButton = DetoxActions.byText('Login');
+  const loginButton = DetoxActions.byText("Login");
   await actions.click(loginButton);
-  
+
   // Verify login success
-  await actions.expectContainsText('welcomeMessage', 'Welcome');
+  await actions.expectContainsText("welcomeMessage", "Welcome");
 }
 
-async function practicalExample2_ListScrolling() {
+export async function practicalExample2ListScrolling() {
   // Scenario: Scroll through a list and tap a specific item
-  
+
   // Scroll to bottom of list
-  const list = DetoxActions.byType('UITableView');
+  const list = DetoxActions.byType("UITableView");
   await actions.scroll(list);
-  
+
   // Find and click item by text
-  const targetItem = DetoxActions.byText('Target Item Name');
+  const targetItem = DetoxActions.byText("Target Item Name");
   await actions.click(targetItem);
-  
+
   // Verify item details are visible
-  await actions.expectVisible(element(by.label('Item Details')));
+  await actions.expectVisible(element(by.label("Item Details")));
 }
 
-async function practicalExample3_FormValidation() {
+export async function practicalExample3FormValidation() {
   // Scenario: Test form validation states
-  
+
   // Fill form
-  await actions.typeText('nameField', 'John');
-  await actions.typeText('emailField', 'invalid-email');
-  
+  await actions.typeText("nameField", "John");
+  await actions.typeText("emailField", "invalid-email");
+
   // Submit form
-  await actions.click(DetoxActions.byText('Submit'));
-  
+  await actions.click(DetoxActions.byText("Submit"));
+
   // Wait for error message
-  await actions.waitForElement(element(by.text('Invalid email format')), 3000);
-  
+  await actions.waitForElement(element(by.text("Invalid email format")), 3000);
+
   // Verify error state
-  await actions.expectVisible(element(by.text('Invalid email format')));
-  
+  await actions.expectVisible(element(by.text("Invalid email format")));
+
   // Fix email
-  await actions.clearText('emailField');
-  await actions.typeText('emailField', 'john@example.com');
-  
+  await actions.clearText("emailField");
+  await actions.typeText("emailField", "john@example.com");
+
   // Resubmit
-  await actions.click(DetoxActions.byText('Submit'));
-  
+  await actions.click(DetoxActions.byText("Submit"));
+
   // Verify success
-  await actions.expectNotVisible(element(by.text('Invalid email format')));
+  await actions.expectNotVisible(element(by.text("Invalid email format")));
 }
 
-async function practicalExample4_Gestures() {
+export async function practicalExample4Gestures() {
   // Scenario: Test swipe gestures
-  
+
   // Swipe up to refresh
-  await actions.swipe('up');
-  
+  await actions.swipe("up");
+
   // Pinch to zoom out
-  await actions.pinch(0.5, 'slow', 0);
-  
+  await actions.pinch(0.5, "slow", 0);
+
   // Long press on an item
-  const listItem = DetoxActions.byText('Important Item');
+  const listItem = DetoxActions.byText("Important Item");
   await actions.longPress(listItem, 1500);
-  
+
   // Verify context menu appears
-  await actions.expectVisible(element(by.label('Context Menu')));
+  await actions.expectVisible(element(by.label("Context Menu")));
 }
 
 // ============================================
@@ -216,8 +213,4 @@ export {
   exampleWithStaticHelpers,
   exampleWithDirectMatchers,
   exampleWithByAll,
-  practicalExample1_LoginForm,
-  practicalExample2_ListScrolling,
-  practicalExample3_FormValidation,
-  practicalExample4_Gestures,
 };
