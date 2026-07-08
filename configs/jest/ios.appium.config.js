@@ -9,6 +9,10 @@ module.exports = {
     '<rootDir>/framework/hooks/testLifecycle.ts'
   ],
   globalTeardown: '<rootDir>/framework/hooks/globalTeardown.ts',
+  reporters: [
+    'default',
+    '<rootDir>/configs/jest/smokeReportReporter.js'
+  ],
   testEnvironmentOptions: {
     ...baseConfig.testEnvironmentOptions,
     platform: 'ios'
