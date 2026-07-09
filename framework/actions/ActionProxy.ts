@@ -13,7 +13,11 @@ import { IActions } from "../types/actions";
 import { Logger } from "../utils/logger";
 import { appendFileSync, unlinkSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
-import { isPlatformSelector, resolvePlatformSelector } from "../utils/SelectorBuilder";
+import {
+  isPlatformSelector,
+  resolvePlatformSelector,
+  isChainableSelector,
+} from "../utils/SelectorBuilder";
 
 const logger = Logger.getInstance();
 
@@ -83,6 +87,10 @@ function selectorName(s: unknown): string {
     const resolved = resolvePlatformSelector(s, platform);
     return selectorName(resolved);
   }
+  // ChainableSelector: 使用紧凑格式显示
+  if (isChainableSelector(s)) {
+    return s.toString(true);
+  }
   if (typeof s === "string") {
     const short = s.includes(":") ? s.split(":").pop()! : s;
     return short.length > 30 ? short.substring(0, 27) + "..." : short;
@@ -106,184 +114,91 @@ function argName(arg: unknown, maxLen = 20): string {
   return "...";
 }
 
-// ================================================================
-//  步骤模板声明式注册表
-// ================================================================
-
-/** 步骤参数规格：描述如何从 args 中提取并格式化某个参数 */
-type ArgSpec =
-  | { kind: "selector"; index: number } // 用 selectorName() 格式化（选择器）
-  | { kind: "value"; index: number } // 用 argName() 格式化（字面量值）
-  | { kind: "duration"; indices: number[] }; // 从多个位置找 number 类型 timeout，输出 "(Nms)"
-
-/** 单个步骤模板：动词 + 参数规格列表 */
-interface StepTemplate {
-  label: string;
-  args?: ArgSpec[];
-}
-
-/**
- * 核心方法模板表：Record<keyof IActions, StepTemplate> 强类型约束。
- * 新增 IActions 接口方法时 tsc 会编译报错强制补模板，避免静默遗漏。
- */
-const STEP_TEMPLATES: Record<keyof IActions, StepTemplate> = {
-  // Element interactions
-  click: { label: "点击", args: [{ kind: "selector", index: 0 }] },
-  doubleClick: { label: "双击", args: [{ kind: "selector", index: 0 }] },
-  longPress: { label: "长按", args: [{ kind: "selector", index: 0 }] },
-  // Input
-  typeText: {
-    label: "输入",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "value", index: 1 },
-    ],
-  },
-  clearText: { label: "清空", args: [{ kind: "selector", index: 0 }] },
-  getText: { label: "获取文本", args: [{ kind: "selector", index: 0 }] },
-  // Assertions
-  expectVisible: { label: "验证可见", args: [{ kind: "selector", index: 0 }] },
-  expectNotVisible: {
-    label: "验证不可见",
-    args: [{ kind: "selector", index: 0 }],
-  },
-  expectText: {
-    label: "验证文本",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "value", index: 1 },
-    ],
-  },
-  expectContainsText: {
-    label: "验证包含文本",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "value", index: 1 },
-    ],
-  },
-  expectEnabled: { label: "验证可交互", args: [{ kind: "selector", index: 0 }] },
-  expectDisabled: { label: "验证禁用", args: [{ kind: "selector", index: 0 }] },
-  // Wait
-  waitForElement: {
-    label: "等待元素可见",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  // Navigation
-  navigateTo: { label: "打开应用" },
-  reload: { label: "重新加载" },
-  back: { label: "返回" },
-  close: { label: "关闭" },
-  // Gestures
-  swipe: { label: "滑动", args: [{ kind: "value", index: 0 }] },
-  scroll: { label: "滚动到", args: [{ kind: "selector", index: 0 }] },
-  pinch: { label: "缩放", args: [{ kind: "value", index: 1 }] },
-  // Utilities
-  takeScreenshot: { label: "截图" },
-  // Device
-  setOrientation: { label: "设置方向", args: [{ kind: "value", index: 0 }] },
-  setLocation: {
-    label: "设置位置",
-    args: [
-      { kind: "value", index: 0 },
-      { kind: "value", index: 1 },
-    ],
-  },
-};
-
-/**
- * 扩展方法模板表：非 IActions 接口的方法（Detox/Appium 扩展的 waitFor* 变体、录屏等）。
- * 无强类型约束，靠开发者补充；遗漏时 buildStepName 会降级 + warn 提醒。
- */
-const EXTENDED_TEMPLATES: Record<string, StepTemplate> = {
-  waitForElementToExist: {
-    label: "等待元素存在",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForElementToDisappear: {
-    label: "等待元素消失",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForElementToBeEnabled: {
-    label: "等待元素可交互",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForElementWhileScrolling: {
-    label: "滚动等待",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForElementWithRetry: {
-    label: "重试等待",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForAllElements: {
-    label: "等待全部元素",
-    args: [{ kind: "duration", indices: [1, 2] }],
-  },
-  waitForAnyElement: {
-    label: "等待任意元素",
-    args: [{ kind: "duration", indices: [1, 2] }],
-  },
-  waitForText: { label: "等待文本", args: [{ kind: "value", index: 1 }] },
-  startRecording: { label: "开始录屏" },
-  stopRecording: { label: "停止录屏" },
-};
-
-/** 按 ArgSpec 从 args 中提取并格式化为步骤名片段 */
-function formatArg(spec: ArgSpec, args: unknown[]): string {
-  switch (spec.kind) {
-    case "selector":
-      return selectorName(args[spec.index]);
-    case "value":
-      return argName(args[spec.index]);
-    case "duration": {
-      for (const i of spec.indices) {
-        const v = args[i];
-        if (v !== undefined && typeof v === "number") {
-          return `(${v}ms)`;
-        }
-      }
-      return "";
-    }
-  }
-}
-
-/** 记录已 warn 过的未配置方法，避免重复刷日志 */
-const warnedMethods = new Set<string>();
-
 function buildStepName(method: string, args: unknown[]): string {
-  const coreTpl = (STEP_TEMPLATES as Record<string, StepTemplate | undefined>)[method];
-  const tpl = coreTpl ?? EXTENDED_TEMPLATES[method];
+  const parts: string[] = [];
 
-  if (!tpl) {
-    // 未配置模板：降级为方法名 + 每方法仅 warn 一次
-    if (!warnedMethods.has(method)) {
-      logger.warn(`[ActionProxy] 步骤模板未配置: ${method}，报告将显示原始方法名`);
-      warnedMethods.add(method);
+  if (method === "click") {
+    parts.push("点击", selectorName(args[0]));
+  } else if (method === "doubleClick") {
+    parts.push("双击", selectorName(args[0]));
+  } else if (method === "longPress") {
+    parts.push("长按", selectorName(args[0]));
+  } else if (method === "typeText") {
+    parts.push("输入", selectorName(args[0]), argName(args[1]));
+  } else if (method === "clearText") {
+    parts.push("清空", selectorName(args[0]));
+  } else if (method === "getText") {
+    parts.push("获取文本", selectorName(args[0]));
+  } else if (method === "expectVisible") {
+    parts.push("验证可见", selectorName(args[0]));
+  } else if (method === "expectNotVisible") {
+    parts.push("验证不可见", selectorName(args[0]));
+  } else if (method === "expectText") {
+    parts.push("验证文本", selectorName(args[0]), argName(args[1]));
+  } else if (method === "expectContainsText") {
+    parts.push("验证包含文本", selectorName(args[0]), argName(args[1]));
+  } else if (method === "expectEnabled") {
+    parts.push("验证可交互", selectorName(args[0]));
+  } else if (method === "expectDisabled") {
+    parts.push("验证禁用", selectorName(args[0]));
+  } else if (method.startsWith("waitForElement")) {
+    if (method === "waitForElement") {
+      parts.push("等待元素可见", selectorName(args[0]));
+    } else if (method === "waitForElementToExist") {
+      parts.push("等待元素存在", selectorName(args[0]));
+    } else if (method === "waitForElementToDisappear") {
+      parts.push("等待元素消失", selectorName(args[0]));
+    } else if (method === "waitForElementToBeEnabled") {
+      parts.push("等待元素可交互", selectorName(args[0]));
+    } else if (method === "waitForElementWhileScrolling") {
+      parts.push("滚动等待", selectorName(args[0]));
+    } else if (method === "waitForElementWithRetry") {
+      parts.push("重试等待", selectorName(args[0]));
+    } else if (method === "waitForAllElements") {
+      parts.push("等待全部元素");
+    } else if (method === "waitForAnyElement") {
+      parts.push("等待任意元素");
+    } else {
+      parts.push("等待元素", selectorName(args[0]));
     }
-    return method;
-  }
 
-  const parts: string[] = [tpl.label];
-  for (const spec of tpl.args ?? []) {
-    parts.push(formatArg(spec, args));
+    const t =
+      args[1] && typeof args[1] === "number"
+        ? args[1]
+        : args[2] && typeof args[2] === "number"
+          ? args[2]
+          : null;
+    if (t) {
+      parts.push(`(${t}ms)`);
+    }
+  } else if (method === "waitForText") {
+    parts.push("等待文本", argName(args[1]));
+  } else if (method === "navigateTo") {
+    parts.push("打开应用");
+  } else if (method === "reload") {
+    parts.push("重新加载");
+  } else if (method === "back") {
+    parts.push("返回");
+  } else if (method === "close") {
+    parts.push("关闭");
+  } else if (method === "swipe") {
+    parts.push("滑动", String(args[0]));
+  } else if (method === "scroll") {
+    parts.push("滚动到", selectorName(args[0]));
+  } else if (method === "pinch") {
+    parts.push("缩放", String(args[1] || ""));
+  } else if (method === "takeScreenshot") {
+    parts.push("截图");
+  } else if (method === "setOrientation") {
+    parts.push("设置方向", String(args[0]));
+  } else if (method === "setLocation") {
+    parts.push("设置位置", String(args[0]), String(args[1]));
+  } else if (method === "startRecording") {
+    parts.push("开始录屏");
+  } else if (method === "stopRecording") {
+    parts.push("停止录屏");
+  } else {
+    parts.push(method);
   }
 
   const name = parts.filter(Boolean).join(" ");

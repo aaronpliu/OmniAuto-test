@@ -8,9 +8,13 @@ export {
   parseSelector,
   isPlatformSelector,
   resolvePlatformSelector,
+  isChainableSelector,
+  ChainableSelector,
   platform,
   by,
 } from "./SelectorBuilder";
+
+export type { SelectorType } from "./SelectorBuilder";
 
 export { TestContext } from "./testContext";
 export { ScreenRecorder, createScreenRecorder, getScreenRecorder } from "./screenRecorder";

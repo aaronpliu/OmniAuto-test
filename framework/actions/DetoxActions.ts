@@ -4,9 +4,12 @@ import { Logger } from "../utils/logger";
 import { resizeScreenshot } from "../utils/imageResizer";
 import {
   parseSelector,
+  isIndexedSelector,
   isPlatformSelector,
   resolvePlatformSelector,
+  isChainableSelector,
 } from "../utils/SelectorBuilder";
+import { ChainableSelectorLike, CompoundSelectorNode } from "../types/actions";
 
 const logger = Logger.getInstance();
 
@@ -21,8 +24,13 @@ let currentPlatform: "ios" | "android" = "ios";
  * - String (with prefix): parsed as unified selector (id:, text:, label:, etc.)
  * - NativeElement: already wrapped element (element(by.xxx))
  * - Matcher: raw matcher that needs wrapping (by.text(), by.label(), etc.)
+ * - ChainableSelectorLike: compound/chainable selector (by.type("X").withDescendant(...))
  */
-export type DetoxSelector = string | ReturnType<typeof element> | ReturnType<typeof by.id>;
+export type DetoxSelector =
+  | string
+  | ReturnType<typeof element>
+  | ReturnType<typeof by.id>
+  | ChainableSelectorLike;
 
 // Type guard to check if something is a NativeElement
 function isNativeElement(obj: any): obj is ReturnType<typeof element> {
@@ -60,17 +68,94 @@ function selectorToDetoxMatcher(selector: string): any {
       return by.id(value);
     case "class":
       return by.type(value);
+    case "type":
+      return by.type(value);
     case "raw":
       return by.id(value);
   }
 }
 
+/**
+ * 将 CompoundSelectorNode 树转换为 Detox NativeMatcher
+ * Convert CompoundSelectorNode tree to Detox NativeMatcher
+ *
+ * 递归解析原子和复合选择器节点，生成 Detox 原生 matcher。
+ * Recursively resolves atomic and compound nodes into Detox native matchers.
+ */
+function resolveCompoundForDetox(node: CompoundSelectorNode): any {
+  if (node.type === "atomic") {
+    const { selectorType, value } = node.atomic!;
+    return selectorToDetoxMatcher(`${selectorType}:${value}`);
+  }
+  // compound node
+  const left = resolveCompoundForDetox(node.left!);
+  const right = resolveCompoundForDetox(node.right!);
+
+  switch (node.relation) {
+    case "descendant":
+      return left.withDescendant(right);
+    case "ancestor":
+      return left.withAncestor(right);
+    case "and":
+      return left.and(right);
+    default:
+      throw new Error(`Unknown compound relation: ${node.relation}`);
+  }
+}
+
 // Helper function to resolve selector to NativeElement
 function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
+  // IndexedSelector: { selector, index } — 按索引选取第N个匹配 / Select Nth match by index
+  if (isIndexedSelector(selector)) {
+    const inner = selector.selector;
+    const idx = selector.index;
+
+    // 内层为 PlatformSelector → 先按平台解析，再递归
+    if (isPlatformSelector(inner)) {
+      const resolved = resolvePlatformSelector(inner, currentPlatform);
+      return resolveElement({ selector: resolved, index: idx } as unknown as DetoxSelector);
+    }
+
+    // 内层为字符串 → 转到 matcher + atIndex(n)
+    if (typeof inner === "string") {
+      const { type } = parseSelector(inner);
+      const matcher = type !== "raw" ? selectorToDetoxMatcher(inner) : by.id(inner);
+      // Detox: matcher.atIndex(n) 选出第 n 个，再 wrap 成 NativeElement
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      return element(matcher.atIndex(idx));
+    }
+
+    // 内层为 ChainableSelector → 先解析为 Detox matcher，再 atIndex
+    if (isChainableSelector(inner)) {
+      const matcher = resolveCompoundForDetox(inner.toNode());
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      return element(matcher.atIndex(idx));
+    }
+
+    // 内层为已解析的 matcher → 直接 .atIndex()
+    if (isDetoxMatcher(inner)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      return element((inner as any).atIndex(idx));
+    }
+
+    // 内层为 NativeElement → 不支持索引（已经是单个对象），降级返回
+    logger.warn(
+      "atIndex() is not applicable to an already-resolved NativeElement; returning the element as-is"
+    );
+    return inner as ReturnType<typeof element>;
+  }
+
   // PlatformSelector: { ios: ..., android: ... } — 按当前平台解析
   if (isPlatformSelector(selector)) {
     const resolved = resolvePlatformSelector(selector, currentPlatform);
     return resolveElement(resolved as DetoxSelector);
+  }
+
+  // ChainableSelector: by.type("X").withDescendant(by.type("Y"))
+  if (isChainableSelector(selector)) {
+    const matcher = resolveCompoundForDetox(selector.toNode());
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    return element(matcher);
   }
 
   // Case 1: Already a NativeElement (wrapped with element())
@@ -215,12 +300,18 @@ export class DetoxActions extends BaseActions {
     timeout = 15000
   ): Promise<void> {
     const targetElem = resolveElement(targetSelector);
-
     logger.debug(`Waiting for element while scrolling ${direction}`);
 
+    const scrollMatcher: Detox.NativeMatcher =
+      typeof scrollContainerSelector === "string"
+        ? (selectorToDetoxMatcher(scrollContainerSelector) as Detox.NativeMatcher)
+        : (scrollContainerSelector as unknown as Detox.NativeMatcher);
     // Note: whileElement requires a matcher, not an element
     // This is a limitation of Detox's API
-    await waitFor(targetElem).toBeVisible().withTimeout(timeout);
+    await waitFor(targetElem)
+      .toBeVisible()
+      .whileElement(scrollMatcher)
+      .scroll(_scrollAmount, direction);
   }
 
   /**

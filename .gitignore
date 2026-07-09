@@ -60,3 +60,4 @@ applications/TestGround/android-app/*
 applications/TestGround/ios-app/*
 !applications/TestGround/ios-app/.gitkeep
 applications/3in1
+tests/mobile/3in1

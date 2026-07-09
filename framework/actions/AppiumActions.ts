@@ -5,9 +5,12 @@ import { Logger } from "../utils/logger";
 import { mobileConfig } from "../utils/mobileConfig";
 import {
   parseSelector,
+  isIndexedSelector,
   isPlatformSelector,
   resolvePlatformSelector,
+  isChainableSelector,
 } from "../utils/SelectorBuilder";
+import { CompoundSelectorNode } from "../types/actions";
 import { resizeScreenshot } from "../utils/imageResizer";
 
 const logger = Logger.getInstance();
@@ -59,8 +62,96 @@ export class AppiumActions extends BaseActions {
         } else {
           return `-ios class chain:**/${value}[1]`;
         }
+      case "type":
+        if (this.platform === "android") {
+          return `android=new UiSelector().className("${value}")`;
+        } else {
+          return `-ios class chain:**/${value}[1]`;
+        }
       case "raw":
         return `~${value}`;
+    }
+  }
+
+  /**
+   * 将原子选择器类型和值转换为 XPath 片段（不含 // 前缀）
+   * Convert atomic selector type/value to XPath fragment (without // prefix)
+   */
+  private static atomicToXPathFragment(
+    selectorType: string,
+    value: string,
+    platform: "ios" | "android"
+  ): string {
+    switch (selectorType) {
+      case "id":
+        return `*[@accessibility-label='${value}']`;
+      case "text":
+        if (platform === "android") {
+          return `*[@text='${value}']`;
+        }
+        return `*[@label='${value}']`;
+      case "label":
+        return `*[@accessibility-label='${value}']`;
+      case "type":
+      case "class":
+        return `*[@class='${value}']`;
+      case "xpath":
+        // xpath value is a path expression, strip leading //
+        return value.replace(/^\/\//, "");
+      case "raw":
+        return `*[@accessibility-label='${value}']`;
+      default:
+        return `*[@accessibility-label='${value}']`;
+    }
+  }
+
+  /**
+   * 将 CompoundSelectorNode 树转换为 Appium XPath 选择器字符串
+   * Convert CompoundSelectorNode tree to Appium XPath selector string
+   *
+   * 递归解析原子和复合选择器节点，生成 XPath 表达式。
+   * Recursively resolves atomic and compound nodes into XPath expressions.
+   */
+  private static resolveCompoundForAppium(
+    node: CompoundSelectorNode,
+    platform: "ios" | "android"
+  ): string {
+    if (node.type === "atomic") {
+      const { selectorType, value } = node.atomic!;
+      const frag = AppiumActions.atomicToXPathFragment(selectorType, value, platform);
+      return `//${frag}`;
+    }
+    // compound node
+    const left = AppiumActions.resolveCompoundForAppium(node.left!, platform);
+    const right = AppiumActions.resolveCompoundForAppium(node.right!, platform);
+
+    switch (node.relation) {
+      case "descendant": {
+        // A has descendant B: //A_XPath[.//B_XPath]
+        // Strip leading // from right for nesting
+        const rightDesc = right.replace(/^\/\//, "");
+        return `${left}[.//${rightDesc}]`;
+      }
+      case "ancestor":
+        // A has ancestor B: //B_XPath//A_XPath
+        // Returns A (left) elements that are inside B (right)
+        return `${right}//${left.replace(/^\/\//, "")}`;
+      case "and": {
+        // A AND B: 尝试合并条件 / Try to merge conditions
+        // Simple case: //*[@cond1] and //*[@cond2] → //*[@cond1 and @cond2]
+        const leftMatch = left.match(/^\/\/\*\[(.+)\]$/);
+        const rightMatch = right.match(/^\/\/\*\[(.+)\]$/);
+        if (leftMatch && rightMatch) {
+          return `//*[${leftMatch[1]} and ${rightMatch[1]}]`;
+        }
+        // Fallback: use left XPath (complex compound selectors)
+        logger.warn(
+          `"and" compound with complex selectors, falling back to left selector: ${left}`
+        );
+        return left;
+      }
+      default:
+        throw new Error(`Unknown compound relation: ${node.relation}`);
     }
   }
 
@@ -69,10 +160,62 @@ export class AppiumActions extends BaseActions {
     driver: WebdriverIO.Browser,
     selector: AppiumSelector
   ): Promise<WebdriverIO.Element> {
+    // IndexedSelector: { selector, index } — 按索引选取第N个匹配 / Select Nth match by index
+    if (isIndexedSelector(selector)) {
+      const inner = selector.selector;
+      const idx = selector.index;
+
+      // 内层为 PlatformSelector → 先按平台解析，再递归
+      if (isPlatformSelector(inner)) {
+        const resolved = resolvePlatformSelector(inner, this.platform);
+        return this.resolveElement(driver, { selector: resolved, index: idx });
+      }
+
+      // 内层为字符串 → $$()[idx]
+      if (typeof inner === "string") {
+        const { type } = parseSelector(inner);
+        const wdioSelector = type !== "raw" ? this.selectorToAppiumString(inner) : `~${inner}`;
+        const elements = await driver.$$(wdioSelector);
+        if (idx >= elements.length) {
+          throw new Error(
+            `Index ${idx} out of bounds: selector "${wdioSelector}" matched ${elements.length} element(s)`
+          );
+        }
+        logger.debug(`Resolved indexed selector: ${inner} [${idx}] → Appium element`);
+        return elements[idx];
+      }
+
+      // 内层为 ChainableSelector → 先解析为 XPath，再 $$()[idx]
+      if (isChainableSelector(inner)) {
+        const xpath = AppiumActions.resolveCompoundForAppium(inner.toNode(), this.platform);
+        const elements = await driver.$$(xpath);
+        if (idx >= elements.length) {
+          throw new Error(
+            `Index ${idx} out of bounds: selector "${xpath}" matched ${elements.length} element(s)`
+          );
+        }
+        logger.debug(`Resolved compound indexed selector [${idx}] → Appium element`);
+        return elements[idx];
+      }
+
+      // 内层为 WebdriverIO Element → 不支持索引（已经是单个对象），降级
+      logger.warn(
+        "atIndex() is not applicable to an already-resolved WebdriverIO.Element; returning as-is"
+      );
+      return inner as WebdriverIO.Element;
+    }
+
     // PlatformSelector: { ios: ..., android: ... } — 按 this.platform 解析
     if (isPlatformSelector(selector)) {
       const resolved = resolvePlatformSelector(selector, this.platform);
       return this.resolveElement(driver, resolved as AppiumSelector);
+    }
+
+    // ChainableSelector: by.type("X").withDescendant(by.type("Y"))
+    if (isChainableSelector(selector)) {
+      const xpath = AppiumActions.resolveCompoundForAppium(selector.toNode(), this.platform);
+      logger.debug(`Resolved compound selector → Appium XPath: ${xpath}`);
+      return await driver.$(xpath);
     }
 
     // If it's already a WebdriverIO element, return it

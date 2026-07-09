@@ -1,26 +1,26 @@
-import { describe, it, beforeAll } from '@jest/globals';
-import { ActionFactory } from '@framework/actions';
-import { LoginPage } from '@applications/TestGround/pages/LoginPage';
+import { describe, it, beforeAll } from "@jest/globals";
+import { ActionFactory } from "@framework/actions";
+import { LoginPage } from "@applications/TestGround/pages/LoginPage";
 
-describe('Mobile Login Tests', () => {
+describe("Mobile Login Tests", () => {
   let loginPage: LoginPage;
 
-  beforeAll(async () => {
-    const platform = (process.env.TEST_PLATFORM || 'ios') as 'ios' | 'android';
+  beforeAll(() => {
+    const platform = (process.env.TEST_PLATFORM || "ios") as "ios" | "android";
     loginPage = new LoginPage(ActionFactory.create(platform));
   });
 
-  it.skip('should display login screen', async () => {
+  it.skip("should display login screen", async () => {
     await loginPage.isVisible();
   });
 
-  it('should login successfully with valid credentials', async () => {
-    await loginPage.login('admin', '123456');
+  it("should login successfully with valid credentials", async () => {
+    await loginPage.login("admin", "123456");
     await loginPage.isVisible();
   });
 
-  it.skip('should show error with invalid credentials', async () => {
-    await loginPage.login('wronguser', 'wrongpass');
-    await loginPage.expectLoginError('Invalid username or password');
+  it.skip("should show error with invalid credentials", async () => {
+    await loginPage.login("wronguser", "wrongpass");
+    await loginPage.expectLoginError("Invalid username or password");
   });
 });

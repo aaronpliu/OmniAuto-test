@@ -14,7 +14,7 @@
  *       不经过 ts-jest transform，因此不要使用 ES Module 语法。
  */
 
-const path = require('path');
+const path = require("path");
 
 module.exports = {
   // ============================================================
@@ -23,8 +23,8 @@ module.exports = {
   detox: {
     testRunner: {
       args: {
-        $0: 'jest',
-        config: 'configs/jest/ios.detox.config.js',
+        $0: "jest",
+        config: "configs/jest/ios.detox.config.js",
       },
       jest: {
         setupTimeout: 120000,
@@ -33,57 +33,61 @@ module.exports = {
 
     // 应用构建产物 / 构建命令
     apps: {
-      'ios.debug': {
-        type: 'ios.app',
-        binaryPath: 'applications/TestGround/ios-app/TestingGround.app',
-        build: 'xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
+      "ios.debug": {
+        type: "ios.app",
+        binaryPath: "applications/3in1/ios-app/HKJC.app",
+        build:
+          "xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build",
       },
-      'ios.release': {
-        type: 'ios.app',
-        binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/YourApp.app',
-        build: 'xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
+      "ios.release": {
+        type: "ios.app",
+        binaryPath: "ios/build/Build/Products/Release-iphonesimulator/YourApp.app",
+        build:
+          "xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -configuration Release -sdk iphonesimulator -derivedDataPath ios/build",
       },
-      'android.debug': {
-        type: 'android.apk',
-        binaryPath: 'applications/TestGround/android-app/app-debug.apk',
-        build: 'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug && cd ..',
+      "android.debug": {
+        type: "android.apk",
+        binaryPath: "applications/TestGround/android-app/app-debug.apk",
+        build:
+          "cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug && cd ..",
       },
-      'android.release': {
-        type: 'android.apk',
-        binaryPath: 'applications/TestGround/android-app/app-release.apk',
-        build: 'cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release && cd ..',
+      "android.release": {
+        type: "android.apk",
+        binaryPath: "applications/TestGround/android-app/app-release.apk",
+        build:
+          "cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release && cd ..",
       },
     },
 
     // 设备 / 模拟器定义
     devices: {
       simulator: {
-        type: 'ios.simulator',
+        type: "ios.simulator",
         device: {
-          type: 'iPhone 17 Pro',
+          type: "iPhone 17 Pro",
         },
       },
       emulator: {
-        type: 'android.emulator',
+        type: "android.emulator",
         device: {
-          avdName: 'Pixel 10 Pro XL',
+          avdName: "Pixel 10 Pro XL",
         },
       },
     },
 
     // configuration = device + app 组合
     configurations: {
-      'ios.sim.debug': { device: 'simulator', app: 'ios.debug' },
-      'ios.sim.release': { device: 'simulator', app: 'ios.release' },
-      'android.emu.debug': { device: 'emulator', app: 'android.debug' },
-      'android.emu.release': { device: 'emulator', app: 'android.release' },
+      "ios.sim.debug": { device: "simulator", app: "ios.debug" },
+      "ios.sim.release": { device: "simulator", app: "ios.release" },
+      "android.emu.debug": { device: "emulator", app: "android.debug" },
+      "android.emu.release": { device: "emulator", app: "android.release" },
     },
 
     // 行为配置
     behavior: {
       init: {
-        reinstallApp: true,
-        launchApp: true,
+        reinstallApp: false,
+        launchApp: false,
       },
       cleanup: {
         shutdownDevice: false,
@@ -96,19 +100,19 @@ module.exports = {
     // 与 Appium 模式 / 框架 testLifecycle 开关统一。
     // .detoxrc.js require 时 process.env 已就绪，求值后返回静态对象给 Detox CLI。
     artifacts: {
-      rootDir: 'artifacts/detox',
+      rootDir: "artifacts/detox",
       plugins: {
         log: {
           enabled: true,
           keepOnlyFailedTestsArtifacts: true,
         },
         screenshot: {
-          enabled: process.env.SCREENSHOT_ON_FAILURE !== 'false',
+          enabled: process.env.SCREENSHOT_ON_FAILURE !== "false",
           shouldTakeAutomaticSnapshots: true,
           keepOnlyFailedTestsArtifacts: true,
         },
         video: {
-          enabled: process.env.VIDEO_RECORDING === 'true',
+          enabled: process.env.VIDEO_RECORDING === "true",
           keepOnlyFailedTestsArtifacts: true,
         },
       },
@@ -121,20 +125,20 @@ module.exports = {
   appium: {
     // Appium Server 连接
     server: {
-      host: '0.0.0.0',
+      host: "0.0.0.0",
       port: 4723,
     },
 
     // Android (UiAutomator2) capabilities
     android: {
-      automationName: 'UiAutomator2',
-      deviceName: 'Pixel_10_Pro_XL',
-      platformVersion: '17',
+      automationName: "UiAutomator2",
+      deviceName: "Pixel_10_Pro_XL",
+      platformVersion: "17",
       // 应用定位：优先使用 appPackage+appActivity，否则使用 app 路径
       // 如填写了 appPackage / appActivity，则忽略 app
-      appPackage: '',
-      appActivity: '',
-      app: '', // 绝对路径或相对项目根的路径；留空则回退到 applications.androidApk
+      appPackage: "",
+      appActivity: "",
+      app: "", // 绝对路径或相对项目根的路径；留空则回退到 applications.androidApk
       systemPort: undefined, // 例如 8200
       // 额外 capabilities（键值对，会以 appium: 前缀输出）
       capabilities: {
@@ -144,17 +148,17 @@ module.exports = {
 
     // iOS (XCUITest) capabilities
     ios: {
-      automationName: 'XCUITest',
-      deviceName: 'iPhone 17 Pro',
-      platformVersion: '18.0',
+      automationName: "XCUITest",
+      deviceName: "iPhone 17 Pro",
+      platformVersion: "18.0",
       // 应用定位：优先 bundleId，否则 app 路径，否则回退到 applications.iosApp
-      bundleId: '',
-      app: '', // 绝对路径或相对项目根的路径；留空则回退到 applications.iosApp
-      udid: '', // 真机或已启动的模拟器 UDID；留空则由设备检测自动填充
-      deviceType: 'simulator', // 'simulator' | 'real'
+      bundleId: "",
+      app: "", // 绝对路径或相对项目根的路径；留空则回退到 applications.iosApp
+      udid: "", // 真机或已启动的模拟器 UDID；留空则由设备检测自动填充
+      deviceType: "simulator", // 'simulator' | 'real'
       // 真机签名（仅 deviceType='real' 时生效）
-      xcodeSigningId: 'iPhone Developer',
-      xcodeOrgId: '', // Apple Team ID
+      xcodeSigningId: "iPhone Developer",
+      xcodeOrgId: "", // Apple Team ID
       // 额外 capabilities（键值对，会以 appium: 前缀输出）
       capabilities: {
         autoAcceptAlerts: true,
@@ -167,9 +171,9 @@ module.exports = {
       noReset: false,
       fullReset: false,
       newCommandTimeout: 300,
-      language: '', // 例如 'zh'
-      locale: '', // 例如 'CN'
-      orientation: '', // 'PORTRAIT' | 'LANDSCAPE' | '' (留空不设置)
+      language: "", // 例如 'zh'
+      locale: "", // 例如 'CN'
+      orientation: "", // 'PORTRAIT' | 'LANDSCAPE' | '' (留空不设置)
     },
   },
 
@@ -177,7 +181,7 @@ module.exports = {
   // 应用路径（统一管理，消除 .detoxrc 与 configs/*.json 重复）
   // ============================================================
   applications: {
-    androidApk: 'applications/TestGround/android-app/app-debug.apk',
-    iosApp: 'applications/TestGround/ios-app/TestingGround.app',
+    androidApk: "applications/TestGround/android-app/app-debug.apk",
+    iosApp: "applications/TestGround/ios-app/TestingGround.app",
   },
 };
