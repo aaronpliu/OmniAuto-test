@@ -5,6 +5,15 @@
 export type SelectorValue = string | object;
 
 /**
+ * PlatformSelector 内部允许的选择器值类型
+ * 排除 PlatformSelector 自身以避免 TSelector → PlatformSelector → TSelector 递归
+ *
+ * Allowed selector value inside PlatformSelector fields.
+ * Excludes PlatformSelector itself to break TSelector → PlatformSelector → TSelector recursion.
+ */
+export type TPlatformValue = SelectorValue | IndexedSelector | ChainableSelectorLike;
+
+/**
  * 平台特定选择器：同一元素在 iOS 和 Android 上可使用不同定位方式
  * Platform-specific selector: same element can use different locators on iOS/Android
  *
@@ -12,20 +21,72 @@ export type SelectorValue = string | object;
  *   by.platform({ ios: by.id('btn'), android: by.text('登录') })
  */
 export type PlatformSelector = {
-  ios: SelectorValue;
-  android: SelectorValue;
+  ios: TPlatformValue;
+  android: TPlatformValue;
 };
+
+/**
+ * 带索引的选择器：同一选择器匹配多个元素时，指定选取第 N 个（0-based）
+ * Indexed selector: when the same selector matches multiple elements,
+ * specify which one to pick by its 0-based index
+ *
+ * 用法 / Usage:
+ *   by.index(by.id('listItem'), 2)  → 第3个 listItem
+ */
+export type IndexedSelector = {
+  selector: TSelector;
+  index: number;
+};
+
+/**
+ * 复合选择器关系类型
+ * Compound selector relation types
+ * - 'descendant': A has descendant B (withDescendant)
+ * - 'ancestor':  A has ancestor B  (withAncestor)
+ * - 'and':       A AND B           (and)
+ */
+export type CompoundRelation = "descendant" | "ancestor" | "and";
+
+/**
+ * 复合选择器树节点（可序列化，跨平台传递）
+ * Serializable compound selector tree node for cross-platform resolution
+ */
+export interface CompoundSelectorNode {
+  type: "atomic" | "compound";
+
+  /** 原子选择器 / Atomic selector: by.id('foo'), by.text('bar'), by.type('UIView') 等 */
+  atomic?: {
+    selectorType: string;
+    value: string;
+  };
+
+  /** 复合选择器：left RELATION right */
+  relation?: CompoundRelation;
+  left?: CompoundSelectorNode;
+  right?: CompoundSelectorNode;
+}
+
+/**
+ * 可链式调用的选择器接口标记
+ * Marker interface for chainable selectors, avoiding circular import
+ * between SelectorBuilder and Actions modules.
+ */
+export interface ChainableSelectorLike {
+  toNode(): CompoundSelectorNode;
+  toString(compact?: boolean): string;
+}
 
 /**
  * Generic selector type that allows each platform to define its own selector format
  * This follows the Open/Closed Principle - open for extension, closed for modification
  *
- * 支持三种形式 / Supports three forms:
+ * 支持四种形式 / Supports four forms:
  * - string: "id:login", "text:Submit", or plain "loginButton"
  * - object: WebdriverIO.Element, Detox NativeElement, Detox matcher, etc.
  * - PlatformSelector: { ios: ..., android: ... } for platform-specific locators
+ * - IndexedSelector: { selector: ..., index: ... } for selecting the Nth match
  */
-export type TSelector = SelectorValue | PlatformSelector;
+export type TSelector = SelectorValue | PlatformSelector | IndexedSelector | ChainableSelectorLike;
 
 export interface IActions {
   // Navigation
