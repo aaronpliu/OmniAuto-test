@@ -31,6 +31,13 @@ npm-debug.log*
 # Detox
 .detoxrc.json.local
 
+# Local config files (developer-specific, not tracked)
+# *.config.ci.js files are the CI baselines and ARE tracked
+configs/mobile.config.js
+configs/web.config.js
+configs/api.config.js
+configs/framework.config.js
+
 # Coverage
 coverage/
 

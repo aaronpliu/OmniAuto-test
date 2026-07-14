@@ -102,11 +102,21 @@ export interface IActions {
   clearText(selector: TSelector): Promise<void>;
   getText(selector: TSelector): Promise<string>;
 
+  // Attributes
+  /** 获取元素所有属性（返回完整对象） */
+  getAttributes(selector: TSelector): Promise<Record<string, unknown>>;
+  /** 获取元素指定属性值 */
+  getAttributes(selector: TSelector, attrName: string): Promise<string>;
+
   // Assertions
-  waitForElement(selector: TSelector, timeout?: number): Promise<void>;
-  expectVisible(selector: TSelector): Promise<void>;
+  /** 等待元素可见（isNotVisible=false）或不可见（isNotVisible=true） */
+  waitForElement(selector: TSelector, timeout?: number, isNotVisible?: boolean): Promise<void>;
+  /** 验证元素可见（isNotVisible=false）或不可见（isNotVisible=true） */
+  expectVisible(selector: TSelector, isNotVisible?: boolean): Promise<void>;
   expectNotVisible(selector: TSelector): Promise<void>;
-  expectText(selector: TSelector, text: string): Promise<void>;
+  expectExist(selector: TSelector): Promise<void>;
+  expectNotExist(selector: TSelector): Promise<void>;
+  expectText(selector: TSelector, text: string | RegExp): Promise<void>;
   expectContainsText(selector: TSelector, text: string): Promise<void>;
   expectEnabled(selector: TSelector): Promise<void>;
   expectDisabled(selector: TSelector): Promise<void>;

@@ -1,11 +1,14 @@
 /**
- * OmniAutoTest 统一移动端配置文件
- * Unified Mobile Configuration — Detox & Appium Single Source of Truth
+ * OmniAutoTest 统一移动端配置文件 — CI 版本（Git 跟踪）
+ * Unified Mobile Configuration — CI Baseline (Git Tracked)
  *
  * 优先级链：环境变量 > 本配置文件 > 代码内置默认值
  * Priority:  Env Vars  >  This Config  >  Built-in Defaults
  *
  * 说明：
+ * - 此文件为 CI 基线配置，由 Git 跟踪，不应在本地修改。
+ * - 本地调试请编辑 configs/mobile.config.js（不受 Git 跟踪）。
+ * - CI 环境（process.env.CI=true）自动加载此文件。
  * - detox 区块：Detox CLI 所需的 apps / devices / configurations / behavior 等
  * - appium 区块：Appium server 连接信息 + Android/iOS capabilities + 通用 capabilities
  * - applications：iOS/Android 应用路径（统一管理，消除 .detoxrc 与 configs/*.json 重复）
@@ -35,7 +38,7 @@ module.exports = {
     apps: {
       "ios.debug": {
         type: "ios.app",
-        binaryPath: "applications/3in1/ios-app/HKJC.app",
+        binaryPath: "ios/build/Build/Products/Debug-iphonesimulator/YourApp.app",
         build:
           "xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build",
       },
@@ -64,13 +67,13 @@ module.exports = {
       simulator: {
         type: "ios.simulator",
         device: {
-          type: "iPhone 17 Pro",
+          type: "Your ios simulator type",
         },
       },
       emulator: {
         type: "android.emulator",
         device: {
-          avdName: "Pixel 10 Pro XL",
+          avdName: "You android emulator name",
         },
       },
     },
@@ -86,7 +89,7 @@ module.exports = {
     // 行为配置
     behavior: {
       init: {
-        reinstallApp: false,
+        reinstallApp: true,
         launchApp: false,
       },
       cleanup: {
@@ -132,7 +135,7 @@ module.exports = {
     // Android (UiAutomator2) capabilities
     android: {
       automationName: "UiAutomator2",
-      deviceName: "Pixel_10_Pro_XL",
+      deviceName: "your android device name",
       platformVersion: "17",
       // 应用定位：优先使用 appPackage+appActivity，否则使用 app 路径
       // 如填写了 appPackage / appActivity，则忽略 app

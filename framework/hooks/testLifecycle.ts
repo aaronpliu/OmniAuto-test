@@ -202,7 +202,15 @@ async function captureScreenshotOnFailure(): Promise<void> {
 
     logger.info("[截图] 测试级截图已记录");
   } catch (err: any) {
-    logger.warn(`[截图] 失败: ${err.message}`);
+    // 环境 teardown 后的错误不需要警告（属于正常流程）
+    if (
+      err instanceof ReferenceError &&
+      (err.message || "").includes("after the Jest environment has been torn down")
+    ) {
+      logger.debug("[截图] 环境已销毁，跳过截图");
+    } else {
+      logger.warn(`[截图] 失败: ${err.message || err}`);
+    }
   }
 }
 
@@ -226,7 +234,27 @@ function clearSteps() {
   }
 }
 
+// 保存原始方法，供 afterEach 安装过滤器、beforeEach 恢复
+let _origConsoleWarn: typeof console.warn | null = null;
+let _origConsoleError: typeof console.error | null = null;
+let _origStderrWrite: typeof process.stderr.write | null = null;
+const SUPPRESS_MSG = "after the Jest environment has been torn down";
+
 beforeEach(async () => {
+  // 恢复 console 和 stderr（上一个 afterEach 可能安装了过滤器）
+  if (_origConsoleWarn) {
+    console.warn = _origConsoleWarn;
+    _origConsoleWarn = null;
+  }
+  if (_origConsoleError) {
+    console.error = _origConsoleError;
+    _origConsoleError = null;
+  }
+  if (_origStderrWrite) {
+    process.stderr.write = _origStderrWrite;
+    _origStderrWrite = null;
+  }
+
   // 清空上一条测试的步骤记录（文件系统）
   clearSteps();
 
@@ -240,6 +268,33 @@ afterEach(async () => {
   const failed = isTestFailed();
   logger.info(`[Lifecycle] testFailed=${failed}`);
 
+  // 0) 安装进程级 stderr 过滤器 — 抑制 Jest teardown 后 WebdriverIO 的 ReferenceError 噪音
+  //    console.warn/error 在 Jest sandbox 内，teardown 时会被恢复，无法拦截
+  //    process.stderr.write 是 Node.js 进程级别的，Jest teardown 不会恢复它
+  _origConsoleWarn = console.warn;
+  _origConsoleError = console.error;
+  _origStderrWrite = process.stderr.write.bind(process.stderr);
+
+  console.warn = (...args: unknown[]) => {
+    if (args.some((a) => typeof a === "string" && a.includes(SUPPRESS_MSG))) {
+      return;
+    }
+    _origConsoleWarn!(...(args as Parameters<typeof console.warn>));
+  };
+  console.error = (...args: unknown[]) => {
+    if (args.some((a) => typeof a === "string" && a.includes(SUPPRESS_MSG))) {
+      return;
+    }
+    _origConsoleError!(...(args as Parameters<typeof console.error>));
+  };
+  process.stderr.write = ((chunk: string | Buffer | Uint8Array) => {
+    const text = typeof chunk === "string" ? chunk : Buffer.from(chunk).toString();
+    if (text.includes(SUPPRESS_MSG)) {
+      return true;
+    }
+    return _origStderrWrite!(chunk as string);
+  }) as typeof process.stderr.write;
+
   // 1) 失败截图
   if (failed) {
     await captureScreenshotOnFailure();
@@ -248,5 +303,19 @@ afterEach(async () => {
   // 2) 停止录屏（失败时只会保存，通过时丢弃）
   if (isRecordingEnabled()) {
     await stopRecording();
+  }
+
+  // 3) Appium 模式：关闭 driver 连接，防止 WebdriverIO 内部 pending 请求
+  //    在 Jest 环境 teardown 后持续触发 import 错误
+  if (!isDetoxMode()) {
+    try {
+      const actions = TestContext.getActions();
+      if (actions && typeof actions.close === "function") {
+        await actions.close();
+        logger.debug("[Lifecycle] Driver session closed");
+      }
+    } catch {
+      /* ignore — driver 可能已经断开 */
+    }
   }
 });

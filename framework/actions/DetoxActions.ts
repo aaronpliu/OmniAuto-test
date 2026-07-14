@@ -9,7 +9,7 @@ import {
   resolvePlatformSelector,
   isChainableSelector,
 } from "../utils/SelectorBuilder";
-import { ChainableSelectorLike, CompoundSelectorNode } from "../types/actions";
+import { ChainableSelectorLike, CompoundSelectorNode, TSelector } from "../types/actions";
 
 const logger = Logger.getInstance();
 
@@ -204,7 +204,20 @@ export class DetoxActions extends BaseActions {
   // Navigation
   async navigateTo(_url?: string): Promise<void> {
     logger.info("Launching app with Detox");
-    await device.launchApp({ newInstance: true });
+    await device.launchApp({
+      newInstance: true,
+      launchArgs: {
+        detoxURLBlacklistRegex: '\\("https://client3.google.com*")',
+        detoxEnableSynchronization: 0,
+      },
+      permissions: {
+        location: "always",
+        notifications: "YES",
+        photos: "YES",
+        microphone: "YES",
+        calendar: "YES",
+      },
+    });
   }
 
   // Element interactions
@@ -256,18 +269,49 @@ export class DetoxActions extends BaseActions {
     return (attribute as any).text || "";
   }
 
-  // Assertions
   /**
-   * Wait for element to be visible (default wait strategy)
-   * @param selector - Element selector
-   * @param timeout - Timeout in milliseconds (default: 10000)
+   * 获取元素属性
+   * @param selector - 元素选择器
+   * @param attrName - 可选，指定属性名则返回单个值(string)；不传则返回完整属性对象
    */
-  async waitForElement(selector: DetoxSelector, timeout = 10000): Promise<void> {
+  async getAttributes(selector: TSelector): Promise<Record<string, unknown>>;
+  async getAttributes(selector: TSelector, attrName: string): Promise<string>;
+  async getAttributes(
+    selector: DetoxSelector,
+    attrName?: string
+  ): Promise<Record<string, unknown> | string> {
     const elem = resolveElement(selector);
     logger.debug(
-      `Waiting for element to be visible: ${typeof selector === "string" ? selector : "custom matcher"}`
+      `Getting attributes from element: ${typeof selector === "string" ? selector : "custom matcher"}`
     );
-    await waitFor(elem).toBeVisible().withTimeout(timeout);
+    const attrs = await elem.getAttributes();
+    if (attrName !== undefined) {
+      return String((attrs as any)[attrName] ?? "");
+    }
+    return attrs as Record<string, unknown>;
+  }
+
+  // Assertions
+  /**
+   * Wait for element to be visible (default) or not visible
+   * @param selector - Element selector
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   * @param isNotVisible - If true, wait for element to NOT be visible (default: false)
+   */
+  async waitForElement(
+    selector: DetoxSelector,
+    timeout = 10000,
+    isNotVisible = false
+  ): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(
+      `Waiting for element to be ${isNotVisible ? "not " : ""}visible: ${typeof selector === "string" ? selector : "custom matcher"}`
+    );
+    if (isNotVisible) {
+      await waitFor(elem).not.toBeVisible().withTimeout(timeout);
+    } else {
+      await waitFor(elem).toBeVisible().withTimeout(timeout);
+    }
   }
 
   /**
@@ -302,12 +346,19 @@ export class DetoxActions extends BaseActions {
     const targetElem = resolveElement(targetSelector);
     logger.debug(`Waiting for element while scrolling ${direction}`);
 
-    const scrollMatcher: Detox.NativeMatcher =
-      typeof scrollContainerSelector === "string"
-        ? (selectorToDetoxMatcher(scrollContainerSelector) as Detox.NativeMatcher)
-        : (scrollContainerSelector as unknown as Detox.NativeMatcher);
-    // Note: whileElement requires a matcher, not an element
-    // This is a limitation of Detox's API
+    // Resolve scroll container to a Detox NativeMatcher
+    // whileElement requires a matcher object, not an element (Detox API limitation)
+    const scrollMatcher: Detox.NativeMatcher = (() => {
+      if (isChainableSelector(scrollContainerSelector)) {
+        return resolveCompoundForDetox(
+          scrollContainerSelector.toNode()
+        ) as unknown as Detox.NativeMatcher;
+      }
+      if (typeof scrollContainerSelector === "string") {
+        return selectorToDetoxMatcher(scrollContainerSelector) as Detox.NativeMatcher;
+      }
+      return scrollContainerSelector as unknown as Detox.NativeMatcher;
+    })();
     await waitFor(targetElem)
       .toBeVisible()
       .whileElement(scrollMatcher)
@@ -436,7 +487,7 @@ export class DetoxActions extends BaseActions {
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
       try {
-        await detoxExpect(elem).toBeNotVisible();
+        await detoxExpect(elem).not.toBeVisible();
         logger.debug("Element is not visible");
         return;
       } catch (error) {
@@ -508,12 +559,16 @@ export class DetoxActions extends BaseActions {
     throw new Error(`Element did not become enabled within ${timeout}ms`);
   }
 
-  async expectVisible(selector: DetoxSelector): Promise<void> {
+  async expectVisible(selector: DetoxSelector, isNotVisible = false): Promise<void> {
     const elem = resolveElement(selector);
     logger.debug(
-      `Expecting element visible: ${typeof selector === "string" ? selector : "custom matcher"}`
+      `Expecting element ${isNotVisible ? "not " : ""}visible: ${typeof selector === "string" ? selector : "custom matcher"}`
     );
-    await detoxExpect(elem).toBeVisible();
+    if (isNotVisible) {
+      await detoxExpect(elem).not.toBeVisible();
+    } else {
+      await detoxExpect(elem).toBeVisible();
+    }
   }
 
   async expectNotVisible(selector: DetoxSelector): Promise<void> {
@@ -521,15 +576,47 @@ export class DetoxActions extends BaseActions {
     logger.debug(
       `Expecting element not visible: ${typeof selector === "string" ? selector : "custom matcher"}`
     );
-    await detoxExpect(elem).toBeNotVisible();
+    await detoxExpect(elem).not.toBeVisible();
   }
 
-  async expectText(selector: DetoxSelector, text: string): Promise<void> {
+  /**
+   * 验证元素存在于 UI 层级中（可能不可见）
+   */
+  async expectExist(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(
+      `Expecting element to exist: ${typeof selector === "string" ? selector : "custom matcher"}`
+    );
+    await detoxExpect(elem).toExist();
+  }
+
+  /**
+   * 验证元素不存在于 UI 层级中
+   */
+  async expectNotExist(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    logger.debug(
+      `Expecting element to not exist: ${typeof selector === "string" ? selector : "custom matcher"}`
+    );
+    await detoxExpect(elem).not.toExist();
+  }
+
+  async expectText(selector: DetoxSelector, text: string | RegExp): Promise<void> {
     const elem = resolveElement(selector);
     logger.debug(
       `Expecting text in element: ${typeof selector === "string" ? selector : "custom matcher"}`
     );
-    await detoxExpect(elem).toHaveText(text);
+    if (text instanceof RegExp) {
+      // Detox 不支持正则断言，用 getAttributes 获取实际文本后自行匹配
+      const attrs = await elem.getAttributes();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const actual = String((attrs as any).text ?? "");
+      if (!text.test(actual)) {
+        throw new Error(`Expected text to match /${text.source}/ but got "${actual}"`);
+      }
+    } else {
+      await detoxExpect(elem).toHaveText(text);
+    }
   }
 
   async expectContainsText(selector: DetoxSelector, text: string): Promise<void> {

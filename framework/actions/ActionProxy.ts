@@ -129,21 +129,37 @@ function buildStepName(method: string, args: unknown[]): string {
     parts.push("清空", selectorName(args[0]));
   } else if (method === "getText") {
     parts.push("获取文本", selectorName(args[0]));
+  } else if (method === "getAttributes") {
+    parts.push("获取属性", selectorName(args[0]));
+    if (args[1] !== undefined) {
+      parts.push(argName(args[1]));
+    }
   } else if (method === "expectVisible") {
-    parts.push("验证可见", selectorName(args[0]));
+    const notVisible = args[1] === true;
+    parts.push(notVisible ? "验证不可见" : "验证可见", selectorName(args[0]));
   } else if (method === "expectNotVisible") {
     parts.push("验证不可见", selectorName(args[0]));
   } else if (method === "expectText") {
-    parts.push("验证文本", selectorName(args[0]), argName(args[1]));
+    const textArg = args[1];
+    if (textArg instanceof RegExp) {
+      parts.push("验证文本匹配", selectorName(args[0]), `/${textArg.source}/`);
+    } else {
+      parts.push("验证文本", selectorName(args[0]), argName(args[1]));
+    }
   } else if (method === "expectContainsText") {
     parts.push("验证包含文本", selectorName(args[0]), argName(args[1]));
   } else if (method === "expectEnabled") {
     parts.push("验证可交互", selectorName(args[0]));
   } else if (method === "expectDisabled") {
     parts.push("验证禁用", selectorName(args[0]));
+  } else if (method === "expectExist") {
+    parts.push("验证存在", selectorName(args[0]));
+  } else if (method === "expectNotExist") {
+    parts.push("验证不存在", selectorName(args[0]));
   } else if (method.startsWith("waitForElement")) {
     if (method === "waitForElement") {
-      parts.push("等待元素可见", selectorName(args[0]));
+      const notVisible = args[2] === true;
+      parts.push(notVisible ? "等待元素不可见" : "等待元素可见", selectorName(args[0]));
     } else if (method === "waitForElementToExist") {
       parts.push("等待元素存在", selectorName(args[0]));
     } else if (method === "waitForElementToDisappear") {
@@ -242,6 +258,18 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target:
 //  Proxy 包装器
 // ================================================================
 
+/**
+ * 检测错误是否由 Jest 环境 teardown 导致
+ * 当 Jest vm.Context 已销毁时，WebdriverIO 等模块的 import 会抛出 ReferenceError
+ */
+function isJestEnvironmentTornDown(error: unknown): boolean {
+  if (error instanceof ReferenceError) {
+    const msg = error.message || "";
+    return msg.includes("after the Jest environment has been torn down");
+  }
+  return false;
+}
+
 const SKIP_METHODS = new Set([
   "getDriver",
   "buildDefaultCapabilities",
@@ -292,13 +320,16 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
         } catch (error: any) {
           // 失败步骤自动截图
           let screenshotPath = "";
-          try {
-            if (typeof (target as any).takeScreenshot === "function") {
-              screenshotPath = await (target as any).takeScreenshot(`step_fail_${Date.now()}`);
-              logger.info(`[Step] 📸 失败截图已保存: ${screenshotPath}`);
+          // 跳过 teardown 后的截图（环境已销毁，WebdriverIO import 会失败）
+          if (!isJestEnvironmentTornDown(error)) {
+            try {
+              if (typeof (target as any).takeScreenshot === "function") {
+                screenshotPath = await (target as any).takeScreenshot(`step_fail_${Date.now()}`);
+                logger.info(`[Step] 📸 失败截图已保存: ${screenshotPath}`);
+              }
+            } catch {
+              /* 截图失败不影响步骤记录 */
             }
-          } catch {
-            /* 截图失败不影响步骤记录 */
           }
 
           // 记录失败步骤到文件

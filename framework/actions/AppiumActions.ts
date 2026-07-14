@@ -37,38 +37,62 @@ export class AppiumActions extends BaseActions {
 
   /**
    * Convert unified selector string to Appium/Wdio selector
-   * Uses this.platform to determine the correct format
+   *
+   * 选择器策略参照 WebdriverIO 官方文档：
+   * https://webdriver.io/zh/docs/selectors#%E6%97%A0%E9%9A%9C%E7%A2%8D-id
+   *
+   * 策略优先级 / Strategy priority:
+   *   1. Accessibility ID (`~`)      — 跨平台最佳，iOS=accessibilityIdentifier, Android=content-desc
+   *   2. Android UiAutomator          — Android 原生 UiSelector，性能最优
+   *   3. iOS Predicate String         — iOS 条件筛选，支持 ==、CONTAINS 等
+   *   4. iOS Class Chain               — iOS 层级查询，性能优于 XPath
+   *   5. XPath                         — 通用兜底，但性能最差且可能脆弱
    */
   private selectorToAppiumString(selector: string): string {
     const { type, value } = parseSelector(selector);
     switch (type) {
       case "id":
+        // Accessibility ID — iOS: accessibilityIdentifier, Android: content-desc + resource-id 后缀
+        // 注意：Android 裸 resource-id（无包名前缀，如 RN 的 testID）由 resolveElement 回退处理
         return `~${value}`;
       case "text":
+        // 按显示文本匹配
+        // Android: UiSelector().text() / iOS: predicate string label ==
         if (this.platform === "android") {
           return `android=new UiSelector().text("${value}")`;
         } else {
           return `-ios predicate string:label == "${value}"`;
         }
       case "label":
-        return `~${value}`;
+        // 按 accessibility label 匹配（注意：不是 accessibility ID）
+        // Android: content-desc = UiSelector().description()
+        // iOS: accessibilityLabel = predicate string label ==
+        if (this.platform === "android") {
+          return `android=new UiSelector().description("${value}")`;
+        } else {
+          return `-ios predicate string:label == "${value}"`;
+        }
       case "xpath":
         return value;
       case "css":
         return value;
       case "class":
+        // 按类名匹配
+        // Android: UiSelector().className() / iOS: class chain
         if (this.platform === "android") {
           return `android=new UiSelector().className("${value}")`;
         } else {
           return `-ios class chain:**/${value}[1]`;
         }
       case "type":
+        // type 与 class 策略相同
         if (this.platform === "android") {
           return `android=new UiSelector().className("${value}")`;
         } else {
           return `-ios class chain:**/${value}[1]`;
         }
       case "raw":
+        // raw — 作为 accessibility ID 处理（向后兼容）
         return `~${value}`;
     }
   }
@@ -76,6 +100,18 @@ export class AppiumActions extends BaseActions {
   /**
    * 将原子选择器类型和值转换为 XPath 片段（不含 // 前缀）
    * Convert atomic selector type/value to XPath fragment (without // prefix)
+   *
+   * 仅用于复合选择器（withDescendant/withAncestor/and），
+   * 简单原子选择器走 selectorToAppiumString 原生策略。
+   *
+   * XPath 属性映射（参照 WebdriverIO 选择器文档）：
+   *   Android:
+   *     - id (accessibility ID) → @content-desc 或 contains(@resource-id, value)
+   *     - text                 → @text
+   *     - label                → @content-desc
+   *   iOS:
+   *     - id (accessibility ID) → @name
+   *     - text / label          → @label
    */
   private static atomicToXPathFragment(
     selectorType: string,
@@ -84,14 +120,27 @@ export class AppiumActions extends BaseActions {
   ): string {
     switch (selectorType) {
       case "id":
-        return `*[@accessibility-label='${value}']`;
+        // Accessibility ID
+        // Android: content-desc 精确匹配 或 resource-id 后缀匹配
+        // iOS: accessibilityIdentifier = @name 属性
+        if (platform === "android") {
+          return `*[contains(@resource-id, '${value}') or @content-desc='${value}']`;
+        }
+        return `*[@name='${value}']`;
       case "text":
+        // 显示文本
+        // Android: @text / iOS: @label
         if (platform === "android") {
           return `*[@text='${value}']`;
         }
         return `*[@label='${value}']`;
       case "label":
-        return `*[@accessibility-label='${value}']`;
+        // Accessibility Label（非 ID）
+        // Android: @content-desc / iOS: @label
+        if (platform === "android") {
+          return `*[@content-desc='${value}']`;
+        }
+        return `*[@label='${value}']`;
       case "type":
       case "class":
         return `*[@class='${value}']`;
@@ -99,9 +148,16 @@ export class AppiumActions extends BaseActions {
         // xpath value is a path expression, strip leading //
         return value.replace(/^\/\//, "");
       case "raw":
-        return `*[@accessibility-label='${value}']`;
+        // raw — 按 accessibility ID 处理
+        if (platform === "android") {
+          return `*[contains(@resource-id, '${value}') or @content-desc='${value}']`;
+        }
+        return `*[@name='${value}']`;
       default:
-        return `*[@accessibility-label='${value}']`;
+        if (platform === "android") {
+          return `*[contains(@resource-id, '${value}') or @content-desc='${value}']`;
+        }
+        return `*[@name='${value}']`;
     }
   }
 
@@ -211,9 +267,43 @@ export class AppiumActions extends BaseActions {
       return this.resolveElement(driver, resolved as AppiumSelector);
     }
 
-    // ChainableSelector: by.type("X").withDescendant(by.type("Y"))
+    // ChainableSelector: by.id("foo"), by.type("X").withDescendant(by.type("Y"))
     if (isChainableSelector(selector)) {
-      const xpath = AppiumActions.resolveCompoundForAppium(selector.toNode(), this.platform);
+      const node = selector.toNode();
+      // 简单原子选择器（非复合）— 直接用原生 Appium 策略，不走 XPath
+      // Simple atomic selector — use native Appium strategy for efficiency and correctness
+      if (node.type === "atomic" && node.atomic) {
+        const { selectorType, value } = node.atomic;
+
+        // Android id 特殊处理：先试 accessibility ID（~value），覆盖 content-desc
+        // 和带包名前缀的 resource-id；找不到则回退到 resourceIdMatches，覆盖
+        // React Native 的裸 resource-id（无包名前缀）
+        if (selectorType === "id" && this.platform === "android") {
+          const accessibilitySel = `~${value}`;
+          logger.debug(
+            `Resolved atomic selector → Appium (try 1: accessibility ID): ${accessibilitySel}`
+          );
+          try {
+            const el = await driver.$(accessibilitySel);
+            if (await el.isExisting()) {
+              return el;
+            }
+          } catch {
+            /* accessibility ID 未命中，继续回退 */
+          }
+          const resourceIdSel = `android=new UiSelector().resourceIdMatches(".*${value}$")`;
+          logger.debug(
+            `Resolved atomic selector → Appium (try 2: resourceIdMatches): ${resourceIdSel}`
+          );
+          return await driver.$(resourceIdSel);
+        }
+
+        const appiumStr = this.selectorToAppiumString(`${selectorType}:${value}`);
+        logger.debug(`Resolved atomic selector → Appium: ${appiumStr}`);
+        return await driver.$(appiumStr);
+      }
+      // 复合选择器 — 转换为 XPath
+      const xpath = AppiumActions.resolveCompoundForAppium(node, this.platform);
       logger.debug(`Resolved compound selector → Appium XPath: ${xpath}`);
       return await driver.$(xpath);
     }
@@ -366,14 +456,62 @@ export class AppiumActions extends BaseActions {
     return await el.getText();
   }
 
-  // Assertions
-  async waitForElement(selector: AppiumSelector, timeout = 10000): Promise<void> {
+  /**
+   * 获取元素属性
+   * @param selector - 元素选择器
+   * @param attrName - 可选，指定属性名则返回单个值(string)；不传则返回常用属性对象
+   */
+  async getAttributes(selector: TSelector): Promise<Record<string, unknown>>;
+  async getAttributes(selector: TSelector, attrName: string): Promise<string>;
+  async getAttributes(
+    selector: AppiumSelector,
+    attrName?: string
+  ): Promise<Record<string, unknown> | string> {
     const driver = await this.getDriver();
     const el = await this.resolveElement(driver, selector);
     logger.debug(
-      `Waiting for element visible: ${typeof selector === "string" ? selector : "custom element"}`
+      `Getting attributes from element: ${typeof selector === "string" ? selector : "custom element"}`
     );
-    await el.waitForDisplayed({ timeout });
+    if (attrName !== undefined) {
+      return (await el.getAttribute(attrName)) ?? "";
+    }
+    // 聚合常用属性
+    const attrs: Record<string, unknown> = {};
+    try {
+      attrs.text = await el.getText();
+      attrs.enabled = await el.isEnabled();
+      attrs.visible = await el.isDisplayed();
+      attrs.existing = await el.isExisting();
+      const resourceId = await el.getAttribute("resource-id");
+      if (resourceId) {
+        attrs["resource-id"] = resourceId;
+      }
+      const className = await el.getAttribute("class");
+      if (className) {
+        attrs["class"] = className;
+      }
+      const contentDesc = await el.getAttribute("content-desc");
+      if (contentDesc) {
+        attrs["content-desc"] = contentDesc;
+      }
+    } catch {
+      // 属性获取失败不抛错，返回已获取的部分
+    }
+    return attrs;
+  }
+
+  // Assertions
+  async waitForElement(
+    selector: AppiumSelector,
+    timeout = 10000,
+    isNotVisible = false
+  ): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await this.resolveElement(driver, selector);
+    logger.debug(
+      `Waiting for element ${isNotVisible ? "not " : ""}visible: ${typeof selector === "string" ? selector : "custom element"}`
+    );
+    await el.waitForDisplayed({ timeout, reverse: isNotVisible });
   }
 
   async waitForElementToExist(selector: AppiumSelector, timeout = 10000): Promise<void> {
@@ -589,17 +727,25 @@ export class AppiumActions extends BaseActions {
     throw new Error(`Element did not become enabled within ${timeout}ms`);
   }
 
-  async expectVisible(selector: AppiumSelector): Promise<void> {
+  async expectVisible(selector: AppiumSelector, isNotVisible = false): Promise<void> {
     const driver = await this.getDriver();
     const el = await this.resolveElement(driver, selector);
     logger.debug(
-      `Expecting element visible: ${typeof selector === "string" ? selector : "custom element"}`
+      `Expecting element ${isNotVisible ? "not " : ""}visible: ${typeof selector === "string" ? selector : "custom element"}`
     );
     const isDisplayed = await el.isDisplayed();
-    if (!isDisplayed) {
-      throw new Error(
-        `Element is not visible: ${typeof selector === "string" ? selector : "custom element"}`
-      );
+    if (isNotVisible) {
+      if (isDisplayed) {
+        throw new Error(
+          `Element is visible (expected not visible): ${typeof selector === "string" ? selector : "custom element"}`
+        );
+      }
+    } else {
+      if (!isDisplayed) {
+        throw new Error(
+          `Element is not visible: ${typeof selector === "string" ? selector : "custom element"}`
+        );
+      }
     }
   }
 
@@ -617,15 +763,55 @@ export class AppiumActions extends BaseActions {
     }
   }
 
-  async expectText(selector: AppiumSelector, text: string): Promise<void> {
+  /**
+   * 验证元素存在于 UI 层级中（可能不可见）
+   */
+  async expectExist(selector: AppiumSelector): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await this.resolveElement(driver, selector);
+    logger.debug(
+      `Expecting element to exist: ${typeof selector === "string" ? selector : "custom element"}`
+    );
+    const exists = await el.isExisting();
+    if (!exists) {
+      throw new Error(
+        `Element does not exist: ${typeof selector === "string" ? selector : "custom element"}`
+      );
+    }
+  }
+
+  /**
+   * 验证元素不存在于 UI 层级中
+   */
+  async expectNotExist(selector: AppiumSelector): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await this.resolveElement(driver, selector);
+    logger.debug(
+      `Expecting element to not exist: ${typeof selector === "string" ? selector : "custom element"}`
+    );
+    const exists = await el.isExisting();
+    if (exists) {
+      throw new Error(
+        `Element exists (expected not exist): ${typeof selector === "string" ? selector : "custom element"}`
+      );
+    }
+  }
+
+  async expectText(selector: AppiumSelector, text: string | RegExp): Promise<void> {
     const driver = await this.getDriver();
     const el = await this.resolveElement(driver, selector);
     logger.debug(
       `Expecting text in element: ${typeof selector === "string" ? selector : "custom element"}`
     );
     const actualText = await el.getText();
-    if (actualText !== text) {
-      throw new Error(`Expected text "${text}" but got "${actualText}"`);
+    if (text instanceof RegExp) {
+      if (!text.test(actualText)) {
+        throw new Error(`Expected text to match /${text.source}/ but got "${actualText}"`);
+      }
+    } else {
+      if (actualText !== text) {
+        throw new Error(`Expected text "${text}" but got "${actualText}"`);
+      }
     }
   }
 
@@ -708,9 +894,16 @@ export class AppiumActions extends BaseActions {
     const driver = await this.getDriver();
     const el = await this.resolveElement(driver, toSelector);
     logger.debug(
-      `Scrolling to element: ${typeof toSelector === "string" ? toSelector : "custom element"}`
+      `Scrolling within element: ${typeof toSelector === "string" ? toSelector : "custom element"}`
     );
-    await el.scrollIntoView();
+    // el.scrollIntoView() 是 Web 专有方法，Appium 不支持（405）
+    // mobile: scroll 需要 strategy+selector 参数，不适合基于 elementId 的容器内滚动
+    // 改用 mobile: scrollGesture（UiAutomator2 原生），在指定元素区域内执行滑动手势
+    await driver.execute("mobile: scrollGesture", {
+      elementId: el.elementId,
+      direction: "down",
+      percent: 0.8,
+    });
   }
 
   async pinch(scale: number): Promise<void> {
@@ -768,7 +961,25 @@ export class AppiumActions extends BaseActions {
   async reload(): Promise<void> {
     logger.info("Reloading app");
     const driver = await this.getDriver();
-    await driver.reloadSession();
+    // driver.reloadSession() 是 Web 专用方法，会重建整个 WebDriver session
+    // 移动端应通过 terminateApp + activateApp 重启应用，保持 session 不变
+    const appId =
+      (this.capabilities as any)?.["appium:appPackage"] ||
+      (this.capabilities as any)?.["appium:bundleId"];
+    if (appId) {
+      await driver.execute("mobile: terminateApp", { appId });
+      await driver.execute("mobile: activateApp", { appId });
+      logger.info("App restarted via mobile: terminateApp + activateApp");
+    } else {
+      // 兜底：无 appId 时尝试 closeApp + activateApp
+      logger.warn("No appId found, falling back to closeApp/launchApp");
+      try {
+        await driver.closeApp();
+        await driver.launchApp();
+      } catch {
+        logger.warn("closeApp/launchApp not available, skipping reload");
+      }
+    }
   }
 
   async back(): Promise<void> {
