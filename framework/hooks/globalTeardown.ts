@@ -36,12 +36,17 @@ export default async function globalTeardown() {
       /* ignore — getAppiumServer 可能未初始化 */
     }
 
-    // 2) 停止 Appium server
+    // 2) 等待飞行中的 WebdriverIO 客户端重试循环沉降
+    //    afterEach 中已通过 TestSessionState 守卫中止 AppiumActions 自控轮询，
+    //    但仍有少量 HTTP 层请求可能未完成，给予短暂沉降窗口以确保彻底清理
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // 3) 停止 Appium server
     logger.info("正在停止 Appium server...");
     const appiumServer = getAppiumServer();
     await appiumServer.stop();
 
-    // 3) 清理环境变量
+    // 4) 清理环境变量
     logger.info("正在清理环境变量...");
     delete process.env.ANDROID_DEVICE_NAME;
     delete process.env.ANDROID_PLATFORM_VERSION;

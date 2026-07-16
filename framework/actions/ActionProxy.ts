@@ -11,13 +11,14 @@
 import { BaseActions } from "./BaseActions";
 import { IActions } from "../types/actions";
 import { Logger } from "../utils/logger";
-import { appendFileSync, unlinkSync, existsSync, readFileSync } from "fs";
+import { appendFileSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
 import {
   isPlatformSelector,
   resolvePlatformSelector,
   isChainableSelector,
 } from "../utils/SelectorBuilder";
+import { TestSessionState } from "../utils/testSessionState";
 
 const logger = Logger.getInstance();
 
@@ -45,36 +46,11 @@ function writeStepToFile(step: Record<string, unknown>): void {
   }
 }
 
-/** 清空步骤文件（在每个 test 开始时调用） */
-export function clearStepsFile(): void {
-  try {
-    const p = getStepsPath();
-    if (existsSync(p)) {
-      unlinkSync(p);
-    }
-  } catch {
-    // ignore
-  }
-}
-
-/** 读取并清空步骤文件（Reporter 调用） */
-export function drainStepsFile(): Record<string, unknown>[] {
-  const p = getStepsPath();
-  try {
-    if (!existsSync(p)) {
-      return [];
-    }
-    const raw = readFileSync(p, "utf-8");
-    unlinkSync(p);
-    return raw
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map((l: string) => JSON.parse(l));
-  } catch {
-    return [];
-  }
-}
+/**
+ * 当 wrapWithAllureStep 已截过图时，Proxy catch 复用该路径，避免重复截图。
+ * 设为 null 表示本轮未截过图。
+ */
+let _lastAllureScreenshotPath: string | null = null;
 
 // ================================================================
 //  生成可读步骤名称
@@ -235,14 +211,18 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target:
           return await fn();
         } catch (innerErr: any) {
           // 步骤失败时截屏并附加到当前 Allure step 上下文中
-          try {
-            if (typeof attachment === "function" && typeof target.takeScreenshot === "function") {
-              const path = await target.takeScreenshot(`step_fail_${Date.now()}`);
-              attachment("Step Failure Screenshot", readFileSync(path as string), "image/png");
-              logger.info(`[Step] 📸 截图已附加到 Allure step`);
+          // 若会话正在销毁则跳过截图，避免 getDriver() 重建 session 触发 ReferenceError
+          if (TestSessionState.isActive) {
+            try {
+              if (typeof attachment === "function" && typeof target.takeScreenshot === "function") {
+                const path = await target.takeScreenshot(`step_fail_${Date.now()}`);
+                _lastAllureScreenshotPath = path; // 共享给 Proxy catch，避免重复截图
+                attachment("Step Failure Screenshot", readFileSync(path as string), "image/png");
+                logger.info(`[Step] 📸 截图已附加到 Allure step`);
+              }
+            } catch {
+              /* 截图附加失败不影响步骤 */
             }
-          } catch {
-            /* 截图附加失败不影响步骤 */
           }
           throw innerErr;
         }
@@ -260,12 +240,17 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target:
 
 /**
  * 检测错误是否由 Jest 环境 teardown 导致
- * 当 Jest vm.Context 已销毁时，WebdriverIO 等模块的 import 会抛出 ReferenceError
+ * 当 Jest vm.Context 已销毁时，WebdriverIO 等模块的 import 会抛出：
+ *   - ReferenceError: "after the Jest environment has been torn down"
+ *   - Error: "Provided module is not an instance of Module"
  */
 function isJestEnvironmentTornDown(error: unknown): boolean {
-  if (error instanceof ReferenceError) {
+  if (error instanceof Error) {
     const msg = error.message || "";
-    return msg.includes("after the Jest environment has been torn down");
+    return (
+      msg.includes("after the Jest environment has been torn down") ||
+      msg.includes("Provided module is not an instance of Module")
+    );
   }
   return false;
 }
@@ -273,7 +258,6 @@ function isJestEnvironmentTornDown(error: unknown): boolean {
 const SKIP_METHODS = new Set([
   "getDriver",
   "buildDefaultCapabilities",
-  "getPlatform",
   "selectorToAppiumString",
   "resolveElement",
 ]);
@@ -318,10 +302,12 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
 
           return result;
         } catch (error: any) {
-          // 失败步骤自动截图
-          let screenshotPath = "";
-          // 跳过 teardown 后的截图（环境已销毁，WebdriverIO import 会失败）
-          if (!isJestEnvironmentTornDown(error)) {
+          // 失败步骤自动截图（仅一次 — 若 wrapWithAllureStep 已截则复用）
+          let screenshotPath = _lastAllureScreenshotPath || "";
+          _lastAllureScreenshotPath = null;
+
+          // wrapWithAllureStep 未截图（Detox 模式）且会话仍活跃时，在此截图
+          if (!screenshotPath && !isJestEnvironmentTornDown(error) && TestSessionState.isActive) {
             try {
               if (typeof (target as any).takeScreenshot === "function") {
                 screenshotPath = await (target as any).takeScreenshot(`step_fail_${Date.now()}`);

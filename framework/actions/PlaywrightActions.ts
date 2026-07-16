@@ -278,7 +278,8 @@ export class PlaywrightActions extends BaseActions {
   // Utilities
   async takeScreenshot(name: string): Promise<string> {
     logger.debug(`Taking screenshot: ${name}`);
-    const path = `artifacts/screenshots/${name}_${Date.now()}.png`;
+    const sessionDir = process.env.OMNITEST_SESSION_DIR || "artifacts";
+    const path = `${sessionDir}/screenshots/${name}_${Date.now()}.png`;
     await this.page.screenshot({ path, fullPage: true });
     return path;
   }

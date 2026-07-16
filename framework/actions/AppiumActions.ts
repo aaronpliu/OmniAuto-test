@@ -3,6 +3,7 @@ import { BaseActions } from "./BaseActions";
 import { TSelector } from "../types/actions";
 import { Logger } from "../utils/logger";
 import { mobileConfig } from "../utils/mobileConfig";
+import { TestSessionState } from "../utils/testSessionState";
 import {
   parseSelector,
   isIndexedSelector,
@@ -52,8 +53,10 @@ export class AppiumActions extends BaseActions {
     const { type, value } = parseSelector(selector);
     switch (type) {
       case "id":
-        // Accessibility ID — iOS: accessibilityIdentifier, Android: content-desc + resource-id 后缀
-        // 注意：Android 裸 resource-id（无包名前缀，如 RN 的 testID）由 resolveElement 回退处理
+        // iOS: accessibilityIdentifier; Android: resourceIdMatches 后缀匹配（RN testID → resource-id）
+        if (this.platform === "android") {
+          return `android=new UiSelector().resourceIdMatches(".*${value}$")`;
+        }
         return `~${value}`;
       case "text":
         // 按显示文本匹配
@@ -275,26 +278,12 @@ export class AppiumActions extends BaseActions {
       if (node.type === "atomic" && node.atomic) {
         const { selectorType, value } = node.atomic;
 
-        // Android id 特殊处理：先试 accessibility ID（~value），覆盖 content-desc
-        // 和带包名前缀的 resource-id；找不到则回退到 resourceIdMatches，覆盖
-        // React Native 的裸 resource-id（无包名前缀）
+        // Android id：直接使用 resourceIdMatches 后缀匹配（RN testID → 裸 resource-id）
+        // 不再先试 accessibility ID（content-desc），因为 RN 的 testID 在 Android
+        // 上映射到 resource-id 而非 content-desc，Try 1 总是失败，徒增 HTTP 往返
         if (selectorType === "id" && this.platform === "android") {
-          const accessibilitySel = `~${value}`;
-          logger.debug(
-            `Resolved atomic selector → Appium (try 1: accessibility ID): ${accessibilitySel}`
-          );
-          try {
-            const el = await driver.$(accessibilitySel);
-            if (await el.isExisting()) {
-              return el;
-            }
-          } catch {
-            /* accessibility ID 未命中，继续回退 */
-          }
           const resourceIdSel = `android=new UiSelector().resourceIdMatches(".*${value}$")`;
-          logger.debug(
-            `Resolved atomic selector → Appium (try 2: resourceIdMatches): ${resourceIdSel}`
-          );
+          logger.debug(`Resolved atomic selector → Appium (resourceIdMatches): ${resourceIdSel}`);
           return await driver.$(resourceIdSel);
         }
 
@@ -343,6 +332,9 @@ export class AppiumActions extends BaseActions {
   }
 
   private async getDriver(): Promise<WebdriverIO.Browser> {
+    if (!TestSessionState.isActive) {
+      throw new Error("Test session teardown: driver unavailable");
+    }
     if (!this.driver) {
       const serverConfig = mobileConfig.getAppiumServerConfig();
       const host = process.env.APPIUM_HOST || serverConfig.host;
@@ -395,7 +387,19 @@ export class AppiumActions extends BaseActions {
   // Navigation
   async navigateTo(_url?: string): Promise<void> {
     logger.info("Starting app with Appium");
-    await this.getDriver();
+    const driver = await this.getDriver();
+    // noReset=true 时，新建 session 不会杀掉 App 进程
+    // 主动 terminateApp + activateApp 确保 App 被重新启动
+    const appId =
+      (this.capabilities as any)?.["appium:appPackage"] ||
+      (this.capabilities as any)?.["appium:bundleId"];
+    if (appId) {
+      await driver.execute("mobile: terminateApp", { appId }).catch(() => {
+        /* App 可能未在运行，忽略 */
+      });
+      await driver.execute("mobile: activateApp", { appId });
+      logger.info(`App activated: ${appId}`);
+    }
   }
 
   // Element interactions
@@ -511,7 +515,30 @@ export class AppiumActions extends BaseActions {
     logger.debug(
       `Waiting for element ${isNotVisible ? "not " : ""}visible: ${typeof selector === "string" ? selector : "custom element"}`
     );
-    await el.waitForDisplayed({ timeout, reverse: isNotVisible });
+
+    // 自控轮询（替代 WebdriverIO 原生 waitForDisplayed），每轮检查 teardown 状态
+    const deadline = Date.now() + timeout;
+    const interval = 500;
+    while (Date.now() < deadline) {
+      if (!TestSessionState.isActive) {
+        throw new Error("Test session teardown: waitForElement aborted");
+      }
+      try {
+        const displayed = await el.isDisplayed();
+        if (isNotVisible ? !displayed : displayed) {
+          return;
+        }
+      } catch {
+        // 元素可能尚未渲染，继续轮询
+      }
+      if (!TestSessionState.isActive) {
+        throw new Error("Test session teardown: waitForElement aborted");
+      }
+      await new Promise((r) => setTimeout(r, Math.min(interval, deadline - Date.now())));
+    }
+    throw new Error(
+      `Element ${isNotVisible ? "did not disappear" : "not visible"} after ${timeout}ms`
+    );
   }
 
   async waitForElementToExist(selector: AppiumSelector, timeout = 10000): Promise<void> {
@@ -520,7 +547,28 @@ export class AppiumActions extends BaseActions {
     logger.debug(
       `Waiting for element to exist: ${typeof selector === "string" ? selector : "custom element"}`
     );
-    await el.waitForExist({ timeout });
+
+    // 自控轮询（替代 WebdriverIO 原生 waitForExist），每轮检查 teardown 状态
+    const deadline = Date.now() + timeout;
+    const interval = 500;
+    while (Date.now() < deadline) {
+      if (!TestSessionState.isActive) {
+        throw new Error("Test session teardown: waitForElementToExist aborted");
+      }
+      try {
+        const exists = await el.isExisting();
+        if (exists) {
+          return;
+        }
+      } catch {
+        // 忽略中间错误，继续轮询
+      }
+      if (!TestSessionState.isActive) {
+        throw new Error("Test session teardown: waitForElementToExist aborted");
+      }
+      await new Promise((r) => setTimeout(r, Math.min(interval, deadline - Date.now())));
+    }
+    throw new Error(`Element did not exist after ${timeout}ms`);
   }
 
   async waitForElementWhileScrolling(
@@ -537,6 +585,9 @@ export class AppiumActions extends BaseActions {
 
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
+      if (!TestSessionState.isActive) {
+        throw new Error("Test session teardown: waitForElementWhileScrolling aborted");
+      }
       try {
         const isDisplayed = await targetElem.isDisplayed();
         if (isDisplayed) {
@@ -547,6 +598,9 @@ export class AppiumActions extends BaseActions {
         // Element not found yet, continue scrolling
       }
 
+      if (!TestSessionState.isActive) {
+        throw new Error("Test session teardown: waitForElementWhileScrolling aborted");
+      }
       await this.scroll(scrollContainerSelector);
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
@@ -571,6 +625,9 @@ export class AppiumActions extends BaseActions {
     );
 
     while (Date.now() - startTime < timeout) {
+      if (!TestSessionState.isActive) {
+        throw new Error("Test session teardown: waitForElementWithRetry aborted");
+      }
       try {
         const el = await this.resolveElement(driver, selector);
 
@@ -721,6 +778,9 @@ export class AppiumActions extends BaseActions {
         logger.debug("Element not ready, retrying...");
       }
 
+      if (!TestSessionState.isActive) {
+        throw new Error("Test session teardown: waitForElementWithRetry aborted");
+      }
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
 
@@ -916,7 +976,8 @@ export class AppiumActions extends BaseActions {
   async takeScreenshot(name: string): Promise<string> {
     logger.debug(`Taking screenshot: ${name}`);
     const driver = await this.getDriver();
-    const path = `artifacts/screenshots/${name}_${Date.now()}.png`;
+    const sessionDir = process.env.OMNITEST_SESSION_DIR || "artifacts";
+    const path = `${sessionDir}/screenshots/${name}_${Date.now()}.png`;
     await driver.saveScreenshot(path);
     // 缩放截图至适合 Web 报告查看的尺寸
     return await resizeScreenshot(path);

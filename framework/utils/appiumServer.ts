@@ -43,8 +43,9 @@ export class AppiumServer {
       return;
     }
 
-    // 确保日志目录存在
-    const logDir = join(process.cwd(), "artifacts", "logs");
+    // 使用本次执行的会话目录（由 globalSetup 创建并写入环境变量）
+    const sessionDir = process.env.OMNITEST_SESSION_DIR;
+    const logDir = sessionDir ? sessionDir : join(process.cwd(), "artifacts", "logs");
     if (!existsSync(logDir)) {
       mkdirSync(logDir, { recursive: true });
     }

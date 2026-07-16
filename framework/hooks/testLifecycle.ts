@@ -12,6 +12,7 @@
 import * as fs from "fs";
 import { join, basename } from "path";
 import { TestContext } from "../utils/testContext";
+import { TestSessionState } from "../utils/testSessionState";
 import { Logger } from "../utils/logger";
 
 const logger = Logger.getInstance();
@@ -104,6 +105,30 @@ function isTestFailed(): boolean {
   return false;
 }
 
+/**
+ * 检查步骤文件中是否已有失败步骤携带了截图。
+ * 若已有步骤级截图，测试级截图纯属冗余（屏幕状态未变化）。
+ */
+function hasStepFailureScreenshot(): boolean {
+  try {
+    const stepsFile = join(process.cwd(), "artifacts", "allure-results", ".pending-steps.jsonl");
+    if (fs.existsSync(stepsFile)) {
+      const raw = fs.readFileSync(stepsFile, "utf-8");
+      return raw.split("\n").some((l: string) => {
+        try {
+          const step = JSON.parse(l);
+          return step.status === "failed" && !!step.screenshot;
+        } catch {
+          return false;
+        }
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
 // ====================================================================
 //  录屏控制（Appium startRecordingScreen / stopRecordingScreen）
 // ====================================================================
@@ -164,6 +189,12 @@ async function captureScreenshotOnFailure(): Promise<void> {
     return;
   }
 
+  // 步骤级已有失败截图时，跳过测试级截图（此时屏幕状态未变化，纯冗余）
+  if (hasStepFailureScreenshot()) {
+    logger.info("[截图] 步骤已有失败截图，跳过测试级截图");
+    return;
+  }
+
   const actions = TestContext.getActions();
   if (!actions || typeof actions.takeScreenshot !== "function") {
     return;
@@ -175,8 +206,9 @@ async function captureScreenshotOnFailure(): Promise<void> {
   try {
     let screenshotPath: string = await actions.takeScreenshot(`failure_${Date.now()}`);
 
-    // 将截图复制到永久目录（Detox 截图可能在 /tmp 中，Reporter 读取前会被清理）
-    const permDir = join(process.cwd(), "artifacts", "screenshots");
+    // 将截图复制到本次执行的会话目录（Detox 截图可能在 /tmp 中，Reporter 读取前会被清理）
+    const sessionDir = process.env.OMNITEST_SESSION_DIR || join(process.cwd(), "artifacts");
+    const permDir = join(sessionDir, "screenshots");
     if (!fs.existsSync(permDir)) {
       fs.mkdirSync(permDir, { recursive: true });
     }
@@ -203,13 +235,16 @@ async function captureScreenshotOnFailure(): Promise<void> {
     logger.info("[截图] 测试级截图已记录");
   } catch (err: any) {
     // 环境 teardown 后的错误不需要警告（属于正常流程）
+    const msg = err.message || "";
     if (
-      err instanceof ReferenceError &&
-      (err.message || "").includes("after the Jest environment has been torn down")
+      (err instanceof ReferenceError &&
+        msg.includes("after the Jest environment has been torn down")) ||
+      msg.includes("Provided module is not an instance of Module") ||
+      msg.includes("A session is either terminated or not started")
     ) {
       logger.debug("[截图] 环境已销毁，跳过截图");
     } else {
-      logger.warn(`[截图] 失败: ${err.message || err}`);
+      logger.warn(`[截图] 失败: ${msg || err}`);
     }
   }
 }
@@ -238,9 +273,18 @@ function clearSteps() {
 let _origConsoleWarn: typeof console.warn | null = null;
 let _origConsoleError: typeof console.error | null = null;
 let _origStderrWrite: typeof process.stderr.write | null = null;
-const SUPPRESS_MSG = "after the Jest environment has been torn down";
+const SUPPRESS_PATTERNS = [
+  "after the Jest environment has been torn down",
+  "Provided module is not an instance of Module",
+  "A session is either terminated or not started",
+  "invalid session id",
+  "Cannot read properties of undefined",
+];
 
 beforeEach(async () => {
+  // 重置会话状态（新测试开始）
+  TestSessionState.reset();
+
   // 恢复 console 和 stderr（上一个 afterEach 可能安装了过滤器）
   if (_origConsoleWarn) {
     console.warn = _origConsoleWarn;
@@ -264,58 +308,64 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // 第一行标记会话正在销毁 — 阻断飞行中异步操作的 driver 调用
+  TestSessionState.markTearingDown();
+
   logger.info("[Lifecycle] afterEach running...");
   const failed = isTestFailed();
   logger.info(`[Lifecycle] testFailed=${failed}`);
 
-  // 0) 安装进程级 stderr 过滤器 — 抑制 Jest teardown 后 WebdriverIO 的 ReferenceError 噪音
+  // 0) 安装进程级 stderr 过滤器 — 抑制 Jest teardown 后的模块/会话错误噪音
   //    console.warn/error 在 Jest sandbox 内，teardown 时会被恢复，无法拦截
   //    process.stderr.write 是 Node.js 进程级别的，Jest teardown 不会恢复它
   _origConsoleWarn = console.warn;
   _origConsoleError = console.error;
   _origStderrWrite = process.stderr.write.bind(process.stderr);
 
+  const shouldSuppress = (text: string): boolean => SUPPRESS_PATTERNS.some((p) => text.includes(p));
+
   console.warn = (...args: unknown[]) => {
-    if (args.some((a) => typeof a === "string" && a.includes(SUPPRESS_MSG))) {
+    if (args.some((a) => typeof a === "string" && shouldSuppress(a))) {
       return;
     }
     _origConsoleWarn!(...(args as Parameters<typeof console.warn>));
   };
   console.error = (...args: unknown[]) => {
-    if (args.some((a) => typeof a === "string" && a.includes(SUPPRESS_MSG))) {
+    if (args.some((a) => typeof a === "string" && shouldSuppress(a))) {
       return;
     }
     _origConsoleError!(...(args as Parameters<typeof console.error>));
   };
   process.stderr.write = ((chunk: string | Buffer | Uint8Array) => {
     const text = typeof chunk === "string" ? chunk : Buffer.from(chunk).toString();
-    if (text.includes(SUPPRESS_MSG)) {
+    if (shouldSuppress(text)) {
       return true;
     }
     return _origStderrWrite!(chunk as string);
   }) as typeof process.stderr.write;
 
-  // 1) 失败截图
+  // 1) Appium 模式：删除 session 以断开连接，并为下次测试重建
+  if (!isDetoxMode()) {
+    try {
+      const actions = TestContext.getActions();
+      const driver = actions?.driver;
+      if (driver) {
+        await driver.deleteSession().catch(() => {});
+        actions.driver = null;
+        logger.debug("[Lifecycle] Appium session deleted");
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // 2) 失败截图
   if (failed) {
     await captureScreenshotOnFailure();
   }
 
-  // 2) 停止录屏（失败时只会保存，通过时丢弃）
+  // 3) 停止录屏（失败时只会保存，通过时丢弃）
   if (isRecordingEnabled()) {
     await stopRecording();
-  }
-
-  // 3) Appium 模式：关闭 driver 连接，防止 WebdriverIO 内部 pending 请求
-  //    在 Jest 环境 teardown 后持续触发 import 错误
-  if (!isDetoxMode()) {
-    try {
-      const actions = TestContext.getActions();
-      if (actions && typeof actions.close === "function") {
-        await actions.close();
-        logger.debug("[Lifecycle] Driver session closed");
-      }
-    } catch {
-      /* ignore — driver 可能已经断开 */
-    }
   }
 });

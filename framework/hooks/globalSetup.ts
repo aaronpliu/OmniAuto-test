@@ -9,6 +9,25 @@ import { getIOSDeviceDetector } from "../utils/iosDeviceDetector";
 
 const logger = Logger.getInstance();
 
+/** 生成会话目录名：omnitest-2026-07-16T15-49-37+0800 */
+function generateSessionDirName(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const offset = -now.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const absMin = Math.abs(offset);
+  const tzStr = `${sign}${pad(Math.floor(absMin / 60))}${pad(absMin % 60)}`;
+
+  const year = now.getFullYear();
+  const month = pad(now.getMonth() + 1);
+  const day = pad(now.getDate());
+  const hour = pad(now.getHours());
+  const minute = pad(now.getMinutes());
+  const second = pad(now.getSeconds());
+
+  return `omnitest-${year}-${month}-${day}T${hour}-${minute}-${second}${tzStr}`;
+}
+
 export default async function globalSetup() {
   logger.info("=== Global Test Setup Started ===");
 
@@ -19,16 +38,23 @@ export default async function globalSetup() {
   logger.info(`Environment: ${fwConfig.environment}`);
   logger.info(`Platform: ${fwConfig.platform}`);
 
-  // Create artifacts directories
+  // 生成本次执行的会话目录并写入环境变量
+  const sessionDirName = generateSessionDirName();
+  const sessionDir = path.join(process.cwd(), "artifacts", "logs", sessionDirName);
+  process.env.OMNITEST_SESSION_DIR = sessionDir;
+  // 将会话目录绑定到 Logger 的 file transport（解决 Logger 在 globalSetup 之前实例化的问题）
+  logger.ensureFileLogging(sessionDir);
+  logger.info(`Session directory: ${sessionDir}`);
+
+  // Create artifacts directories（会话目录 + allure-results）
   const dirs = [
-    "artifacts/screenshots",
-    "artifacts/logs",
+    path.join(sessionDir, "screenshots"),
+    path.join(sessionDir, "videos"),
     "artifacts/allure-results",
-    "artifacts/videos",
   ];
 
   dirs.forEach((dir) => {
-    const fullPath = path.join(process.cwd(), dir);
+    const fullPath = path.isAbsolute(dir) ? dir : path.join(process.cwd(), dir);
     if (!fs.existsSync(fullPath)) {
       fs.mkdirSync(fullPath, { recursive: true });
     }

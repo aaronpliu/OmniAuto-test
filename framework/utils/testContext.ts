@@ -7,7 +7,6 @@
  */
 export class TestContext {
   private static actions: any = null;
-  private static recordingStarted = false;
 
   /**
    * 设置当前测试的 actions 实例
@@ -27,21 +26,6 @@ export class TestContext {
    * 标记录屏状态
    */
   static setRecordingStarted(started: boolean): void {
-    this.recordingStarted = started;
-  }
-
-  /**
-   * 是否正在录屏
-   */
-  static isRecordingStarted(): boolean {
-    return this.recordingStarted;
-  }
-
-  /**
-   * 清理上下文
-   */
-  static clear(): void {
-    this.actions = null;
-    this.recordingStarted = false;
+    // reserved for future use
   }
 }
