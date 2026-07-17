@@ -324,10 +324,28 @@ export class AppiumActions extends BaseActions {
    * 优先级链：环境变量 > configs/mobile.config.js > 内置默认值
    * 具体合并逻辑见 MobileConfigLoader.getAppiumCapabilities()
    */
+  /**
+   * 根据 LOG_LEVEL 环境变量计算 WebdriverIO logLevel
+   * info  → "warn"  (抑制 COMMAND/DATA/RESULT)
+   * debug → "info"  (输出 COMMAND/DATA/RESULT)
+   * trace → "debug" (输出所有底层日志)
+   */
+  private resolveWdioLogLevel(): "debug" | "info" | "warn" {
+    const level = process.env.LOG_LEVEL || "info";
+    switch (level) {
+      case "trace":
+        return "debug";
+      case "debug":
+        return "info";
+      default:
+        return "warn";
+    }
+  }
+
   private buildDefaultCapabilities(): RemoteOptions["capabilities"] {
     const platformName = (process.env.TEST_PLATFORM || "android") as "android" | "ios";
     const capabilities = mobileConfig.getAppiumCapabilities(platformName);
-    logger.debug("Built capabilities from mobile config:", JSON.stringify(capabilities, null, 2));
+    logger.debug("Built capabilities from mobile config: " + JSON.stringify(capabilities, null, 2));
     return capabilities;
   }
 
@@ -376,7 +394,7 @@ export class AppiumActions extends BaseActions {
         port,
         path: "/",
         capabilities: this.capabilities,
-        logLevel: "warn", // 抑制 WebdriverIO 的 COMMAND/DATA/RESULT info 日志
+        logLevel: this.resolveWdioLogLevel(),
       });
 
       logger.info("✓ Connected to Appium Server");

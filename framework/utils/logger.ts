@@ -9,8 +9,11 @@ export class Logger {
 
   private constructor() {
     // 只初始化 console transport，file transport 延迟到会话目录就绪后再挂载
+    const rawLevel = process.env.LOG_LEVEL || "info";
+    // Winston 没有 trace 级别，trace 映射为 debug（最详细）
+    const winstonLevel = rawLevel === "trace" ? "debug" : rawLevel;
     this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || "info",
+      level: winstonLevel,
       format: winston.format.combine(
         winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
         winston.format.errors({ stack: true }),

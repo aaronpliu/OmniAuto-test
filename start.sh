@@ -92,6 +92,10 @@ show_help() {
     echo "                              Enable test recording (default: off)"
     echo "  --no-recording, --no-rec   禁用测试录屏"
     echo "                              Disable test recording"
+    echo "  --log-level <level>        设置日志级别 / Set log level"
+    echo "                              info  — 框架 info/warn/error，底层框架日志抑制（默认）"
+    echo "                              debug — 增加 WebdriverIO COMMAND/DATA/RESULT 日志"
+    echo "                              trace — 输出所有日志，含 Playwright pw:api 调试信息"
     echo ""
     echo -e "${GREEN}测试目标筛选 / Test Target Filtering:${NC}"
     echo "  在子命令后追加文件/目录/模式，透传给底层 Jest/Detox/Playwright："
@@ -291,7 +295,11 @@ install_dependencies() {
 # 透传位置参数：文件/目录/匹配模式，如 tests/mobile/TestGround/login.spec.ts
 run_ios_test() {
     print_info "运行 iOS 测试（Detox）..."
-    npm run test:mobile:ios -- "$@"
+    if [ -n "$DETOX_LOGLEVEL" ]; then
+        npm run test:mobile:ios -- --loglevel "$DETOX_LOGLEVEL" "$@"
+    else
+        npm run test:mobile:ios -- "$@"
+    fi
     return $?
 }
 
@@ -309,7 +317,11 @@ run_ios_appium_test() {
 # 透传位置参数：文件/目录/匹配模式
 run_android_detox_test() {
     print_info "运行 Android 测试（Detox）..."
-    npm run test:mobile:android:detox -- "$@"
+    if [ -n "$DETOX_LOGLEVEL" ]; then
+        npm run test:mobile:android:detox -- --loglevel "$DETOX_LOGLEVEL" "$@"
+    else
+        npm run test:mobile:android:detox -- "$@"
+    fi
     return $?
 }
 
@@ -374,7 +386,11 @@ run_android_test() {
 # 透传位置参数：文件名子串过滤 / -g <title-正则>
 run_web_test() {
     print_info "运行 Web 测试..."
-    npm run test:web -- "$@"
+    if [ -n "$DEBUG_PLAYWRIGHT" ]; then
+        DEBUG="$DEBUG_PLAYWRIGHT" npm run test:web -- "$@"
+    else
+        npm run test:web -- "$@"
+    fi
     return $?
 }
 
@@ -780,9 +796,16 @@ main() {
 # 在所有命令之前解析，提取并导出环境变量
 SCREENSHOT_ON_FAILURE=true
 VIDEO_RECORDING=false
+LOG_LEVEL=info
+DETOX_LOGLEVEL=""
+DEBUG_PLAYWRIGHT=""
 REMAINING_ARGS=()
 
-for arg in "$@"; do
+i=0
+args_count=$#
+args_array=("$@")
+while [ $i -lt $args_count ]; do
+    arg="${args_array[$i]}"
     case "$arg" in
         --screenshot|--ss)
             SCREENSHOT_ON_FAILURE=true
@@ -796,19 +819,52 @@ for arg in "$@"; do
         --no-recording|--no-rec)
             VIDEO_RECORDING=false
             ;;
+        --log-level)
+            i=$((i + 1))
+            if [ $i -lt $args_count ]; then
+                LOG_LEVEL="${args_array[$i]}"
+                case "$LOG_LEVEL" in
+                    info|debug|trace) ;;
+                    *)
+                        print_error "无效的日志级别: $LOG_LEVEL"
+                        print_info "可用级别: info, debug, trace"
+                        exit 1
+                        ;;
+                esac
+            else
+                print_error "--log-level 需要参数: info, debug, trace"
+                exit 1
+            fi
+            ;;
         *)
             REMAINING_ARGS+=("$arg")
             ;;
     esac
+    i=$((i + 1))
 done
+
+# 根据 LOG_LEVEL 计算 Detox --loglevel 参数
+case "$LOG_LEVEL" in
+    debug|trace)
+        DETOX_LOGLEVEL="$LOG_LEVEL"
+        ;;
+esac
+
+# 根据 LOG_LEVEL 设置 Playwright DEBUG 环境变量
+if [ "$LOG_LEVEL" = "trace" ]; then
+    DEBUG_PLAYWRIGHT="pw:api"
+fi
 
 export SCREENSHOT_ON_FAILURE
 export VIDEO_RECORDING
+export LOG_LEVEL
+export DEBUG_PLAYWRIGHT
 
 # 如果传入了开关参数，打印当前配置
-if [ "$SCREENSHOT_ON_FAILURE" != true ] || [ "$VIDEO_RECORDING" = true ]; then
+if [ "$SCREENSHOT_ON_FAILURE" != true ] || [ "$VIDEO_RECORDING" = true ] || [ "$LOG_LEVEL" != info ]; then
     print_info "截图 / Screenshot: $([ "$SCREENSHOT_ON_FAILURE" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"
     print_info "录屏 / Recording: $([ "$VIDEO_RECORDING" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"
+    print_info "日志级别 / Log Level: $LOG_LEVEL"
 fi
 
 # 执行主函数（传入过滤后的参数）
