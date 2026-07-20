@@ -9,7 +9,7 @@ const logger = Logger.getInstance();
  *
  * 加载策略：
  *   CI 环境（CI=true） → configs/mobile.config.ci.js
- *   本地环境            → configs/mobile.config.js
+ *   本地环境            → configs/mobile.config.local.js
  *   加载失败            → 内置默认值兜底
  *
  * 所有配置值直接从上述文件读取，不再通过环境变量覆盖。
@@ -38,7 +38,7 @@ export class MobileConfigLoader {
   /** 根据运行环境选择配置文件 */
   private resolveConfigPath(): string {
     const isCI = process.env.CI === "true";
-    const configFile = isCI ? "mobile.config.ci.js" : "mobile.config.js";
+    const configFile = isCI ? "mobile.config.ci.js" : "mobile.config.local.js";
     return path.join(process.cwd(), "configs", configFile);
   }
 

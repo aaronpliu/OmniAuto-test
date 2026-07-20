@@ -5,7 +5,7 @@
  * 优先级链：环境变量 > 本配置文件 > 默认值
  * 被 framework/utils/unifiedConfig.ts 类型化访问，ConfigManager.getFrameworkConfig() 也读取此处作为兜底。
  *
- * 注意：此文件为 CI 基线配置，本地调试请编辑 configs/framework.config.js。
+ * 注意：此文件为 CI 基线配置，本地调试请编辑 configs/framework.config.local.js。
  */
 module.exports = {
   // 测试失败时自动截图

@@ -321,7 +321,7 @@ export class AppiumActions extends BaseActions {
   /**
    * Build default capabilities from unified mobile config + env overrides
    *
-   * 优先级链：环境变量 > configs/mobile.config.js > 内置默认值
+   * 优先级链：环境变量 > configs/mobile.config.local.js > 内置默认值
    * 具体合并逻辑见 MobileConfigLoader.getAppiumCapabilities()
    */
   /**

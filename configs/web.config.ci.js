@@ -4,7 +4,7 @@
  * 优先级链：环境变量 > 本配置文件 > Playwright 默认值
  * 被 playwright.config.ts 引用，由 framework/utils/unifiedConfig.ts 类型化访问
  *
- * 注意：此文件为 CI 基线配置，本地调试请编辑 configs/web.config.js。
+ * 注意：此文件为 CI 基线配置，本地调试请编辑 configs/web.config.local.js。
  */
 const path = require("path");
 

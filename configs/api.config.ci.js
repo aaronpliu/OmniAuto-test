@@ -4,7 +4,7 @@
  * 优先级链：环境变量 > 环境配置(app.apiBaseUrl) > 本配置文件 > 默认值
  * 被 framework/api/ApiClient.ts 引用，由 framework/utils/unifiedConfig.ts 类型化访问
  *
- * 注意：此文件为 CI 基线配置，本地调试请编辑 configs/api.config.js。
+ * 注意：此文件为 CI 基线配置，本地调试请编辑 configs/api.config.local.js。
  */
 module.exports = {
   // 请求超时（毫秒）

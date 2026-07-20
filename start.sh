@@ -288,6 +288,11 @@ install_dependencies() {
     else
         print_success "依赖已安装"
     fi
+
+    # 自动生成本地配置文件（缺失时从 .ci.js 模板复制）
+    if [ -f "scripts/setup-configs.js" ]; then
+        node scripts/setup-configs.js
+    fi
     return 0
 }
 

@@ -7,7 +7,7 @@
  *
  * 说明：
  * - 此文件为 CI 基线配置，由 Git 跟踪，不应在本地修改。
- * - 本地调试请编辑 configs/mobile.config.js（不受 Git 跟踪）。
+ * - 本地调试请编辑 configs/mobile.config.local.js（不受 Git 跟踪）。
  * - CI 环境（process.env.CI=true）自动加载此文件。
  * - detox 区块：Detox CLI 所需的 apps / devices / configurations / behavior 等
  * - appium 区块：Appium server 连接信息 + Android/iOS capabilities + 通用 capabilities

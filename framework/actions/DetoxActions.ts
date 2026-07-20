@@ -727,7 +727,7 @@ export class DetoxActions extends BaseActions {
   }
 
   /**
-   * Detox 录屏由 artifacts video 插件接管（configs/mobile.config.js detox.artifacts.plugins.video），
+   * Detox 录屏由 artifacts video 插件接管（configs/mobile.config.local.js detox.artifacts.plugins.video），
    * 此方法为接口兼容占位，实际录屏产物（.mp4）由 DetoxAllureReporter 在 onRunComplete 收集。
    */
   async startRecording(): Promise<void> {

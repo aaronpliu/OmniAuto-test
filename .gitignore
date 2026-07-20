@@ -33,10 +33,10 @@ npm-debug.log*
 
 # Local config files (developer-specific, not tracked)
 # *.config.ci.js files are the CI baselines and ARE tracked
-configs/mobile.config.js
-configs/web.config.js
-configs/api.config.js
-configs/framework.config.js
+configs/mobile.config.local.js
+configs/web.config.local.js
+configs/api.config.local.js
+configs/framework.config.local.js
 
 # Coverage
 coverage/
