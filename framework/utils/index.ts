@@ -8,6 +8,7 @@ export {
   parseSelector,
   isPlatformSelector,
   resolvePlatformSelector,
+  platformSelectorToString,
   isChainableSelector,
   ChainableSelector,
   platform,

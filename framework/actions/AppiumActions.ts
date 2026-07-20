@@ -395,10 +395,21 @@ export class AppiumActions extends BaseActions {
         path: "/",
         capabilities: this.capabilities,
         logLevel: this.resolveWdioLogLevel(),
+        waitforTimeout: 5000,
       });
 
       // 显式通过 W3C timeouts 端点设置 implicit wait，确保 Appium 3.0 正确应用
+      // 注意：UiAutomator2 驱动不识别 W3C timeouts 能力项，需通过 Settings API 控制
       await this.driver.setTimeout({ implicit: 0 });
+
+      // 缩短 UiAutomator2 驱动的服务端超时：
+      // waitForIdleTimeout —— 等待 App 空闲的超时（默认 10000ms）
+      // waitForSelectorTimeout —— 元素选择器超时（默认 10000ms）
+      // 不缩短 actionAcknowledgmentTimeout，避免手势操作被截断
+      await this.driver.updateSettings({
+        waitForIdleTimeout: 1000,
+        waitForSelectorTimeout: 1000,
+      });
 
       logger.info("✓ Connected to Appium Server");
     }

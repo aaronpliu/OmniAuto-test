@@ -288,6 +288,36 @@ export function resolvePlatformSelector(
   return platform === "ios" ? selector.ios : selector.android;
 }
 
+// ========== PlatformSelector 字符串化 / PlatformSelector Stringification ==========
+
+/**
+ * 将 PlatformSelector 转为人类可读的字符串，用于日志输出
+ * Converts a PlatformSelector to a human-readable string for logging
+ *
+ * 示例 / Example:
+ *   { ios: "type:WMButtonWidgetView descendant type:UILabel", android: "type: descendant type:" }
+ */
+export function platformSelectorToString(selector: PlatformSelector): string {
+  const iosStr = platformValueToString(selector.ios);
+  const androidStr = platformValueToString(selector.android);
+  return `{ios: ${iosStr}, android: ${androidStr}}`;
+}
+
+/** 递归将 TPlatformValue 转为字符串 */
+function platformValueToString(value: TPlatformValue): string {
+  if (isChainableSelector(value)) {
+    return value.toString();
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (isIndexedSelector(value)) {
+    const inner = platformValueToString(value.selector as TPlatformValue);
+    return `[${value.index}]:${inner}`;
+  }
+  return String(value);
+}
+
 // ========== 索引选择器 / Indexed Selector ==========
 
 /**
