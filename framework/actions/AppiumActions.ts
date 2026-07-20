@@ -397,6 +397,9 @@ export class AppiumActions extends BaseActions {
         logLevel: this.resolveWdioLogLevel(),
       });
 
+      // 显式通过 W3C timeouts 端点设置 implicit wait，确保 Appium 3.0 正确应用
+      await this.driver.setTimeout({ implicit: 0 });
+
       logger.info("✓ Connected to Appium Server");
     }
     return this.driver;
@@ -529,12 +532,12 @@ export class AppiumActions extends BaseActions {
     isNotVisible = false
   ): Promise<void> {
     const driver = await this.getDriver();
-    const el = await this.resolveElement(driver, selector);
     logger.debug(
       `Waiting for element ${isNotVisible ? "not " : ""}visible: ${typeof selector === "string" ? selector : "custom element"}`
     );
 
     // 自控轮询（替代 WebdriverIO 原生 waitForDisplayed），每轮检查 teardown 状态
+    // resolveElement 在循环内调用，避免 WebdriverIO 默认 waitforTimeout(30s) 放大每次重试的等待时间
     const deadline = Date.now() + timeout;
     const interval = 500;
     while (Date.now() < deadline) {
@@ -542,6 +545,7 @@ export class AppiumActions extends BaseActions {
         throw new Error("Test session teardown: waitForElement aborted");
       }
       try {
+        const el = await this.resolveElement(driver, selector);
         const displayed = await el.isDisplayed();
         if (isNotVisible ? !displayed : displayed) {
           return;
@@ -561,12 +565,12 @@ export class AppiumActions extends BaseActions {
 
   async waitForElementToExist(selector: AppiumSelector, timeout = 10000): Promise<void> {
     const driver = await this.getDriver();
-    const el = await this.resolveElement(driver, selector);
     logger.debug(
       `Waiting for element to exist: ${typeof selector === "string" ? selector : "custom element"}`
     );
 
     // 自控轮询（替代 WebdriverIO 原生 waitForExist），每轮检查 teardown 状态
+    // resolveElement 在循环内调用，避免 WebdriverIO 默认 waitforTimeout(30s) 放大每次重试的等待时间
     const deadline = Date.now() + timeout;
     const interval = 500;
     while (Date.now() < deadline) {
@@ -574,6 +578,7 @@ export class AppiumActions extends BaseActions {
         throw new Error("Test session teardown: waitForElementToExist aborted");
       }
       try {
+        const el = await this.resolveElement(driver, selector);
         const exists = await el.isExisting();
         if (exists) {
           return;
@@ -597,16 +602,17 @@ export class AppiumActions extends BaseActions {
     timeout = 15000
   ): Promise<void> {
     const driver = await this.getDriver();
-    const targetElem = await this.resolveElement(driver, targetSelector);
 
     logger.debug(`Waiting for element while scrolling ${direction}`);
 
+    // resolveElement 在循环内调用，避免 WebdriverIO 默认 waitforTimeout(30s) 放大每次重试的等待时间
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
       if (!TestSessionState.isActive) {
         throw new Error("Test session teardown: waitForElementWhileScrolling aborted");
       }
       try {
+        const targetElem = await this.resolveElement(driver, targetSelector);
         const isDisplayed = await targetElem.isDisplayed();
         if (isDisplayed) {
           logger.debug("Element is visible after scrolling");

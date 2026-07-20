@@ -202,36 +202,49 @@ function buildStepName(method: string, args: unknown[]): string {
 // ================================================================
 
 async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target: any): Promise<T> {
+  // 隔离 require 的 try-catch：仅处理 allure-js-commons 不存在的情况（如 Detox 环境）
+  // step() 执行产生的异常应自然向上传播，不应被此处捕获
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- allure-js-commons runtime types
+  let step: ((...args: any[]) => any) | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- allure-js-commons runtime types
+  let attachment: ((...args: any[]) => any) | undefined;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional runtime dependency
-    const { step, attachment } = require("allure-js-commons");
-    if (typeof step === "function") {
-      return await step(name, async () => {
-        try {
-          return await fn();
-        } catch (innerErr: any) {
-          // 步骤失败时截屏并附加到当前 Allure step 上下文中
-          // 若会话正在销毁则跳过截图，避免 getDriver() 重建 session 触发 ReferenceError
-          if (TestSessionState.isActive) {
-            try {
-              if (typeof attachment === "function" && typeof target.takeScreenshot === "function") {
-                const path = await target.takeScreenshot(`step_fail_${Date.now()}`);
-                _lastAllureScreenshotPath = path; // 共享给 Proxy catch，避免重复截图
-                attachment("Step Failure Screenshot", readFileSync(path as string), "image/png");
-                logger.info(`[Step] 📸 截图已附加到 Allure step`);
-              }
-            } catch {
-              /* 截图附加失败不影响步骤 */
-            }
-          }
-          throw innerErr;
-        }
-      });
-    }
+    const allure = require("allure-js-commons");
+    step = allure.step;
+    attachment = allure.attachment;
   } catch {
-    // Allure 运行时不可用（如 Detox 环境），降级为直接执行
+    // allure-js-commons 不可用，降级为直接执行 fn()
+    return await fn();
   }
-  return await fn();
+
+  if (typeof step !== "function") {
+    return await fn();
+  }
+
+  // step() 在此处调用，其内部异常（包括 fn() 抛出的业务异常）会原样向上传播
+  // 不再有外层 try-catch 吞异常 → 杜绝 fn() 被执行两次的 BUG
+  return await step(name, async () => {
+    try {
+      return await fn();
+    } catch (innerErr: any) {
+      // 步骤失败时截屏并附加到当前 Allure step 上下文中
+      // 若会话正在销毁则跳过截图，避免 getDriver() 重建 session 触发 ReferenceError
+      if (TestSessionState.isActive) {
+        try {
+          if (typeof attachment === "function" && typeof target.takeScreenshot === "function") {
+            const path = await target.takeScreenshot(`step_fail_${Date.now()}`);
+            _lastAllureScreenshotPath = path; // 共享给 Proxy catch，避免重复截图
+            attachment("Step Failure Screenshot", readFileSync(path as string), "image/png");
+            logger.info(`[Step] 📸 截图已附加到 Allure step`);
+          }
+        } catch {
+          /* 截图附加失败不影响步骤 */
+        }
+      }
+      throw innerErr;
+    }
+  });
 }
 
 // ================================================================

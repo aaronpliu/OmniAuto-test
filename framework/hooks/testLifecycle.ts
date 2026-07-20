@@ -14,8 +14,12 @@ import { join, basename } from "path";
 import { TestContext } from "../utils/testContext";
 import { TestSessionState } from "../utils/testSessionState";
 import { Logger } from "../utils/logger";
+import { ensureSessionDir } from "../utils/sessionDir";
 
 const logger = Logger.getInstance();
+
+// 确保会话目录已创建（兼容 Detox 模式下 globalSetup 未被调用的场景，幂等）
+ensureSessionDir();
 
 /** 安全地附加文件到 Allure 报告（使用 allure-js-commons 原生 API） */
 function allureAttachment(name: string, content: Buffer, type: string): void {

@@ -174,8 +174,12 @@ export class MobileConfigLoader {
     if (common.newCommandTimeout) {
       capabilities["appium:newCommandTimeout"] = common.newCommandTimeout;
     }
+    // 使用 W3C 标准 timeouts.implicit 而非 appium:implicitWaitMs（Appium 3.0 兼容）
     if (common.implicitWaitMs !== undefined) {
-      capabilities["appium:implicitWaitMs"] = common.implicitWaitMs;
+      capabilities.timeouts = {
+        ...(capabilities.timeouts || {}),
+        implicit: common.implicitWaitMs,
+      };
     }
     if (common.language) {
       capabilities["appium:language"] = common.language;
