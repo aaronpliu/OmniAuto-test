@@ -17,6 +17,7 @@ import {
   isPlatformSelector,
   resolvePlatformSelector,
   isChainableSelector,
+  isIndexedSelector,
 } from "../utils/SelectorBuilder";
 import { TestSessionState } from "../utils/testSessionState";
 
@@ -66,6 +67,11 @@ function selectorName(s: unknown): string {
   // ChainableSelector: 使用紧凑格式显示
   if (isChainableSelector(s)) {
     return s.toString(true);
+  }
+  // IndexedSelector: { selector, index } — 显示内层选择器名 + 索引
+  if (isIndexedSelector(s)) {
+    const innerName = selectorName((s as { selector: unknown; index: number }).selector);
+    return `${innerName}[${(s as { selector: unknown; index: number }).index}]`;
   }
   if (typeof s === "string") {
     const short = s.includes(":") ? s.split(":").pop()! : s;

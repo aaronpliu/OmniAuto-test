@@ -116,26 +116,26 @@ function resolveElement(selector: DetoxSelector): ReturnType<typeof element> {
       return resolveElement({ selector: resolved, index: idx } as unknown as DetoxSelector);
     }
 
-    // 内层为字符串 → 转到 matcher + atIndex(n)
+    // 内层为字符串 → 转到 matcher → element(matcher).atIndex(n)
     if (typeof inner === "string") {
       const { type } = parseSelector(inner);
       const matcher = type !== "raw" ? selectorToDetoxMatcher(inner) : by.id(inner);
-      // Detox: matcher.atIndex(n) 选出第 n 个，再 wrap 成 NativeElement
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      return element(matcher.atIndex(idx));
+      // Detox 20.x: atIndex() 在 element() 返回的 IndexableNativeElement 上，不在 NativeMatcher 上
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+      return (element as any)(matcher).atIndex(idx);
     }
 
-    // 内层为 ChainableSelector → 先解析为 Detox matcher，再 atIndex
+    // 内层为 ChainableSelector → 先解析为 Detox matcher，再 element(matcher).atIndex(n)
     if (isChainableSelector(inner)) {
       const matcher = resolveCompoundForDetox(inner.toNode());
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      return element(matcher.atIndex(idx));
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+      return (element as any)(matcher).atIndex(idx);
     }
 
-    // 内层为已解析的 matcher → 直接 .atIndex()
+    // 内层为已解析的 matcher → element(matcher).atIndex(n)
     if (isDetoxMatcher(inner)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      return element((inner as any).atIndex(idx));
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+      return (element as any)(inner as any).atIndex(idx);
     }
 
     // 内层为 NativeElement → 不支持索引（已经是单个对象），降级返回
