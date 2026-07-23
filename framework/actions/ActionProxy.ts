@@ -53,6 +53,21 @@ function writeStepToFile(step: Record<string, unknown>): void {
  */
 let _lastAllureScreenshotPath: string | null = null;
 
+/**
+ * 截图抑制标志位
+ * 由 suppressScreenshot() 设置，告知 wrapWithAllureStep 和 Proxy catch
+ * 跳过截图——用于业务脚本已用 .catch() 显式处理的预期失败操作。
+ */
+let _suppressScreenshot = false;
+
+/**
+ * 抑制模式下的延迟错误
+ * 当 _suppressScreenshot 为 true 且 fn() 抛出异常时，
+ * 在 step() 内部吞掉错误（让 step 正常结束为 passed），
+ * 然后在 step() 返回后重新抛出，避免 allure-js-commons 标记为 Broken。
+ */
+let _deferredError: unknown = null;
+
 // ================================================================
 //  生成可读步骤名称
 // ================================================================
@@ -230,12 +245,21 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target:
 
   // step() 在此处调用，其内部异常（包括 fn() 抛出的业务异常）会原样向上传播
   // 不再有外层 try-catch 吞异常 → 杜绝 fn() 被执行两次的 BUG
-  return await step(name, async () => {
+  // 抑制模式：在 step() 内部吞掉错误（step 标记为 passed），之后再重新抛出
+  _deferredError = null;
+  const result = await step(name, async () => {
     try {
       return await fn();
     } catch (innerErr: any) {
+      // 抑制模式（预期失败）：吞掉错误，让 step 正常结束为 passed
+      // 错误延迟到 step() 返回后由调用方重新抛出
+      if (_suppressScreenshot) {
+        _deferredError = innerErr;
+        return undefined as T; // step 正常返回，标记为 passed
+      }
+
       // 步骤失败时截屏并附加到当前 Allure step 上下文中
-      // 若会话正在销毁则跳过截图，避免 getDriver() 重建 session 触发 ReferenceError
+      // 若会话正在销毁则跳过
       if (TestSessionState.isActive) {
         try {
           if (typeof attachment === "function" && typeof target.takeScreenshot === "function") {
@@ -251,6 +275,50 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target:
       throw innerErr;
     }
   });
+
+  // step() 已正常结束（passed），现在重新抛出延迟的错误
+  if (_deferredError !== null) {
+    const err = _deferredError;
+    _deferredError = null;
+    throw err;
+  }
+
+  return result;
+}
+
+// ================================================================
+//  截图抑制 API（供业务脚本标记预期失败操作）
+// ================================================================
+
+/**
+ * 抑制截图及 Allure 失败记录 — 用于包裹已知可能失败且已用 .catch() 处理的操作。
+ *
+ * 当 Page Object 中的某个操作属于「可选步骤」（如关闭可能不存在的弹窗），
+ * 调用方通常用 `.catch()` 静默处理失败。此时框架应当：
+ *   - 跳过失败截图（避免产生无意义截图噪音）
+ *   - 跳过 Allure step 记录（避免将预期失败标记为 Broken）
+ *   - 不写入失败步骤到 .pending-steps.jsonl（避免测试被误判为失败）
+ *
+ * @example
+ * ```ts
+ * import { suppressScreenshot } from "@framework/actions";
+ *
+ * async closeDialogButton(): Promise<void> {
+ *   await suppressScreenshot(
+ *     this.actions.click(by.id("dialog_OK"))
+ *   ).catch(() => {
+ *     logger.warn("弹窗不存在，跳过");
+ *   });
+ * }
+ * ```
+ */
+export async function suppressScreenshot<T>(promise: Promise<T>): Promise<T> {
+  _suppressScreenshot = true;
+  try {
+    return await promise;
+  } finally {
+    _suppressScreenshot = false;
+  }
 }
 
 // ================================================================
@@ -321,12 +389,25 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
 
           return result;
         } catch (error: any) {
+          // 抑制模式（预期失败）：不写入失败步骤、不截图、不记录 Broken
+          // 调用方的 .catch() 会处理此错误，不应影响测试结果
+          if (_suppressScreenshot) {
+            logger.info(`[Step] ⚠ ${stepName} (suppressed): ${error.message}`);
+            throw error;
+          }
+
           // 失败步骤自动截图（仅一次 — 若 wrapWithAllureStep 已截则复用）
           let screenshotPath = _lastAllureScreenshotPath || "";
           _lastAllureScreenshotPath = null;
 
           // wrapWithAllureStep 未截图（Detox 模式）且会话仍活跃时，在此截图
-          if (!screenshotPath && !isJestEnvironmentTornDown(error) && TestSessionState.isActive) {
+          // 同样尊重抑制标志位
+          if (
+            !screenshotPath &&
+            !isJestEnvironmentTornDown(error) &&
+            TestSessionState.isActive &&
+            !_suppressScreenshot
+          ) {
             try {
               if (typeof (target as any).takeScreenshot === "function") {
                 screenshotPath = await (target as any).takeScreenshot(`step_fail_${Date.now()}`);

@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as fs from "fs";
 import { Logger } from "../utils/logger";
 import { config } from "../utils/config";
 import { mobileConfig } from "../utils/mobileConfig";
@@ -9,8 +10,44 @@ import { ensureSessionDir } from "../utils/sessionDir";
 
 const logger = Logger.getInstance();
 
+/**
+ * 清理 allure-results 目录中的旧文件，避免多次运行的结果混合导致
+ * Allure 报告出现重复测试用例或 "Unknown" 条目。
+ */
+function cleanAllureResults(): void {
+  const resultsDir = path.join(process.cwd(), "artifacts", "allure-results");
+  if (!fs.existsSync(resultsDir)) {
+    return;
+  }
+  try {
+    const files = fs.readdirSync(resultsDir);
+    for (const file of files) {
+      // 只清理 Allure 结果文件和步骤暂存文件，保留目录本身
+      if (
+        file.endsWith("-result.json") ||
+        file.endsWith("-container.json") ||
+        file.endsWith("-attachment.png") ||
+        file.endsWith("-attachment.txt") ||
+        file.endsWith("-attachment.md") ||
+        file.endsWith("-attachment.webm") ||
+        file.endsWith("-attachment.zip") ||
+        file === ".pending-steps.jsonl" ||
+        file === ".pending-attach.jsonl"
+      ) {
+        fs.unlinkSync(path.join(resultsDir, file));
+      }
+    }
+    logger.info("已清理 allure-results 目录中的旧结果文件");
+  } catch (error: any) {
+    logger.warn(`清理 allure-results 失败: ${error.message}`);
+  }
+}
+
 export default async function globalSetup() {
   logger.info("=== Global Test Setup Started ===");
+
+  // 清理上一次运行的 Allure 结果，防止新旧数据混合
+  cleanAllureResults();
 
   // Load configuration
   config.loadEnvironment();
