@@ -37,7 +37,7 @@ export class MobileConfigLoader {
 
   /** 根据运行环境选择配置文件 */
   private resolveConfigPath(): string {
-    const isCI = process.env.CI === "true";
+    const isCI = !!process.env.CI;
     const configFile = isCI ? "mobile.config.ci.js" : "mobile.config.local.js";
     return path.join(process.cwd(), "configs", configFile);
   }
@@ -189,6 +189,28 @@ export class MobileConfigLoader {
     }
     if (common.orientation) {
       capabilities["appium:orientation"] = common.orientation;
+    }
+
+    // ---------- 环境变量最终覆盖（优先级最高，用于 CI pipeline 直接设置 env 的场景） ----------
+    if (process.env.APP_PATH) {
+      if (platform === "android") {
+        // APP_PATH 覆盖 app，同时清除 appPackage/appActivity（避免冲突）
+        capabilities["appium:app"] = path.resolve(process.cwd(), process.env.APP_PATH);
+        delete capabilities["appium:appPackage"];
+        delete capabilities["appium:appActivity"];
+      } else {
+        capabilities["appium:app"] = path.resolve(process.cwd(), process.env.APP_PATH);
+        delete capabilities["appium:bundleId"];
+      }
+    }
+    if (process.env.APPIUM_NO_RESET === "true") {
+      capabilities["appium:noReset"] = true;
+    }
+    if (process.env.APPIUM_FULL_RESET === "true") {
+      capabilities["appium:fullReset"] = true;
+    }
+    if (process.env.APPIUM_SYSTEM_PORT) {
+      capabilities["appium:systemPort"] = parseInt(process.env.APPIUM_SYSTEM_PORT, 10);
     }
 
     logger.debug("Built capabilities from mobile config: " + JSON.stringify(capabilities, null, 2));

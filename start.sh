@@ -97,6 +97,33 @@ show_help() {
     echo "                              debug — 增加 WebdriverIO COMMAND/DATA/RESULT 日志"
     echo "                              trace — 输出所有日志，含 Playwright pw:api 调试信息"
     echo ""
+    echo -e "${GREEN}CI 动态配置参数 / CI Dynamic Configuration:${NC}"
+    echo "  以下参数通过 CLI 传入，映射为环境变量覆盖配置文件中的默认值。"
+    echo "  These flags map to environment variables that override config file defaults."
+    echo ""
+    echo -e "  ${YELLOW}Appium Server:${NC}"
+    echo "    --appium-host <host>       Appium Server 地址 / Server address"
+    echo "    --appium-port <port>       Appium Server 端口 / Server port"
+    echo ""
+    echo -e "  ${YELLOW}Android 设备 / Device:${NC}"
+    echo "    --android-device <name>    设备名 / Device name (ANDROID_DEVICE_NAME)"
+    echo "    --android-version <ver>    平台版本 / Platform version (ANDROID_PLATFORM_VERSION)"
+    echo "    --app-package <pkg>        应用包名 / App package (APP_PACKAGE)"
+    echo "    --app-activity <act>       启动 Activity / App activity (APP_ACTIVITY)"
+    echo "    --system-port <port>       系统端口 / System port (APPIUM_SYSTEM_PORT)"
+    echo ""
+    echo -e "  ${YELLOW}iOS 设备 / Device:${NC}"
+    echo "    --ios-device <name>        设备名 / Device name (IOS_DEVICE_NAME)"
+    echo "    --ios-version <ver>        平台版本 / Platform version (IOS_PLATFORM_VERSION)"
+    echo "    --bundle-id <id>           应用 Bundle ID (BUNDLE_ID)"
+    echo ""
+    echo -e "  ${YELLOW}通用 / Common:${NC}"
+    echo "    --mobile-app <path>        APK/IPA 路径，支持相对和绝对路径 / App path (APP_PATH)"
+    echo "    --no-reset                 启用 noReset (APPIUM_NO_RESET=true)"
+    echo "    --full-reset               启用 fullReset (APPIUM_FULL_RESET=true)"
+    echo "    --language <lang>          设备语言 / Device language (APPIUM_LANGUAGE)"
+    echo "    --locale <locale>          设备地区 / Device locale (APPIUM_LOCALE)"
+    echo ""
     echo -e "${GREEN}测试目标筛选 / Test Target Filtering:${NC}"
     echo "  在子命令后追加文件/目录/模式，透传给底层 Jest/Detox/Playwright："
     echo "  Append file/dir/pattern after subcommand (passed through to Jest/Detox/Playwright):"
@@ -804,6 +831,22 @@ VIDEO_RECORDING=false
 LOG_LEVEL=info
 DETOX_LOGLEVEL=""
 DEBUG_PLAYWRIGHT=""
+# CI 动态配置参数（默认空，由 CLI 或环境变量覆盖）
+APPIUM_HOST="${APPIUM_HOST:-}"
+APPIUM_PORT="${APPIUM_PORT:-}"
+ANDROID_DEVICE_NAME="${ANDROID_DEVICE_NAME:-}"
+ANDROID_PLATFORM_VERSION="${ANDROID_PLATFORM_VERSION:-}"
+IOS_DEVICE_NAME="${IOS_DEVICE_NAME:-}"
+IOS_PLATFORM_VERSION="${IOS_PLATFORM_VERSION:-}"
+APP_PATH="${APP_PATH:-}"
+APP_PACKAGE="${APP_PACKAGE:-}"
+APP_ACTIVITY="${APP_ACTIVITY:-}"
+BUNDLE_ID="${BUNDLE_ID:-}"
+APPIUM_SYSTEM_PORT="${APPIUM_SYSTEM_PORT:-}"
+APPIUM_NO_RESET="${APPIUM_NO_RESET:-}"
+APPIUM_FULL_RESET="${APPIUM_FULL_RESET:-}"
+APPIUM_LANGUAGE="${APPIUM_LANGUAGE:-}"
+APPIUM_LOCALE="${APPIUM_LOCALE:-}"
 REMAINING_ARGS=()
 
 i=0
@@ -841,6 +884,52 @@ while [ $i -lt $args_count ]; do
                 exit 1
             fi
             ;;
+        # ---- CI 动态配置参数 ----
+        --appium-host)
+            i=$((i + 1)); APPIUM_HOST="${args_array[$i]}"
+            ;;
+        --appium-port)
+            i=$((i + 1)); APPIUM_PORT="${args_array[$i]}"
+            ;;
+        --android-device)
+            i=$((i + 1)); ANDROID_DEVICE_NAME="${args_array[$i]}"
+            ;;
+        --android-version)
+            i=$((i + 1)); ANDROID_PLATFORM_VERSION="${args_array[$i]}"
+            ;;
+        --ios-device)
+            i=$((i + 1)); IOS_DEVICE_NAME="${args_array[$i]}"
+            ;;
+        --ios-version)
+            i=$((i + 1)); IOS_PLATFORM_VERSION="${args_array[$i]}"
+            ;;
+        --mobile-app)
+            i=$((i + 1)); APP_PATH="${args_array[$i]}"
+            ;;
+        --app-package)
+            i=$((i + 1)); APP_PACKAGE="${args_array[$i]}"
+            ;;
+        --app-activity)
+            i=$((i + 1)); APP_ACTIVITY="${args_array[$i]}"
+            ;;
+        --bundle-id)
+            i=$((i + 1)); BUNDLE_ID="${args_array[$i]}"
+            ;;
+        --system-port)
+            i=$((i + 1)); APPIUM_SYSTEM_PORT="${args_array[$i]}"
+            ;;
+        --no-reset)
+            APPIUM_NO_RESET=true
+            ;;
+        --full-reset)
+            APPIUM_FULL_RESET=true
+            ;;
+        --language)
+            i=$((i + 1)); APPIUM_LANGUAGE="${args_array[$i]}"
+            ;;
+        --locale)
+            i=$((i + 1)); APPIUM_LOCALE="${args_array[$i]}"
+            ;;
         *)
             REMAINING_ARGS+=("$arg")
             ;;
@@ -864,12 +953,49 @@ export SCREENSHOT_ON_FAILURE
 export VIDEO_RECORDING
 export LOG_LEVEL
 export DEBUG_PLAYWRIGHT
+export APPIUM_HOST
+export APPIUM_PORT
+export ANDROID_DEVICE_NAME
+export ANDROID_PLATFORM_VERSION
+export IOS_DEVICE_NAME
+export IOS_PLATFORM_VERSION
+export APP_PATH
+export APP_PACKAGE
+export APP_ACTIVITY
+export BUNDLE_ID
+export APPIUM_SYSTEM_PORT
+export APPIUM_NO_RESET
+export APPIUM_FULL_RESET
+export APPIUM_LANGUAGE
+export APPIUM_LOCALE
 
-# 如果传入了开关参数，打印当前配置
-if [ "$SCREENSHOT_ON_FAILURE" != true ] || [ "$VIDEO_RECORDING" = true ] || [ "$LOG_LEVEL" != info ]; then
+# 打印非默认配置
+_has_custom_config=false
+[ "$SCREENSHOT_ON_FAILURE" != true ] && _has_custom_config=true
+[ "$VIDEO_RECORDING" = true ] && _has_custom_config=true
+[ "$LOG_LEVEL" != info ] && _has_custom_config=true
+[ -n "$APPIUM_HOST" ] || [ -n "$APPIUM_PORT" ] || [ -n "$ANDROID_DEVICE_NAME" ] || [ -n "$IOS_DEVICE_NAME" ] && _has_custom_config=true
+[ -n "$APP_PATH" ] || [ -n "$APP_PACKAGE" ] || [ -n "$BUNDLE_ID" ] && _has_custom_config=true
+
+if [ "$_has_custom_config" = true ]; then
     print_info "截图 / Screenshot: $([ "$SCREENSHOT_ON_FAILURE" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"
     print_info "录屏 / Recording: $([ "$VIDEO_RECORDING" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"
     print_info "日志级别 / Log Level: $LOG_LEVEL"
+    [ -n "$APPIUM_HOST" ] && print_info "Appium Host: $APPIUM_HOST"
+    [ -n "$APPIUM_PORT" ] && print_info "Appium Port: $APPIUM_PORT"
+    [ -n "$ANDROID_DEVICE_NAME" ] && print_info "Android Device: $ANDROID_DEVICE_NAME"
+    [ -n "$ANDROID_PLATFORM_VERSION" ] && print_info "Android Version: $ANDROID_PLATFORM_VERSION"
+    [ -n "$IOS_DEVICE_NAME" ] && print_info "iOS Device: $IOS_DEVICE_NAME"
+    [ -n "$IOS_PLATFORM_VERSION" ] && print_info "iOS Version: $IOS_PLATFORM_VERSION"
+    [ -n "$APP_PATH" ] && print_info "App Path: $APP_PATH"
+    [ -n "$APP_PACKAGE" ] && print_info "App Package: $APP_PACKAGE"
+    [ -n "$APP_ACTIVITY" ] && print_info "App Activity: $APP_ACTIVITY"
+    [ -n "$BUNDLE_ID" ] && print_info "Bundle ID: $BUNDLE_ID"
+    [ -n "$APPIUM_SYSTEM_PORT" ] && print_info "System Port: $APPIUM_SYSTEM_PORT"
+    [ -n "$APPIUM_NO_RESET" ] && print_info "No Reset: $APPIUM_NO_RESET"
+    [ -n "$APPIUM_FULL_RESET" ] && print_info "Full Reset: $APPIUM_FULL_RESET"
+    [ -n "$APPIUM_LANGUAGE" ] && print_info "Language: $APPIUM_LANGUAGE"
+    [ -n "$APPIUM_LOCALE" ] && print_info "Locale: $APPIUM_LOCALE"
 fi
 
 # 执行主函数（传入过滤后的参数）
