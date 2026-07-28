@@ -200,8 +200,8 @@ request/response noise.
 
 ### .detoxrc.js
 
-Entry point for Detox CLI. Requires `configs/mobile.config.js` and exports its
-`detox` section. Defines Detox configurations: `ios.sim.debug` /
+Entry point for Detox CLI. Requires `configs/mobile.config.local.js` and exports
+its `detox` section. Defines Detox configurations: `ios.sim.debug` /
 `ios.sim.release` (iPhone 17 Pro) and `android.emu.debug` /
 `android.emu.release` (Pixel 10 Pro XL). Binary paths point to
 `applications/TestGround/`. Artifacts plugins (screenshot `onFailure`, video,

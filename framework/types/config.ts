@@ -32,7 +32,7 @@ export interface FrameworkConfig {
 
 // ============================================================
 // 统一移动端配置类型（MobileConfig）
-// 与 configs/mobile.config.js 结构一一对应
+// 与 configs/mobile.config.local.js 结构一一对应
 // ============================================================
 
 /** Detox 应用定义 */
@@ -115,6 +115,8 @@ export interface AppiumCommonCapabilitiesConfig {
   noReset: boolean;
   fullReset: boolean;
   newCommandTimeout: number;
+  /** 隐式等待超时(ms)，0=关闭，默认 0。框架用显式 waitForElement* 控制等待 */
+  implicitWaitMs?: number;
   language: string;
   locale: string;
   orientation: string;
@@ -143,7 +145,7 @@ export interface MobileConfig {
 
 // ============================================================
 // Web / API / 框架行为配置类型
-// 与 configs/web.config.js / api.config.js / framework.config.js 对应
+// 与 configs/web.config.local.js / api.config.local.js / framework.config.local.js 对应
 // ============================================================
 
 /** Web 项目（浏览器）配置 */

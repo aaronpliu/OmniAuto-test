@@ -1,5 +1,6 @@
 import { Logger } from "../utils/logger";
 import { getAppiumServer } from "../utils/appiumServer";
+import { mobileConfig } from "../utils/mobileConfig";
 
 const logger = Logger.getInstance();
 
@@ -7,12 +8,45 @@ export default async function globalTeardown() {
   logger.info("========== 测试环境清理开始 ==========");
 
   try {
-    // 停止 Appium server
+    // 1) 强制杀掉 Appium session，释放 WebdriverIO 的 pending 请求
+    //    （避免 Jest 环境 teardown 后 WebdriverIO 内部持续 import 报错）
+    try {
+      const serverConfig = mobileConfig.getAppiumServerConfig();
+      const host = process.env.APPIUM_HOST || serverConfig.host || "0.0.0.0";
+      const port = process.env.APPIUM_PORT || String(serverConfig.port) || "4723";
+      const sessionBase = `http://${host}:${port}/session`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      try {
+        const resp = await fetch(`${sessionBase}s`, { signal: controller.signal });
+        const body = JSON.parse(await resp.text());
+        const sessions = (body.value ?? []) as Array<{ id: string }>;
+        for (const s of sessions) {
+          await fetch(`${sessionBase}/${s.id}`, {
+            method: "DELETE",
+            signal: controller.signal,
+          }).catch(() => {});
+        }
+      } catch {
+        /* fetch 失败说明 Appium 已不在运行 */
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch {
+      /* ignore — getAppiumServer 可能未初始化 */
+    }
+
+    // 2) 等待飞行中的 WebdriverIO 客户端重试循环沉降
+    //    afterEach 中已通过 TestSessionState 守卫中止 AppiumActions 自控轮询，
+    //    但仍有少量 HTTP 层请求可能未完成，给予短暂沉降窗口以确保彻底清理
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // 3) 停止 Appium server
     logger.info("正在停止 Appium server...");
     const appiumServer = getAppiumServer();
     await appiumServer.stop();
 
-    // 清理环境变量
+    // 4) 清理环境变量
     logger.info("正在清理环境变量...");
     delete process.env.ANDROID_DEVICE_NAME;
     delete process.env.ANDROID_PLATFORM_VERSION;
@@ -23,7 +57,8 @@ export default async function globalTeardown() {
     delete process.env.IOS_DEVICE_TYPE;
 
     logger.info("========== 测试环境清理完成 ==========");
-  } catch (error: any) {
-    logger.error(`环境清理失败: ${error.message}`);
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logger.error(`环境清理失败: ${errMsg}`);
   }
 }

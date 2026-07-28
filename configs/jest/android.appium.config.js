@@ -1,20 +1,18 @@
-const baseConfig = require('./base.config');
+const baseConfig = require("./base.config");
 
 module.exports = {
   ...baseConfig,
-  testMatch: ['**/tests/mobile/**/*.spec.ts'],
-  globalSetup: '<rootDir>/framework/hooks/globalSetup.ts',
+  testMatch: ["**/tests/mobile/**/*.spec.ts"],
+  globalSetup: "<rootDir>/framework/hooks/globalSetup.ts",
   setupFilesAfterEnv: [
-    '<rootDir>/framework/hooks/appiumSetup.ts',
-    '<rootDir>/framework/hooks/testLifecycle.ts'
+    "<rootDir>/framework/hooks/appiumSetup.ts",
+    "<rootDir>/framework/hooks/testLifecycle.ts",
   ],
-  globalTeardown: '<rootDir>/framework/hooks/globalTeardown.ts',
-  reporters: [
-    'default',
-    '<rootDir>/configs/jest/smokeReportReporter.js'
-  ],
+  globalTeardown: "<rootDir>/framework/hooks/globalTeardown.ts",
+  forceExit: true,
+  reporters: ["default", "<rootDir>/configs/jest/smokeReportReporter.js"],
   testEnvironmentOptions: {
     ...baseConfig.testEnvironmentOptions,
-    platform: 'android'
-  }
+    platform: "android",
+  },
 };

@@ -2,7 +2,28 @@ import { Logger } from "../utils/logger";
 
 const logger = Logger.getInstance();
 
+/**
+ * 全局 unhandledRejection 处理器
+ * 抑制 Jest 环境 teardown 后 WebdriverIO 内部轮询产生的 ReferenceError
+ * 这些错误是预期的：测试超时后 WebdriverIO 的 waitUntil 循环仍在发 HTTP 请求
+ */
+function suppressTornDownErrors(): void {
+  process.on("unhandledRejection", (reason: unknown) => {
+    if (reason instanceof ReferenceError) {
+      const msg = reason.message || "";
+      if (msg.includes("after the Jest environment has been torn down")) {
+        logger.debug("[suppressed] WebdriverIO post-teardown rejection");
+        return;
+      }
+    }
+    const reasonStr = reason instanceof Error ? reason.message : String(reason);
+    logger.warn(`[unhandledRejection] ${reasonStr}`);
+  });
+}
+
 export default function appiumSetup(): Promise<void> {
+  suppressTornDownErrors();
+
   const platform = process.env.TEST_PLATFORM || "android";
   logger.info("========== 测试环境附加设置 ==========");
   logger.info(`当前环境: ${process.env.NODE_ENV || "development"}`);

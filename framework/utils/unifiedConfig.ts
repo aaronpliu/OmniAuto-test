@@ -52,7 +52,7 @@ export class UnifiedConfigLoader {
 
   /**
    * 获取 Web 模式配置
-   * 优先级：环境变量 BASE_URL > configs/web.config.js > 内置默认值
+   * 优先级：环境变量 BASE_URL > configs/web.config.local.js > 内置默认值
    */
   getWebConfig(): WebConfig {
     const raw = this.load().web || {};
@@ -73,7 +73,7 @@ export class UnifiedConfigLoader {
 
   /**
    * 获取 API 模式配置
-   * 优先级：环境变量 API_TIMEOUT > configs/api.config.js > 内置默认值
+   * 优先级：环境变量 API_TIMEOUT > configs/api.config.local.js > 内置默认值
    */
   getApiConfig(): ApiConfig {
     const raw = this.load().api || {};
@@ -90,7 +90,7 @@ export class UnifiedConfigLoader {
 
   /**
    * 获取框架行为配置
-   * 优先级：环境变量 > configs/framework.config.js > 内置默认值
+   * 优先级：环境变量 > configs/framework.config.local.js > 内置默认值
    *
    * 判断规则：环境变量显式设置（!== undefined）时优先，否则回退配置文件，再回退默认值。
    */

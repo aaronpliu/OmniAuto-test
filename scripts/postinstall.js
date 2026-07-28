@@ -5,6 +5,15 @@
  * 在 Linux/Windows CI 环境会导致 npm install 失败。
  * 本脚本仅在 macOS 上执行拷贝，其余平台静默跳过。
  */
+
+// ---------- 本地配置文件自动生成 ----------
+try {
+  require("./setup-configs.js");
+} catch (err) {
+  console.warn("[postinstall] setup-configs 执行失败:", err.message);
+}
+// ------------------------------------------
+
 const fs = require("fs");
 const path = require("path");
 

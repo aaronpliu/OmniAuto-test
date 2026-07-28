@@ -1,24 +1,22 @@
-const baseConfig = require('./base.config');
+const baseConfig = require("./base.config");
 
 module.exports = {
   ...baseConfig,
-  testMatch: ['**/tests/mobile/**/*.spec.ts'],
+  testMatch: ["**/tests/mobile/**/*.spec.ts"],
   testEnvironmentOptions: {
     ...baseConfig.testEnvironmentOptions,
-    platform: 'android'
+    platform: "android",
   },
   // 使用 Detox 运行器
-  globalSetup: 'detox/runners/jest/globalSetup',
-  globalTeardown: 'detox/runners/jest/globalTeardown',
-  testEnvironment: 'detox/runners/jest/testEnvironment',
+  globalSetup: "<rootDir>/framework/hooks/detoxGlobalSetup.js",
+  globalTeardown: "<rootDir>/framework/hooks/detoxGlobalTeardown.js",
+  testEnvironment: "detox/runners/jest/testEnvironment",
   // Detox reporter + 自定义 Allure reporter
   reporters: [
-    'default',
-    '<rootDir>/framework/reporters/detoxAllureReporter.ts',
-    '<rootDir>/configs/jest/smokeReportReporter.js'
+    "default",
+    "<rootDir>/framework/reporters/detoxAllureReporter.ts",
+    "<rootDir>/configs/jest/smokeReportReporter.js",
   ],
-  setupFilesAfterEnv: [
-    '<rootDir>/framework/hooks/testLifecycle.ts'
-  ],
-  maxWorkers: 1
+  setupFilesAfterEnv: ["<rootDir>/framework/hooks/testLifecycle.ts"],
+  maxWorkers: 1,
 };
