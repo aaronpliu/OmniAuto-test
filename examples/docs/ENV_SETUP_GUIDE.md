@@ -51,7 +51,7 @@ IOS_AUTOMATION_NAME=XCUITest
 
 #### Option A: Connect to Remote Appium Server
 
-Configure the Appium Server address in `configs/mobile.config.js`:
+Configure the Appium Server address in `configs/mobile.config.local.js`:
 
 ```json
 {
@@ -93,32 +93,32 @@ curl http://localhost:4723/wd/hub/status
 
 ### Required Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `APPIUM_HOST` | Appium server hostname | `localhost` |
-| `APPIUM_PORT` | Appium server port | `4723` |
-| `PLATFORM_NAME` | Target platform | `android` or `ios` |
+| Variable        | Description            | Example            |
+| --------------- | ---------------------- | ------------------ |
+| `APPIUM_HOST`   | Appium server hostname | `localhost`        |
+| `APPIUM_PORT`   | Appium server port     | `4723`             |
+| `PLATFORM_NAME` | Target platform        | `android` or `ios` |
 
 ### Android-Specific Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `ANDROID_DEVICE_NAME` | Device/emulator name | ✅ Yes |
-| `ANDROID_PLATFORM_VERSION` | Android version | ✅ Yes |
-| `ANDROID_APP_PACKAGE` | App package name | ✅ Yes |
-| `ANDROID_APP_ACTIVITY` | Main activity | ✅ Yes |
-| `ANDROID_APP_PATH` | Path to APK file | ✅ Yes |
-| `ANDROID_AUTOMATION_NAME` | Automation engine | No (default: UiAutomator2) |
+| Variable                   | Description          | Required                   |
+| -------------------------- | -------------------- | -------------------------- |
+| `ANDROID_DEVICE_NAME`      | Device/emulator name | ✅ Yes                     |
+| `ANDROID_PLATFORM_VERSION` | Android version      | ✅ Yes                     |
+| `ANDROID_APP_PACKAGE`      | App package name     | ✅ Yes                     |
+| `ANDROID_APP_ACTIVITY`     | Main activity        | ✅ Yes                     |
+| `ANDROID_APP_PATH`         | Path to APK file     | ✅ Yes                     |
+| `ANDROID_AUTOMATION_NAME`  | Automation engine    | No (default: UiAutomator2) |
 
 ### iOS-Specific Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `IOS_DEVICE_NAME` | Device/simulator name | ✅ Yes |
-| `IOS_PLATFORM_VERSION` | iOS version | ✅ Yes |
-| `IOS_BUNDLE_ID` | App bundle identifier | ✅ Yes |
-| `IOS_APP_PATH` | Path to .app/.ipa file | ✅ Yes |
-| `IOS_AUTOMATION_NAME` | Automation engine | No (default: XCUITest) |
+| Variable               | Description            | Required               |
+| ---------------------- | ---------------------- | ---------------------- |
+| `IOS_DEVICE_NAME`      | Device/simulator name  | ✅ Yes                 |
+| `IOS_PLATFORM_VERSION` | iOS version            | ✅ Yes                 |
+| `IOS_BUNDLE_ID`        | App bundle identifier  | ✅ Yes                 |
+| `IOS_APP_PATH`         | Path to .app/.ipa file | ✅ Yes                 |
+| `IOS_AUTOMATION_NAME`  | Automation engine      | No (default: XCUITest) |
 
 ---
 
@@ -207,6 +207,7 @@ LAMBDATEST_KEY=your_access_key
 ### Issue: Cannot connect to Appium
 
 **Solution:**
+
 ```bash
 # Check if Appium is running
 curl http://localhost:4723/wd/hub/status
@@ -224,6 +225,7 @@ ping your-appium-server.com
 ### Issue: Device not found
 
 **Android:**
+
 ```bash
 # List connected devices
 adb devices
@@ -236,6 +238,7 @@ ANDROID_DEVICE_NAME=emulator-5554
 ```
 
 **iOS:**
+
 ```bash
 # List available simulators
 xcrun simctl list devices
@@ -247,6 +250,7 @@ IOS_DEVICE_NAME=iPhone 14
 ### Issue: App not launching
 
 **Check app path:**
+
 ```bash
 # Verify app file exists
 ls -la ./apps/android/app-debug.apk
@@ -257,6 +261,7 @@ ANDROID_APP_PATH=./apps/android/app-debug.apk
 ```
 
 **Check package/activity (Android):**
+
 ```bash
 # Get package and activity from APK
 aapt dump badging ./apps/android/app-debug.apk | grep "package\|launchable-activity"
@@ -269,12 +274,14 @@ ANDROID_APP_ACTIVITY=.MainActivity
 ### Issue: Permission errors
 
 **Android:**
+
 ```env
 # Auto-grant all permissions
 AUTO_GRANT_PERMISSIONS=true
 ```
 
 **iOS:**
+
 ```env
 # Auto-accept system alerts
 AUTO_ACCEPT_ALERTS=true
@@ -369,6 +376,7 @@ CUSTOM_CAPABILITIES={"appium:disableWindowAnimation": true}
 ## Support
 
 For issues or questions:
+
 1. Check Appium logs (location depends on your Appium Server setup)
 2. Review [.env.example](./.env.example) for all available options
 3. See [WAIT_MECHANISMS.md](./WAIT_MECHANISMS.md) for test wait strategies

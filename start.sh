@@ -11,6 +11,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+DIM='\033[2m'
 NC='\033[0m' # No Color
 
 # 打印带颜色的消息
@@ -32,109 +33,96 @@ print_error() {
 
 # 显示帮助信息
 show_help() {
-    echo -e "${CYAN}================================================================${NC}"
+    echo -e "${CYAN}==============================================================================${NC}"
     echo -e "${CYAN}   OmniAutoTest - 自动化测试平台启动脚本 / Automated Testing Platform Start Script${NC}"
-    echo -e "${CYAN}================================================================${NC}"
+    echo -e "${CYAN}==============================================================================${NC}"
     echo ""
-    echo -e "${GREEN}用法 / Usage:${NC}"
-    echo "  ./start.sh [选项 / option]"
+    echo -e "${GREEN}语法 / Syntax:${NC}"
     echo ""
-    echo -e "${GREEN}选项 / Options:${NC}"
+    echo -e "  ./start.sh ${YELLOW}<command>${NC} ${CYAN}[全局参数]${NC} ${CYAN}[CI 配置参数]${NC} [测试目标...]"
     echo ""
-    echo -e "  ${YELLOW}install${NC}           安装项目依赖 / Install project dependencies"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh install"
+    echo -e "  ${DIM}• <command>  必填，必须放在第一个位置${NC}"
+    echo -e "  ${DIM}• [全局参数]  可选，位置不限，可放在 command 前后任意位置${NC}"
+    echo -e "  ${DIM}• [CI 配置]  可选，位置不限，用于覆盖配置文件默认值${NC}"
+    echo -e "  ${DIM}• [测试目标]  可选，必须放在 command 之后，支持文件/目录/模式${NC}"
     echo ""
-    echo -e "  ${YELLOW}appium:start${NC}      启动本地 Appium Server（用于调试）/ Start local Appium Server (for debugging)"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh appium:start"
+    echo -e "${GREEN}<command> 必填命令 / Required Commands:${NC}"
     echo ""
-    echo -e "  ${YELLOW}appium:stop${NC}       停止本地 Appium Server / Stop local Appium Server"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh appium:stop"
+    echo -e "  ${YELLOW}install${NC}               安装项目依赖 / Install dependencies"
+    echo -e "  ${YELLOW}test:ios${NC}              iOS 测试 (Detox) / iOS tests (Detox)"
+    echo -e "  ${YELLOW}test:ios:appium${NC}       iOS 测试 (Appium) / iOS tests (Appium)"
+    echo -e "  ${YELLOW}test:android${NC}          Android 测试 (Appium) / Android tests (Appium)"
+    echo -e "  ${YELLOW}test:android:detox${NC}    Android 测试 (Detox) / Android tests (Detox)"
+    echo -e "  ${YELLOW}test:web${NC}              Web 测试 (Playwright) / Web tests (Playwright)"
+    echo -e "  ${YELLOW}test:api${NC}              API 测试 / API tests"
+    echo -e "  ${YELLOW}test:all${NC}              运行所有测试 / Run all tests"
+    echo -e "  ${YELLOW}report${NC}                生成并打开 Allure 报告 / Generate & open report"
+    echo -e "  ${YELLOW}appium:start${NC}          启动本地 Appium Server / Start local Appium Server"
+    echo -e "  ${YELLOW}appium:stop${NC}           停止本地 Appium Server / Stop local Appium Server"
+    echo -e "  ${YELLOW}clean${NC}                 清理环境和缓存 / Clean environment and cache"
+    echo -e "  ${YELLOW}-h, --help${NC}            显示此帮助 / Show this help"
     echo ""
-    echo -e "  ${YELLOW}test:ios${NC}          运行 iOS 测试 (使用 Detox) / Run iOS tests (using Detox)"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:ios"
+    echo -e "  ${DIM}不传参时显示交互式菜单 / Shows interactive menu when no args given${NC}"
     echo ""
-    echo -e "  ${YELLOW}test:ios:appium${NC}    运行 iOS 测试 (使用 Appium) / Run iOS tests (using Appium)"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:ios:appium"
+    echo -e "${GREEN}[全局参数] 可选，位置不限 / Global Flags (optional, any position):${NC}"
     echo ""
-    echo -e "  ${YELLOW}test:android${NC}      运行 Android 测试 (使用 Appium) / Run Android tests (using Appium)"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:android"
+    echo -e "  ${CYAN}--screenshot${NC}, ${CYAN}--ss${NC}         启用失败截图 ${DIM}(默认)${NC}"
+    echo -e "  ${CYAN}--no-screenshot${NC}, ${CYAN}--no-ss${NC}   禁用失败截图"
+    echo -e "  ${CYAN}--recording${NC}, ${CYAN}--rec${NC}         启用测试录屏 ${DIM}(默认关闭)${NC}"
+    echo -e "  ${CYAN}--no-recording${NC}, ${CYAN}--no-rec${NC}   禁用测试录屏"
+    echo -e "  ${CYAN}--log-level${NC} <level>       日志级别: ${CYAN}info${NC} ${DIM}(默认)${NC} | ${CYAN}debug${NC} | ${CYAN}trace${NC}"
     echo ""
-    echo -e "  ${YELLOW}test:android:detox${NC} 运行 Android 测试 (使用 Detox) / Run Android tests (using Detox)"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:android:detox"
+    echo -e "${GREEN}[CI 配置参数] 可选，位置不限 / CI Config Overrides (optional, any position):${NC}"
+    echo -e "  ${DIM}映射为环境变量，覆盖 configs/mobile.config.*.js 中的默认值${NC}"
     echo ""
-    echo -e "  ${YELLOW}test:web${NC}          运行 Web 测试 (使用 Playwright) / Run Web tests (using Playwright)"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:web"
+    echo -e "  ${CYAN}--appium-host${NC} <host>       Appium Server 地址"
+    echo -e "  ${CYAN}--appium-port${NC} <port>       Appium Server 端口"
+    echo -e "  ${CYAN}--android-device${NC} <name>    Android 设备名 ${DIM}(ANDROID_DEVICE_NAME)${NC}"
+    echo -e "  ${CYAN}--android-version${NC} <ver>    Android 平台版本 ${DIM}(ANDROID_PLATFORM_VERSION)${NC}"
+    echo -e "  ${CYAN}--ios-device${NC} <name>        iOS 设备名 ${DIM}(IOS_DEVICE_NAME)${NC}"
+    echo -e "  ${CYAN}--ios-version${NC} <ver>        iOS 平台版本 ${DIM}(IOS_PLATFORM_VERSION)${NC}"
+    echo -e "  ${CYAN}--mobile-app${NC} <path>        APK/IPA 路径 ${DIM}(相对或绝对路径)${NC}"
+    echo -e "  ${CYAN}--app-package${NC} <pkg>        Android appPackage"
+    echo -e "  ${CYAN}--app-activity${NC} <act>       Android appActivity"
+    echo -e "  ${CYAN}--bundle-id${NC} <id>           iOS Bundle ID"
+    echo -e "  ${CYAN}--system-port${NC} <port>       Android systemPort"
+    echo -e "  ${CYAN}--no-reset${NC}                 启用 Appium noReset"
+    echo -e "  ${CYAN}--full-reset${NC}               启用 Appium fullReset"
+    echo -e "  ${CYAN}--language${NC} <lang>          设备语言 ${DIM}(如 zh)${NC}"
+    echo -e "  ${CYAN}--locale${NC} <locale>          设备地区 ${DIM}(如 CN)${NC}"
     echo ""
-    echo -e "  ${YELLOW}test:api${NC}          运行 API 测试 / Run API tests"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:api"
+    echo -e "${GREEN}[测试目标] 可选，放在 command 之后 / Test Target (optional, after command):${NC}"
     echo ""
-    echo -e "  ${YELLOW}test:all${NC}          运行所有测试 / Run all tests"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh test:all"
+    echo -e "  ${DIM}透传给底层 Jest/Detox/Playwright，支持文件、目录、匹配模式：${NC}"
+    echo "    ./start.sh test:android tests/mobile/login.spec.ts"
+    echo "    ./start.sh test:android tests/mobile/"
+    echo "    ./start.sh test:android --testPathPattern=login"
+    echo "    ./start.sh test:web -g \"用户登录\""
     echo ""
-    echo -e "  ${YELLOW}report${NC}            生成并打开测试报告 / Generate and open test report"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh report"
+    echo -e "${GREEN}示例 / Examples:${NC}"
     echo ""
-    echo -e "  ${YELLOW}clean${NC}             清理环境和缓存 / Clean environment and cache"
-    echo -e "                    ${BLUE}示例/Example:${NC} ./start.sh clean"
+    echo -e "  ${DIM}# 基础用法${NC}"
+    echo "  ./start.sh test:android"
+    echo "  ./start.sh test:ios tests/mobile/login.spec.ts"
     echo ""
-    echo -e "  ${YELLOW}-h, --help${NC}        显示此帮助信息 / Show this help message"
+    echo -e "  ${DIM}# 带全局参数（位置不限）${NC}"
+    echo "  ./start.sh --recording test:android"
+    echo "  ./start.sh test:ios --no-screenshot --log-level debug"
     echo ""
-    echo -e "${GREEN}不传参运行 / Run without arguments:${NC}"
-    echo "  ./start.sh"
-    echo "  将显示交互式菜单 / Will show interactive menu"
+    echo -e "  ${DIM}# CI 动态配置（覆盖配置文件默认值）${NC}"
+    echo "  ./start.sh test:android --appium-host 192.168.1.100 --android-device Pixel_7 \\"
+    echo "    --android-version 14 --mobile-app ./build/app.apk --no-reset"
     echo ""
-    echo -e "${GREEN}全局参数（适用于所有移动端测试）/ Global flags (for all mobile tests):${NC}"
-    echo "  --screenshot, --ss         启用失败截图（默认）"
-    echo "                              Enable screenshot on failure (default: on)"
-    echo "  --no-screenshot, --no-ss   禁用失败截图"
-    echo "                              Disable screenshot on failure"
-    echo "  --recording, --rec         启用测试录屏（默认关闭）"
-    echo "                              Enable test recording (default: off)"
-    echo "  --no-recording, --no-rec   禁用测试录屏"
-    echo "                              Disable test recording"
-    echo ""
-    echo -e "${BLUE}示例/Examples:${NC}"
-    echo "  ./start.sh test:android --recording"
-    echo "  ./start.sh test:ios:appium --no-screenshot --recording"
-    echo "  ./start.sh test:ios --recording --no-screenshot"
-    echo ""
-    echo -e "${GREEN}Appium 配置 / Appium Configuration:${NC}"
-    echo "  本项目仅支持连接远程 Appium Server"
-    echo "  This project only supports connecting to remote Appium Servers"
-    echo "  请在配置文件中设置 Appium Server 地址"
-    echo "  Please set Appium Server address in configuration file"
-    echo "  配置文件位置 / Configuration file location: configs/environments/development.json"
-    echo ""
-    echo -e "${GREEN}本地调试 / Local Debugging:${NC}"
-    echo "  可以使用以下命令启动本地 Appium Server:"
-    echo "  You can use the following commands to start a local Appium Server:"
-    echo "  ./start.sh appium:start"
-    echo ""
-    echo -e "${GREEN}快速开始 / Quick Start:${NC}"
-    echo "  1. 安装依赖:     ./start.sh install"
-    echo "     Install deps: ./start.sh install"
-    echo "  2. 运行 iOS 测试:   ./start.sh test:ios"
-    echo "     Run iOS tests:   ./start.sh test:ios"
-    echo "  3. 生成报告:        ./start.sh report"
-    echo "     Generate report: ./start.sh report"
+    echo -e "  ${DIM}# 直接设置环境变量（不走 start.sh）${NC}"
+    echo "  APPIUM_HOST=10.0.0.1 APP_PATH=./build/app.apk npm run test:mobile:android"
     echo ""
     echo -e "${GREEN}前置要求 / Prerequisites:${NC}"
-    echo "  - Appium (可选，用于本地调试) / Appium (optional, for local debugging):"
-    echo "                    npm install appium (项目中安装 / install in project)"
-    echo "                    npm install -g appium (全局安装 / install globally)"
-    echo "  - Appium 驱动 / Appium drivers:"
-    echo "                    Android: appium driver install uiautomator2"
-    echo "                    iOS:     appium driver install xcuitest"
-    echo "  - iOS 测试 (Appium): 需要 Xcode + iOS 模拟器或真机"
-    echo "    iOS (Appium): Requires Xcode + iOS simulator or real device"
-    echo "  - Node.js >= 22.22.0"
+    echo -e "  Node.js >= 22.22.0"
+    echo -e "  Appium ${DIM}(可选，本地调试用)${NC}:  npm install appium && appium driver install uiautomator2"
     echo ""
-    echo -e "${CYAN}================================================================${NC}"
-    echo -e "${CYAN}  文档 / Documentation:${NC}"
-    echo -e "${CYAN}  - README.md: 项目概述 / Project overview${NC}"
-    echo -e "${CYAN}  - README_zh.md: 中文文档 / Chinese documentation${NC}"
-    echo -e "${CYAN}  - examples/docs/: 详细指南 / Detailed guides${NC}"
-    echo -e "${CYAN}================================================================${NC}"
+    echo -e "${DIM}配置文件: configs/mobile.config.ci.js (CI) / configs/mobile.config.local.js (本地)${NC}"
+    echo -e "${DIM}文档: README.md / README_zh.md / examples/docs/${NC}"
+    echo -e "${CYAN}==============================================================================${NC}"
     exit 0
 }
 
@@ -264,29 +252,45 @@ install_dependencies() {
     else
         print_success "依赖已安装"
     fi
+
+    # 自动生成本地配置文件（缺失时从 .ci.js 模板复制）
+    if [ -f "scripts/setup-configs.js" ]; then
+        node scripts/setup-configs.js
+    fi
     return 0
 }
 
 # 运行 iOS 测试（Detox）
+# 透传位置参数：文件/目录/匹配模式，如 tests/mobile/TestGround/login.spec.ts
 run_ios_test() {
     print_info "运行 iOS 测试（Detox）..."
-    npm run test:mobile:ios
+    if [ -n "$DETOX_LOGLEVEL" ]; then
+        npm run test:mobile:ios -- --loglevel "$DETOX_LOGLEVEL" "$@"
+    else
+        npm run test:mobile:ios -- "$@"
+    fi
     return $?
 }
 
 # 运行 iOS 测试（Appium）
+# 透传位置参数：文件/目录/匹配模式
 run_ios_appium_test() {
     print_info "运行 iOS 测试（Appium）..."
     print_info "请确保 Appium Server 已启动并可访问"
     print_info "Please ensure Appium Server is running and accessible"
-    npm run test:mobile:ios:appium
+    npm run test:mobile:ios:appium -- "$@"
     return $?
 }
 
 # 运行 Android 测试（Detox）
+# 透传位置参数：文件/目录/匹配模式
 run_android_detox_test() {
     print_info "运行 Android 测试（Detox）..."
-    npm run test:mobile:android:detox
+    if [ -n "$DETOX_LOGLEVEL" ]; then
+        npm run test:mobile:android:detox -- --loglevel "$DETOX_LOGLEVEL" "$@"
+    else
+        npm run test:mobile:android:detox -- "$@"
+    fi
     return $?
 }
 
@@ -329,34 +333,41 @@ check_android_device() {
 }
 
 # 运行 Android 测试
+# 透传位置参数：文件/目录/匹配模式
 run_android_test() {
     print_info "运行 Android 测试..."
-    
+
     # 先检测 Android 设备
     if ! check_android_device; then
         return 1
     fi
-    
+
     # 运行测试
     print_info "正在连接远程 Appium Server..."
     print_info "Connecting to remote Appium Server..."
     print_info "请确保 Appium Server 已启动并可访问"
     print_info "Please ensure Appium Server is running and accessible"
-    npm run test:mobile:android
+    npm run test:mobile:android -- "$@"
     return $?
 }
 
 # 运行 Web 测试
+# 透传位置参数：文件名子串过滤 / -g <title-正则>
 run_web_test() {
     print_info "运行 Web 测试..."
-    npm run test:web
+    if [ -n "$DEBUG_PLAYWRIGHT" ]; then
+        DEBUG="$DEBUG_PLAYWRIGHT" npm run test:web -- "$@"
+    else
+        npm run test:web -- "$@"
+    fi
     return $?
 }
 
 # 运行 API 测试
+# 透传位置参数：文件/目录/匹配模式
 run_api_test() {
     print_info "运行 API 测试..."
-    npm run test:api
+    npm run test:api -- "$@"
     return $?
 }
 
@@ -649,7 +660,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_ios_test; then
+                if ! run_ios_test "${@:2}"; then
                     print_error "iOS 测试运行失败"
                     print_error "iOS test failed"
                     exit 1
@@ -661,7 +672,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_ios_appium_test; then
+                if ! run_ios_appium_test "${@:2}"; then
                     print_error "iOS (Appium) 测试运行失败"
                     print_error "iOS (Appium) test failed"
                     exit 1
@@ -673,7 +684,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_android_test; then
+                if ! run_android_test "${@:2}"; then
                     print_error "Android 测试运行失败"
                     print_error "Android test failed"
                     exit 1
@@ -685,7 +696,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_android_detox_test; then
+                if ! run_android_detox_test "${@:2}"; then
                     print_error "Android (Detox) 测试运行失败"
                     print_error "Android (Detox) test failed"
                     exit 1
@@ -697,7 +708,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_web_test; then
+                if ! run_web_test "${@:2}"; then
                     print_error "Web 测试运行失败"
                     print_error "Web test failed"
                     exit 1
@@ -709,7 +720,7 @@ main() {
                     print_error "Failed to install dependencies"
                     exit 1
                 fi
-                if ! run_api_test; then
+                if ! run_api_test "${@:2}"; then
                     print_error "API 测试运行失败"
                     print_error "API test failed"
                     exit 1
@@ -754,9 +765,32 @@ main() {
 # 在所有命令之前解析，提取并导出环境变量
 SCREENSHOT_ON_FAILURE=true
 VIDEO_RECORDING=false
+LOG_LEVEL=info
+DETOX_LOGLEVEL=""
+DEBUG_PLAYWRIGHT=""
+# CI 动态配置参数（默认空，由 CLI 或环境变量覆盖）
+APPIUM_HOST="${APPIUM_HOST:-}"
+APPIUM_PORT="${APPIUM_PORT:-}"
+ANDROID_DEVICE_NAME="${ANDROID_DEVICE_NAME:-}"
+ANDROID_PLATFORM_VERSION="${ANDROID_PLATFORM_VERSION:-}"
+IOS_DEVICE_NAME="${IOS_DEVICE_NAME:-}"
+IOS_PLATFORM_VERSION="${IOS_PLATFORM_VERSION:-}"
+APP_PATH="${APP_PATH:-}"
+APP_PACKAGE="${APP_PACKAGE:-}"
+APP_ACTIVITY="${APP_ACTIVITY:-}"
+BUNDLE_ID="${BUNDLE_ID:-}"
+APPIUM_SYSTEM_PORT="${APPIUM_SYSTEM_PORT:-}"
+APPIUM_NO_RESET="${APPIUM_NO_RESET:-}"
+APPIUM_FULL_RESET="${APPIUM_FULL_RESET:-}"
+APPIUM_LANGUAGE="${APPIUM_LANGUAGE:-}"
+APPIUM_LOCALE="${APPIUM_LOCALE:-}"
 REMAINING_ARGS=()
 
-for arg in "$@"; do
+i=0
+args_count=$#
+args_array=("$@")
+while [ $i -lt $args_count ]; do
+    arg="${args_array[$i]}"
     case "$arg" in
         --screenshot|--ss)
             SCREENSHOT_ON_FAILURE=true
@@ -770,19 +804,135 @@ for arg in "$@"; do
         --no-recording|--no-rec)
             VIDEO_RECORDING=false
             ;;
+        --log-level)
+            i=$((i + 1))
+            if [ $i -lt $args_count ]; then
+                LOG_LEVEL="${args_array[$i]}"
+                case "$LOG_LEVEL" in
+                    info|debug|trace) ;;
+                    *)
+                        print_error "无效的日志级别: $LOG_LEVEL"
+                        print_info "可用级别: info, debug, trace"
+                        exit 1
+                        ;;
+                esac
+            else
+                print_error "--log-level 需要参数: info, debug, trace"
+                exit 1
+            fi
+            ;;
+        # ---- CI 动态配置参数 ----
+        --appium-host)
+            i=$((i + 1)); APPIUM_HOST="${args_array[$i]}"
+            ;;
+        --appium-port)
+            i=$((i + 1)); APPIUM_PORT="${args_array[$i]}"
+            ;;
+        --android-device)
+            i=$((i + 1)); ANDROID_DEVICE_NAME="${args_array[$i]}"
+            ;;
+        --android-version)
+            i=$((i + 1)); ANDROID_PLATFORM_VERSION="${args_array[$i]}"
+            ;;
+        --ios-device)
+            i=$((i + 1)); IOS_DEVICE_NAME="${args_array[$i]}"
+            ;;
+        --ios-version)
+            i=$((i + 1)); IOS_PLATFORM_VERSION="${args_array[$i]}"
+            ;;
+        --mobile-app)
+            i=$((i + 1)); APP_PATH="${args_array[$i]}"
+            ;;
+        --app-package)
+            i=$((i + 1)); APP_PACKAGE="${args_array[$i]}"
+            ;;
+        --app-activity)
+            i=$((i + 1)); APP_ACTIVITY="${args_array[$i]}"
+            ;;
+        --bundle-id)
+            i=$((i + 1)); BUNDLE_ID="${args_array[$i]}"
+            ;;
+        --system-port)
+            i=$((i + 1)); APPIUM_SYSTEM_PORT="${args_array[$i]}"
+            ;;
+        --no-reset)
+            APPIUM_NO_RESET=true
+            ;;
+        --full-reset)
+            APPIUM_FULL_RESET=true
+            ;;
+        --language)
+            i=$((i + 1)); APPIUM_LANGUAGE="${args_array[$i]}"
+            ;;
+        --locale)
+            i=$((i + 1)); APPIUM_LOCALE="${args_array[$i]}"
+            ;;
         *)
             REMAINING_ARGS+=("$arg")
             ;;
     esac
+    i=$((i + 1))
 done
+
+# 根据 LOG_LEVEL 计算 Detox --loglevel 参数
+case "$LOG_LEVEL" in
+    debug|trace)
+        DETOX_LOGLEVEL="$LOG_LEVEL"
+        ;;
+esac
+
+# 根据 LOG_LEVEL 设置 Playwright DEBUG 环境变量
+if [ "$LOG_LEVEL" = "trace" ]; then
+    DEBUG_PLAYWRIGHT="pw:api"
+fi
 
 export SCREENSHOT_ON_FAILURE
 export VIDEO_RECORDING
+export LOG_LEVEL
+export DEBUG_PLAYWRIGHT
+export APPIUM_HOST
+export APPIUM_PORT
+export ANDROID_DEVICE_NAME
+export ANDROID_PLATFORM_VERSION
+export IOS_DEVICE_NAME
+export IOS_PLATFORM_VERSION
+export APP_PATH
+export APP_PACKAGE
+export APP_ACTIVITY
+export BUNDLE_ID
+export APPIUM_SYSTEM_PORT
+export APPIUM_NO_RESET
+export APPIUM_FULL_RESET
+export APPIUM_LANGUAGE
+export APPIUM_LOCALE
 
-# 如果传入了开关参数，打印当前配置
-if [ "$SCREENSHOT_ON_FAILURE" != true ] || [ "$VIDEO_RECORDING" = true ]; then
+# 打印非默认配置
+_has_custom_config=false
+[ "$SCREENSHOT_ON_FAILURE" != true ] && _has_custom_config=true
+[ "$VIDEO_RECORDING" = true ] && _has_custom_config=true
+[ "$LOG_LEVEL" != info ] && _has_custom_config=true
+[ -n "$APPIUM_HOST" ] || [ -n "$APPIUM_PORT" ] || [ -n "$ANDROID_DEVICE_NAME" ] || [ -n "$IOS_DEVICE_NAME" ] && _has_custom_config=true
+[ -n "$APP_PATH" ] || [ -n "$APP_PACKAGE" ] || [ -n "$BUNDLE_ID" ] && _has_custom_config=true
+
+if [ "$_has_custom_config" = true ]; then
     print_info "截图 / Screenshot: $([ "$SCREENSHOT_ON_FAILURE" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"
     print_info "录屏 / Recording: $([ "$VIDEO_RECORDING" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"
+    print_info "日志级别 / Log Level: $LOG_LEVEL"
+    [ -n "$APPIUM_HOST" ] && print_info "Appium Host: $APPIUM_HOST"
+    [ -n "$APPIUM_PORT" ] && print_info "Appium Port: $APPIUM_PORT"
+    [ -n "$ANDROID_DEVICE_NAME" ] && print_info "Android Device: $ANDROID_DEVICE_NAME"
+    [ -n "$ANDROID_PLATFORM_VERSION" ] && print_info "Android Version: $ANDROID_PLATFORM_VERSION"
+    [ -n "$IOS_DEVICE_NAME" ] && print_info "iOS Device: $IOS_DEVICE_NAME"
+    [ -n "$IOS_PLATFORM_VERSION" ] && print_info "iOS Version: $IOS_PLATFORM_VERSION"
+    [ -n "$APP_PATH" ] && print_info "App Path: $APP_PATH"
+    [ -n "$APP_PACKAGE" ] && print_info "App Package: $APP_PACKAGE"
+    [ -n "$APP_ACTIVITY" ] && print_info "App Activity: $APP_ACTIVITY"
+    [ -n "$BUNDLE_ID" ] && print_info "Bundle ID: $BUNDLE_ID"
+    [ -n "$APPIUM_SYSTEM_PORT" ] && print_info "System Port: $APPIUM_SYSTEM_PORT"
+    [ -n "$APPIUM_NO_RESET" ] && print_info "No Reset: $APPIUM_NO_RESET"
+    [ -n "$APPIUM_FULL_RESET" ] && print_info "Full Reset: $APPIUM_FULL_RESET"
+    [ -n "$APPIUM_LANGUAGE" ] && print_info "Language: $APPIUM_LANGUAGE"
+    [ -n "$APPIUM_LOCALE" ] && print_info "Locale: $APPIUM_LOCALE"
 fi
 
 # 执行主函数（传入过滤后的参数）

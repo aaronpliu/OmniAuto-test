@@ -104,17 +104,55 @@ export class PlaywrightActions extends BaseActions {
     return (await this.page.textContent(sel)) || "";
   }
 
-  // Assertions
-  async waitForElement(selector: TSelector, timeout = 10000): Promise<void> {
+  /**
+   * 获取元素属性
+   * @param selector - 元素选择器
+   * @param attrName - 可选，指定属性名则返回单个值(string)；不传则返回完整属性对象
+   */
+  async getAttributes(selector: TSelector): Promise<Record<string, unknown>>;
+  async getAttributes(selector: TSelector, attrName: string): Promise<string>;
+  async getAttributes(
+    selector: TSelector,
+    attrName?: string
+  ): Promise<Record<string, unknown> | string> {
     const sel = this.resolveSelector(selector);
-    logger.debug(`Waiting for element: ${sel}`);
-    await this.page.waitForSelector(sel, { state: "visible", timeout });
+    logger.debug(`Getting attributes from element: ${sel}`);
+    if (attrName !== undefined) {
+      return (await this.page.getAttribute(sel, attrName)) ?? "";
+    }
+    // 通过 evaluate 获取所有 DOM 属性
+    const attrs = await this.page.evaluate((s: string) => {
+      const el: any = document.querySelector(s);
+      if (!el) {
+        return {};
+      }
+      const result: Record<string, unknown> = {};
+      for (const attr of el.attributes) {
+        result[attr.name] = attr.value;
+      }
+      result.textContent = el.textContent || "";
+      result.visible = !!el.offsetParent;
+      return result;
+    }, sel);
+    return attrs;
   }
 
-  async expectVisible(selector: TSelector): Promise<void> {
+  // Assertions
+  async waitForElement(selector: TSelector, timeout = 10000, isNotVisible = false): Promise<void> {
     const sel = this.resolveSelector(selector);
-    logger.debug(`Expecting element visible: ${sel}`);
-    await this.page.waitForSelector(sel, { state: "visible" });
+    logger.debug(`Waiting for element${isNotVisible ? " to hide" : ""}: ${sel}`);
+    await this.page.waitForSelector(sel, {
+      state: isNotVisible ? "hidden" : "visible",
+      timeout,
+    });
+  }
+
+  async expectVisible(selector: TSelector, isNotVisible = false): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element${isNotVisible ? " not" : ""} visible: ${sel}`);
+    await this.page.waitForSelector(sel, {
+      state: isNotVisible ? "hidden" : "visible",
+    });
   }
 
   async expectNotVisible(selector: TSelector): Promise<void> {
@@ -123,12 +161,36 @@ export class PlaywrightActions extends BaseActions {
     await this.page.waitForSelector(sel, { state: "hidden" });
   }
 
-  async expectText(selector: TSelector, text: string): Promise<void> {
+  /**
+   * 验证元素存在于 DOM 中（可能不可见）
+   */
+  async expectExist(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element to exist: ${sel}`);
+    await this.page.waitForSelector(sel, { state: "attached" });
+  }
+
+  /**
+   * 验证元素不存在于 DOM 中
+   */
+  async expectNotExist(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element to not exist: ${sel}`);
+    await this.page.waitForSelector(sel, { state: "detached" });
+  }
+
+  async expectText(selector: TSelector, text: string | RegExp): Promise<void> {
     const sel = this.resolveSelector(selector);
     logger.debug(`Expecting text in element: ${sel}`);
-    const actualText = await this.page.textContent(sel);
-    if (actualText !== text) {
-      throw new Error(`Expected text "${text}" but got "${actualText}"`);
+    const actualText = (await this.page.textContent(sel)) || "";
+    if (text instanceof RegExp) {
+      if (!text.test(actualText)) {
+        throw new Error(`Expected text to match /${text.source}/ but got "${actualText}"`);
+      }
+    } else {
+      if (actualText !== text) {
+        throw new Error(`Expected text "${text}" but got "${actualText}"`);
+      }
     }
   }
 
@@ -216,7 +278,8 @@ export class PlaywrightActions extends BaseActions {
   // Utilities
   async takeScreenshot(name: string): Promise<string> {
     logger.debug(`Taking screenshot: ${name}`);
-    const path = `artifacts/screenshots/${name}_${Date.now()}.png`;
+    const sessionDir = process.env.OMNITEST_SESSION_DIR || "artifacts";
+    const path = `${sessionDir}/screenshots/${name}_${Date.now()}.png`;
     await this.page.screenshot({ path, fullPage: true });
     return path;
   }

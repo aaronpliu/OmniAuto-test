@@ -7,7 +7,13 @@ const logger = Logger.getInstance();
 /**
  * 统一移动端配置加载器（单例）
  *
- * 优先级链：环境变量 > configs/mobile.config.js > 内置默认值
+ * 加载策略：
+ *   CI 环境（CI=true） → configs/mobile.config.ci.js
+ *   本地环境            → configs/mobile.config.local.js
+ *   加载失败            → 内置默认值兜底
+ *
+ * 所有配置值直接从上述文件读取，不再通过环境变量覆盖。
+ * 如需切换配置项，直接编辑对应的 .js 文件。
  *
  * 使用方式：
  *   import { mobileConfig } from '@framework/utils/mobileConfig';
@@ -18,11 +24,9 @@ const logger = Logger.getInstance();
 export class MobileConfigLoader {
   private static instance: MobileConfigLoader;
   private config: MobileConfig | null = null;
-  private configPath: string;
+  private configPath: string = "";
 
-  private constructor() {
-    this.configPath = path.join(process.cwd(), "configs", "mobile.config.js");
-  }
+  private constructor() {}
 
   static getInstance(): MobileConfigLoader {
     if (!MobileConfigLoader.instance) {
@@ -31,14 +35,22 @@ export class MobileConfigLoader {
     return MobileConfigLoader.instance;
   }
 
+  /** 根据运行环境选择配置文件 */
+  private resolveConfigPath(): string {
+    const isCI = !!process.env.CI;
+    const configFile = isCI ? "mobile.config.ci.js" : "mobile.config.local.js";
+    return path.join(process.cwd(), "configs", configFile);
+  }
+
   /**
    * 加载并缓存统一配置文件
-   * 允许外部传入已加载的配置（主要用于 .detoxrc.js 等场景避免循环依赖）
    */
   load(): MobileConfig {
     if (this.config) {
       return this.config;
     }
+
+    this.configPath = this.resolveConfigPath();
 
     try {
       // 清除 require 缓存，确保获取最新配置（开发时热更新）
@@ -65,16 +77,9 @@ export class MobileConfigLoader {
     return this.load().appium;
   }
 
-  /**
-   * 获取 Appium Server 配置（环境变量优先）
-   * 优先级：APPIUM_HOST/APPIUM_PORT 环境变量 > 配置文件 > 默认值
-   */
+  /** 获取 Appium Server 配置（直接来自配置文件） */
   getAppiumServerConfig(): AppiumServerConfig {
-    const fileConfig = this.load().appium.server;
-    return {
-      host: process.env.APPIUM_HOST || fileConfig.host || "0.0.0.0",
-      port: parseInt(process.env.APPIUM_PORT || String(fileConfig.port) || "4723", 10),
-    };
+    return this.load().appium.server;
   }
 
   /**
@@ -85,9 +90,7 @@ export class MobileConfigLoader {
   }
 
   /**
-   * 构建指定平台的 Appium capabilities（环境变量作为覆盖层）
-   *
-   * 优先级：环境变量 > 配置文件 > 内置默认值
+   * 构建指定平台的 Appium capabilities（数据全部来自配置文件）
    *
    * @param platform 'android' | 'ios'
    * @returns WebdriverIO RemoteOptions['capabilities'] 格式的 capabilities 对象
@@ -96,39 +99,23 @@ export class MobileConfigLoader {
     const appiumConfig = this.getAppiumConfig();
     const capabilities: Record<string, any> = {};
 
-    // ---------- 通用 capabilities ----------
-    const common = appiumConfig.common;
     capabilities.platformName = platform === "ios" ? "iOS" : "Android";
 
-    // ---------- 平台特定 capabilities ----------
+    const common = appiumConfig.common;
+
     if (platform === "android") {
       const android = appiumConfig.android;
-      capabilities["appium:automationName"] =
-        process.env.ANDROID_AUTOMATION_NAME || android.automationName;
-      capabilities["appium:deviceName"] = process.env.ANDROID_DEVICE_NAME || android.deviceName;
-      capabilities["appium:platformVersion"] =
-        process.env.ANDROID_PLATFORM_VERSION || android.platformVersion;
+      capabilities["appium:automationName"] = android.automationName;
+      capabilities["appium:deviceName"] = android.deviceName;
+      capabilities["appium:platformVersion"] = android.platformVersion;
 
-      // 应用定位：环境变量 > 配置文件 appPackage/appActivity > 配置文件 app > applications.androidApk
-      const envAppPackage = process.env.ANDROID_APP_PACKAGE;
-      const envAppActivity = process.env.ANDROID_APP_ACTIVITY;
-      const envAppPath = process.env.ANDROID_APP_PATH;
-      const cfgAppPackage = android.appPackage;
-      const cfgAppActivity = android.appActivity;
-      const cfgApp = android.app;
-
-      if (envAppPackage && envAppActivity) {
-        capabilities["appium:appPackage"] = envAppPackage;
-        capabilities["appium:appActivity"] = envAppActivity;
-      } else if (envAppPath) {
-        capabilities["appium:app"] = envAppPath;
-      } else if (cfgAppPackage && cfgAppActivity) {
-        capabilities["appium:appPackage"] = cfgAppPackage;
-        capabilities["appium:appActivity"] = cfgAppActivity;
-      } else if (cfgApp) {
-        capabilities["appium:app"] = path.resolve(process.cwd(), cfgApp);
+      // 应用定位：优先 appPackage+appActivity，其次 app 路径，最后回退 applications.androidApk
+      if (android.appPackage && android.appActivity) {
+        capabilities["appium:appPackage"] = android.appPackage;
+        capabilities["appium:appActivity"] = android.appActivity;
+      } else if (android.app) {
+        capabilities["appium:app"] = path.resolve(process.cwd(), android.app);
       } else {
-        // 回退到 applications.androidApk
         const apkRel = this.getApplications().androidApk;
         if (apkRel) {
           capabilities["appium:app"] = path.resolve(process.cwd(), apkRel);
@@ -136,53 +123,28 @@ export class MobileConfigLoader {
         }
       }
 
-      // systemPort
-      const systemPort = process.env.ANDROID_SYSTEM_PORT
-        ? parseInt(process.env.ANDROID_SYSTEM_PORT, 10)
-        : android.systemPort;
-      if (systemPort) {
-        capabilities["appium:systemPort"] = systemPort;
+      if (android.systemPort) {
+        capabilities["appium:systemPort"] = android.systemPort;
       }
 
-      // 额外 capabilities（配置文件中的 android.capabilities 键值对）
       this.mergeExtraCapabilities(capabilities, android.capabilities);
-
-      // 环境变量覆盖：autoGrantPermissions
-      if (process.env.AUTO_GRANT_PERMISSIONS !== undefined) {
-        capabilities["appium:autoGrantPermissions"] = process.env.AUTO_GRANT_PERMISSIONS === "true";
-      }
     }
 
     if (platform === "ios") {
       const ios = appiumConfig.ios;
-      capabilities["appium:automationName"] = process.env.IOS_AUTOMATION_NAME || ios.automationName;
-      capabilities["appium:deviceName"] = process.env.IOS_DEVICE_NAME || ios.deviceName;
-      capabilities["appium:platformVersion"] =
-        process.env.IOS_PLATFORM_VERSION || ios.platformVersion;
+      capabilities["appium:automationName"] = ios.automationName;
+      capabilities["appium:deviceName"] = ios.deviceName;
+      capabilities["appium:platformVersion"] = ios.platformVersion;
 
-      // UDID（环境变量 > 配置文件）
-      const udid = process.env.IOS_UDID || ios.udid;
-      if (udid) {
-        capabilities["appium:udid"] = udid;
+      if (ios.udid) {
+        capabilities["appium:udid"] = ios.udid;
       }
 
-      // deviceType
-      const deviceType = process.env.IOS_DEVICE_TYPE || ios.deviceType;
-
-      // 应用定位：环境变量 bundleId > 环境变量 app > 配置文件 bundleId > 配置文件 app > applications.iosApp
-      const envBundleId = process.env.IOS_BUNDLE_ID;
-      const envAppPath = process.env.IOS_APP_PATH;
-      const cfgBundleId = ios.bundleId;
-      const cfgApp = ios.app;
-
-      if (envBundleId) {
-        capabilities["appium:bundleId"] = envBundleId;
-      } else if (envAppPath) {
-        capabilities["appium:app"] = envAppPath;
-      } else if (cfgBundleId) {
-        capabilities["appium:bundleId"] = cfgBundleId;
-      } else if (cfgApp) {
-        capabilities["appium:app"] = path.resolve(process.cwd(), cfgApp);
+      // 应用定位：优先 bundleId，其次 app 路径，最后回退 applications.iosApp
+      if (ios.bundleId) {
+        capabilities["appium:bundleId"] = ios.bundleId;
+      } else if (ios.app) {
+        capabilities["appium:app"] = path.resolve(process.cwd(), ios.app);
       } else {
         const iosAppRel = this.getApplications().iosApp;
         if (iosAppRel) {
@@ -192,61 +154,66 @@ export class MobileConfigLoader {
       }
 
       // 真机签名
-      if (deviceType === "real") {
-        capabilities["appium:xcodeSigningId"] =
-          process.env.IOS_XCODE_SIGNING_ID || ios.xcodeSigningId;
-        const teamId = process.env.IOS_TEAM_ID || ios.xcodeOrgId;
-        if (teamId) {
-          capabilities["appium:xcodeOrgId"] = teamId;
+      if (ios.deviceType === "real") {
+        capabilities["appium:xcodeSigningId"] = ios.xcodeSigningId;
+        if (ios.xcodeOrgId) {
+          capabilities["appium:xcodeOrgId"] = ios.xcodeOrgId;
         }
       }
 
-      // 额外 capabilities（配置文件中的 ios.capabilities 键值对）
       this.mergeExtraCapabilities(capabilities, ios.capabilities);
-
-      // 环境变量覆盖
-      if (process.env.AUTO_ACCEPT_ALERTS !== undefined) {
-        capabilities["appium:autoAcceptAlerts"] = process.env.AUTO_ACCEPT_ALERTS === "true";
-      }
-      if (process.env.IOS_CONNECT_HARDWARE_KEYBOARD !== undefined) {
-        capabilities["appium:connectHardwareKeyboard"] =
-          process.env.IOS_CONNECT_HARDWARE_KEYBOARD === "true";
-      }
     }
 
-    // ---------- 通用 capabilities（环境变量覆盖） ----------
-    if (process.env.NO_RESET !== undefined) {
-      capabilities["appium:noReset"] = process.env.NO_RESET === "true";
-    } else if (common.noReset) {
+    // ---------- 通用 capabilities（直接来自配置文件） ----------
+    if (common.noReset) {
       capabilities["appium:noReset"] = common.noReset;
     }
-
-    if (process.env.FULL_RESET !== undefined) {
-      capabilities["appium:fullReset"] = process.env.FULL_RESET === "true";
-    } else if (common.fullReset) {
+    if (common.fullReset) {
       capabilities["appium:fullReset"] = common.fullReset;
     }
-
-    if (process.env.NEW_COMMAND_TIMEOUT !== undefined) {
-      capabilities["appium:newCommandTimeout"] = parseInt(process.env.NEW_COMMAND_TIMEOUT, 10);
-    } else if (common.newCommandTimeout) {
+    if (common.newCommandTimeout) {
       capabilities["appium:newCommandTimeout"] = common.newCommandTimeout;
     }
+    // 使用 W3C 标准 timeouts.implicit 而非 appium:implicitWaitMs（Appium 3.0 兼容）
+    if (common.implicitWaitMs !== undefined) {
+      capabilities.timeouts = {
+        ...(capabilities.timeouts || {}),
+        implicit: common.implicitWaitMs,
+      };
+    }
+    if (common.language) {
+      capabilities["appium:language"] = common.language;
+    }
+    if (common.locale) {
+      capabilities["appium:locale"] = common.locale;
+    }
+    if (common.orientation) {
+      capabilities["appium:orientation"] = common.orientation;
+    }
 
-    if (process.env.LANGUAGE || common.language) {
-      capabilities["appium:language"] = process.env.LANGUAGE || common.language;
+    // ---------- 环境变量最终覆盖（优先级最高，用于 CI pipeline 直接设置 env 的场景） ----------
+    if (process.env.APP_PATH) {
+      if (platform === "android") {
+        // APP_PATH 覆盖 app，同时清除 appPackage/appActivity（避免冲突）
+        capabilities["appium:app"] = path.resolve(process.cwd(), process.env.APP_PATH);
+        delete capabilities["appium:appPackage"];
+        delete capabilities["appium:appActivity"];
+      } else {
+        capabilities["appium:app"] = path.resolve(process.cwd(), process.env.APP_PATH);
+        delete capabilities["appium:bundleId"];
+      }
     }
-    if (process.env.LOCALE || common.locale) {
-      capabilities["appium:locale"] = process.env.LOCALE || common.locale;
+    if (process.env.APPIUM_NO_RESET === "true") {
+      capabilities["appium:noReset"] = true;
     }
-    if (process.env.ORIENTATION || common.orientation) {
-      capabilities["appium:orientation"] = process.env.ORIENTATION || common.orientation;
+    if (process.env.APPIUM_FULL_RESET === "true") {
+      capabilities["appium:fullReset"] = true;
+    }
+    if (process.env.APPIUM_SYSTEM_PORT) {
+      capabilities["appium:systemPort"] = parseInt(process.env.APPIUM_SYSTEM_PORT, 10);
     }
 
-    logger.debug(
-      "Built capabilities from mobile config + env overrides:",
-      JSON.stringify(capabilities, null, 2)
-    );
+    logger.debug("Built capabilities from mobile config: " + JSON.stringify(capabilities, null, 2));
     return capabilities;
   }
 
@@ -305,6 +272,7 @@ export class MobileConfigLoader {
           noReset: false,
           fullReset: false,
           newCommandTimeout: 300,
+          implicitWaitMs: 0,
           language: "",
           locale: "",
           orientation: "",

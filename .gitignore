@@ -14,6 +14,7 @@ artifacts/
 *.swo
 .lingma/
 .codebuddy/
+.qoder/
 
 # OS
 .DS_Store
@@ -30,6 +31,13 @@ npm-debug.log*
 
 # Detox
 .detoxrc.json.local
+
+# Local config files (developer-specific, not tracked)
+# *.config.ci.js files are the CI baselines and ARE tracked
+configs/mobile.config.local.js
+configs/web.config.local.js
+configs/api.config.local.js
+configs/framework.config.local.js
 
 # Coverage
 coverage/
@@ -60,3 +68,4 @@ applications/TestGround/android-app/*
 applications/TestGround/ios-app/*
 !applications/TestGround/ios-app/.gitkeep
 applications/3in1
+tests/mobile/3in1

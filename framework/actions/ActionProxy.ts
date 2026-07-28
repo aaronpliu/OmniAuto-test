@@ -11,9 +11,15 @@
 import { BaseActions } from "./BaseActions";
 import { IActions } from "../types/actions";
 import { Logger } from "../utils/logger";
-import { appendFileSync, unlinkSync, existsSync, readFileSync } from "fs";
+import { appendFileSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
-import { isPlatformSelector, resolvePlatformSelector } from "../utils/SelectorBuilder";
+import {
+  isPlatformSelector,
+  resolvePlatformSelector,
+  isChainableSelector,
+  isIndexedSelector,
+} from "../utils/SelectorBuilder";
+import { TestSessionState } from "../utils/testSessionState";
 
 const logger = Logger.getInstance();
 
@@ -41,36 +47,26 @@ function writeStepToFile(step: Record<string, unknown>): void {
   }
 }
 
-/** 清空步骤文件（在每个 test 开始时调用） */
-export function clearStepsFile(): void {
-  try {
-    const p = getStepsPath();
-    if (existsSync(p)) {
-      unlinkSync(p);
-    }
-  } catch {
-    // ignore
-  }
-}
+/**
+ * 当 wrapWithAllureStep 已截过图时，Proxy catch 复用该路径，避免重复截图。
+ * 设为 null 表示本轮未截过图。
+ */
+let _lastAllureScreenshotPath: string | null = null;
 
-/** 读取并清空步骤文件（Reporter 调用） */
-export function drainStepsFile(): Record<string, unknown>[] {
-  const p = getStepsPath();
-  try {
-    if (!existsSync(p)) {
-      return [];
-    }
-    const raw = readFileSync(p, "utf-8");
-    unlinkSync(p);
-    return raw
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map((l: string) => JSON.parse(l));
-  } catch {
-    return [];
-  }
-}
+/**
+ * 截图抑制标志位
+ * 由 suppressScreenshot() 设置，告知 wrapWithAllureStep 和 Proxy catch
+ * 跳过截图——用于业务脚本已用 .catch() 显式处理的预期失败操作。
+ */
+let _suppressScreenshot = false;
+
+/**
+ * 抑制模式下的延迟错误
+ * 当 _suppressScreenshot 为 true 且 fn() 抛出异常时，
+ * 在 step() 内部吞掉错误（让 step 正常结束为 passed），
+ * 然后在 step() 返回后重新抛出，避免 allure-js-commons 标记为 Broken。
+ */
+let _deferredError: unknown = null;
 
 // ================================================================
 //  生成可读步骤名称
@@ -82,6 +78,15 @@ function selectorName(s: unknown): string {
     const platform = (process.env.TEST_PLATFORM || "ios").toLowerCase() as "ios" | "android";
     const resolved = resolvePlatformSelector(s, platform);
     return selectorName(resolved);
+  }
+  // ChainableSelector: 使用紧凑格式显示
+  if (isChainableSelector(s)) {
+    return s.toString(true);
+  }
+  // IndexedSelector: { selector, index } — 显示内层选择器名 + 索引
+  if (isIndexedSelector(s)) {
+    const innerName = selectorName((s as { selector: unknown; index: number }).selector);
+    return `${innerName}[${(s as { selector: unknown; index: number }).index}]`;
   }
   if (typeof s === "string") {
     const short = s.includes(":") ? s.split(":").pop()! : s;
@@ -106,184 +111,107 @@ function argName(arg: unknown, maxLen = 20): string {
   return "...";
 }
 
-// ================================================================
-//  步骤模板声明式注册表
-// ================================================================
-
-/** 步骤参数规格：描述如何从 args 中提取并格式化某个参数 */
-type ArgSpec =
-  | { kind: "selector"; index: number } // 用 selectorName() 格式化（选择器）
-  | { kind: "value"; index: number } // 用 argName() 格式化（字面量值）
-  | { kind: "duration"; indices: number[] }; // 从多个位置找 number 类型 timeout，输出 "(Nms)"
-
-/** 单个步骤模板：动词 + 参数规格列表 */
-interface StepTemplate {
-  label: string;
-  args?: ArgSpec[];
-}
-
-/**
- * 核心方法模板表：Record<keyof IActions, StepTemplate> 强类型约束。
- * 新增 IActions 接口方法时 tsc 会编译报错强制补模板，避免静默遗漏。
- */
-const STEP_TEMPLATES: Record<keyof IActions, StepTemplate> = {
-  // Element interactions
-  click: { label: "点击", args: [{ kind: "selector", index: 0 }] },
-  doubleClick: { label: "双击", args: [{ kind: "selector", index: 0 }] },
-  longPress: { label: "长按", args: [{ kind: "selector", index: 0 }] },
-  // Input
-  typeText: {
-    label: "输入",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "value", index: 1 },
-    ],
-  },
-  clearText: { label: "清空", args: [{ kind: "selector", index: 0 }] },
-  getText: { label: "获取文本", args: [{ kind: "selector", index: 0 }] },
-  // Assertions
-  expectVisible: { label: "验证可见", args: [{ kind: "selector", index: 0 }] },
-  expectNotVisible: {
-    label: "验证不可见",
-    args: [{ kind: "selector", index: 0 }],
-  },
-  expectText: {
-    label: "验证文本",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "value", index: 1 },
-    ],
-  },
-  expectContainsText: {
-    label: "验证包含文本",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "value", index: 1 },
-    ],
-  },
-  expectEnabled: { label: "验证可交互", args: [{ kind: "selector", index: 0 }] },
-  expectDisabled: { label: "验证禁用", args: [{ kind: "selector", index: 0 }] },
-  // Wait
-  waitForElement: {
-    label: "等待元素可见",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  // Navigation
-  navigateTo: { label: "打开应用" },
-  reload: { label: "重新加载" },
-  back: { label: "返回" },
-  close: { label: "关闭" },
-  // Gestures
-  swipe: { label: "滑动", args: [{ kind: "value", index: 0 }] },
-  scroll: { label: "滚动到", args: [{ kind: "selector", index: 0 }] },
-  pinch: { label: "缩放", args: [{ kind: "value", index: 1 }] },
-  // Utilities
-  takeScreenshot: { label: "截图" },
-  // Device
-  setOrientation: { label: "设置方向", args: [{ kind: "value", index: 0 }] },
-  setLocation: {
-    label: "设置位置",
-    args: [
-      { kind: "value", index: 0 },
-      { kind: "value", index: 1 },
-    ],
-  },
-};
-
-/**
- * 扩展方法模板表：非 IActions 接口的方法（Detox/Appium 扩展的 waitFor* 变体、录屏等）。
- * 无强类型约束，靠开发者补充；遗漏时 buildStepName 会降级 + warn 提醒。
- */
-const EXTENDED_TEMPLATES: Record<string, StepTemplate> = {
-  waitForElementToExist: {
-    label: "等待元素存在",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForElementToDisappear: {
-    label: "等待元素消失",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForElementToBeEnabled: {
-    label: "等待元素可交互",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForElementWhileScrolling: {
-    label: "滚动等待",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForElementWithRetry: {
-    label: "重试等待",
-    args: [
-      { kind: "selector", index: 0 },
-      { kind: "duration", indices: [1, 2] },
-    ],
-  },
-  waitForAllElements: {
-    label: "等待全部元素",
-    args: [{ kind: "duration", indices: [1, 2] }],
-  },
-  waitForAnyElement: {
-    label: "等待任意元素",
-    args: [{ kind: "duration", indices: [1, 2] }],
-  },
-  waitForText: { label: "等待文本", args: [{ kind: "value", index: 1 }] },
-  startRecording: { label: "开始录屏" },
-  stopRecording: { label: "停止录屏" },
-};
-
-/** 按 ArgSpec 从 args 中提取并格式化为步骤名片段 */
-function formatArg(spec: ArgSpec, args: unknown[]): string {
-  switch (spec.kind) {
-    case "selector":
-      return selectorName(args[spec.index]);
-    case "value":
-      return argName(args[spec.index]);
-    case "duration": {
-      for (const i of spec.indices) {
-        const v = args[i];
-        if (v !== undefined && typeof v === "number") {
-          return `(${v}ms)`;
-        }
-      }
-      return "";
-    }
-  }
-}
-
-/** 记录已 warn 过的未配置方法，避免重复刷日志 */
-const warnedMethods = new Set<string>();
-
 function buildStepName(method: string, args: unknown[]): string {
-  const coreTpl = (STEP_TEMPLATES as Record<string, StepTemplate | undefined>)[method];
-  const tpl = coreTpl ?? EXTENDED_TEMPLATES[method];
+  const parts: string[] = [];
 
-  if (!tpl) {
-    // 未配置模板：降级为方法名 + 每方法仅 warn 一次
-    if (!warnedMethods.has(method)) {
-      logger.warn(`[ActionProxy] 步骤模板未配置: ${method}，报告将显示原始方法名`);
-      warnedMethods.add(method);
+  if (method === "click") {
+    parts.push("点击", selectorName(args[0]));
+  } else if (method === "doubleClick") {
+    parts.push("双击", selectorName(args[0]));
+  } else if (method === "longPress") {
+    parts.push("长按", selectorName(args[0]));
+  } else if (method === "typeText") {
+    parts.push("输入", selectorName(args[0]), argName(args[1]));
+  } else if (method === "clearText") {
+    parts.push("清空", selectorName(args[0]));
+  } else if (method === "getText") {
+    parts.push("获取文本", selectorName(args[0]));
+  } else if (method === "getAttributes") {
+    parts.push("获取属性", selectorName(args[0]));
+    if (args[1] !== undefined) {
+      parts.push(argName(args[1]));
     }
-    return method;
-  }
+  } else if (method === "expectVisible") {
+    const notVisible = args[1] === true;
+    parts.push(notVisible ? "验证不可见" : "验证可见", selectorName(args[0]));
+  } else if (method === "expectNotVisible") {
+    parts.push("验证不可见", selectorName(args[0]));
+  } else if (method === "expectText") {
+    const textArg = args[1];
+    if (textArg instanceof RegExp) {
+      parts.push("验证文本匹配", selectorName(args[0]), `/${textArg.source}/`);
+    } else {
+      parts.push("验证文本", selectorName(args[0]), argName(args[1]));
+    }
+  } else if (method === "expectContainsText") {
+    parts.push("验证包含文本", selectorName(args[0]), argName(args[1]));
+  } else if (method === "expectEnabled") {
+    parts.push("验证可交互", selectorName(args[0]));
+  } else if (method === "expectDisabled") {
+    parts.push("验证禁用", selectorName(args[0]));
+  } else if (method === "expectExist") {
+    parts.push("验证存在", selectorName(args[0]));
+  } else if (method === "expectNotExist") {
+    parts.push("验证不存在", selectorName(args[0]));
+  } else if (method.startsWith("waitForElement")) {
+    if (method === "waitForElement") {
+      const notVisible = args[2] === true;
+      parts.push(notVisible ? "等待元素不可见" : "等待元素可见", selectorName(args[0]));
+    } else if (method === "waitForElementToExist") {
+      parts.push("等待元素存在", selectorName(args[0]));
+    } else if (method === "waitForElementToDisappear") {
+      parts.push("等待元素消失", selectorName(args[0]));
+    } else if (method === "waitForElementToBeEnabled") {
+      parts.push("等待元素可交互", selectorName(args[0]));
+    } else if (method === "waitForElementWhileScrolling") {
+      parts.push("滚动等待", selectorName(args[0]));
+    } else if (method === "waitForElementWithRetry") {
+      parts.push("重试等待", selectorName(args[0]));
+    } else if (method === "waitForAllElements") {
+      parts.push("等待全部元素");
+    } else if (method === "waitForAnyElement") {
+      parts.push("等待任意元素");
+    } else {
+      parts.push("等待元素", selectorName(args[0]));
+    }
 
-  const parts: string[] = [tpl.label];
-  for (const spec of tpl.args ?? []) {
-    parts.push(formatArg(spec, args));
+    const t =
+      args[1] && typeof args[1] === "number"
+        ? args[1]
+        : args[2] && typeof args[2] === "number"
+          ? args[2]
+          : null;
+    if (t) {
+      parts.push(`(${t}ms)`);
+    }
+  } else if (method === "waitForText") {
+    parts.push("等待文本", argName(args[1]));
+  } else if (method === "navigateTo") {
+    parts.push("打开应用");
+  } else if (method === "reload") {
+    parts.push("重新加载");
+  } else if (method === "back") {
+    parts.push("返回");
+  } else if (method === "close") {
+    parts.push("关闭");
+  } else if (method === "swipe") {
+    parts.push("滑动", String(args[0]));
+  } else if (method === "scroll") {
+    parts.push("滚动到", selectorName(args[0]));
+  } else if (method === "pinch") {
+    parts.push("缩放", String(args[1] || ""));
+  } else if (method === "takeScreenshot") {
+    parts.push("截图");
+  } else if (method === "setOrientation") {
+    parts.push("设置方向", String(args[0]));
+  } else if (method === "setLocation") {
+    parts.push("设置位置", String(args[0]), String(args[1]));
+  } else if (method === "startRecording") {
+    parts.push("开始录屏");
+  } else if (method === "stopRecording") {
+    parts.push("停止录屏");
+  } else {
+    parts.push(method);
   }
 
   const name = parts.filter(Boolean).join(" ");
@@ -295,42 +223,128 @@ function buildStepName(method: string, args: unknown[]): string {
 // ================================================================
 
 async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target: any): Promise<T> {
+  // 隔离 require 的 try-catch：仅处理 allure-js-commons 不存在的情况（如 Detox 环境）
+  // step() 执行产生的异常应自然向上传播，不应被此处捕获
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- allure-js-commons runtime types
+  let step: ((...args: any[]) => any) | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- allure-js-commons runtime types
+  let attachment: ((...args: any[]) => any) | undefined;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional runtime dependency
-    const { step, attachment } = require("allure-js-commons");
-    if (typeof step === "function") {
-      return await step(name, async () => {
-        try {
-          return await fn();
-        } catch (innerErr: any) {
-          // 步骤失败时截屏并附加到当前 Allure step 上下文中
-          try {
-            if (typeof attachment === "function" && typeof target.takeScreenshot === "function") {
-              const path = await target.takeScreenshot(`step_fail_${Date.now()}`);
-              attachment("Step Failure Screenshot", readFileSync(path as string), "image/png");
-              logger.info(`[Step] 📸 截图已附加到 Allure step`);
-            }
-          } catch {
-            /* 截图附加失败不影响步骤 */
-          }
-          throw innerErr;
-        }
-      });
-    }
+    const allure = require("allure-js-commons");
+    step = allure.step;
+    attachment = allure.attachment;
   } catch {
-    // Allure 运行时不可用（如 Detox 环境），降级为直接执行
+    // allure-js-commons 不可用，降级为直接执行 fn()
+    return await fn();
   }
-  return await fn();
+
+  if (typeof step !== "function") {
+    return await fn();
+  }
+
+  // step() 在此处调用，其内部异常（包括 fn() 抛出的业务异常）会原样向上传播
+  // 不再有外层 try-catch 吞异常 → 杜绝 fn() 被执行两次的 BUG
+  // 抑制模式：在 step() 内部吞掉错误（step 标记为 passed），之后再重新抛出
+  _deferredError = null;
+  const result = await step(name, async () => {
+    try {
+      return await fn();
+    } catch (innerErr: any) {
+      // 抑制模式（预期失败）：吞掉错误，让 step 正常结束为 passed
+      // 错误延迟到 step() 返回后由调用方重新抛出
+      if (_suppressScreenshot) {
+        _deferredError = innerErr;
+        return undefined as T; // step 正常返回，标记为 passed
+      }
+
+      // 步骤失败时截屏并附加到当前 Allure step 上下文中
+      // 若会话正在销毁则跳过
+      if (TestSessionState.isActive) {
+        try {
+          if (typeof attachment === "function" && typeof target.takeScreenshot === "function") {
+            const path = await target.takeScreenshot(`step_fail_${Date.now()}`);
+            _lastAllureScreenshotPath = path; // 共享给 Proxy catch，避免重复截图
+            attachment("Step Failure Screenshot", readFileSync(path as string), "image/png");
+            logger.info(`[Step] 📸 截图已附加到 Allure step`);
+          }
+        } catch {
+          /* 截图附加失败不影响步骤 */
+        }
+      }
+      throw innerErr;
+    }
+  });
+
+  // step() 已正常结束（passed），现在重新抛出延迟的错误
+  if (_deferredError !== null) {
+    const err = _deferredError;
+    _deferredError = null;
+    throw err;
+  }
+
+  return result;
+}
+
+// ================================================================
+//  截图抑制 API（供业务脚本标记预期失败操作）
+// ================================================================
+
+/**
+ * 抑制截图及 Allure 失败记录 — 用于包裹已知可能失败且已用 .catch() 处理的操作。
+ *
+ * 当 Page Object 中的某个操作属于「可选步骤」（如关闭可能不存在的弹窗），
+ * 调用方通常用 `.catch()` 静默处理失败。此时框架应当：
+ *   - 跳过失败截图（避免产生无意义截图噪音）
+ *   - 跳过 Allure step 记录（避免将预期失败标记为 Broken）
+ *   - 不写入失败步骤到 .pending-steps.jsonl（避免测试被误判为失败）
+ *
+ * @example
+ * ```ts
+ * import { suppressScreenshot } from "@framework/actions";
+ *
+ * async closeDialogButton(): Promise<void> {
+ *   await suppressScreenshot(
+ *     this.actions.click(by.id("dialog_OK"))
+ *   ).catch(() => {
+ *     logger.warn("弹窗不存在，跳过");
+ *   });
+ * }
+ * ```
+ */
+export async function suppressScreenshot<T>(promise: Promise<T>): Promise<T> {
+  _suppressScreenshot = true;
+  try {
+    return await promise;
+  } finally {
+    _suppressScreenshot = false;
+  }
 }
 
 // ================================================================
 //  Proxy 包装器
 // ================================================================
 
+/**
+ * 检测错误是否由 Jest 环境 teardown 导致
+ * 当 Jest vm.Context 已销毁时，WebdriverIO 等模块的 import 会抛出：
+ *   - ReferenceError: "after the Jest environment has been torn down"
+ *   - Error: "Provided module is not an instance of Module"
+ */
+function isJestEnvironmentTornDown(error: unknown): boolean {
+  if (error instanceof Error) {
+    const msg = error.message || "";
+    return (
+      msg.includes("after the Jest environment has been torn down") ||
+      msg.includes("Provided module is not an instance of Module")
+    );
+  }
+  return false;
+}
+
 const SKIP_METHODS = new Set([
   "getDriver",
   "buildDefaultCapabilities",
-  "getPlatform",
   "selectorToAppiumString",
   "resolveElement",
 ]);
@@ -375,15 +389,33 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
 
           return result;
         } catch (error: any) {
-          // 失败步骤自动截图
-          let screenshotPath = "";
-          try {
-            if (typeof (target as any).takeScreenshot === "function") {
-              screenshotPath = await (target as any).takeScreenshot(`step_fail_${Date.now()}`);
-              logger.info(`[Step] 📸 失败截图已保存: ${screenshotPath}`);
+          // 抑制模式（预期失败）：不写入失败步骤、不截图、不记录 Broken
+          // 调用方的 .catch() 会处理此错误，不应影响测试结果
+          if (_suppressScreenshot) {
+            logger.info(`[Step] ⚠ ${stepName} (suppressed): ${error.message}`);
+            throw error;
+          }
+
+          // 失败步骤自动截图（仅一次 — 若 wrapWithAllureStep 已截则复用）
+          let screenshotPath = _lastAllureScreenshotPath || "";
+          _lastAllureScreenshotPath = null;
+
+          // wrapWithAllureStep 未截图（Detox 模式）且会话仍活跃时，在此截图
+          // 同样尊重抑制标志位
+          if (
+            !screenshotPath &&
+            !isJestEnvironmentTornDown(error) &&
+            TestSessionState.isActive &&
+            !_suppressScreenshot
+          ) {
+            try {
+              if (typeof (target as any).takeScreenshot === "function") {
+                screenshotPath = await (target as any).takeScreenshot(`step_fail_${Date.now()}`);
+                logger.info(`[Step] 📸 失败截图已保存: ${screenshotPath}`);
+              }
+            } catch {
+              /* 截图失败不影响步骤记录 */
             }
-          } catch {
-            /* 截图失败不影响步骤记录 */
           }
 
           // 记录失败步骤到文件
