@@ -651,6 +651,130 @@ export class DetoxActions extends BaseActions {
     }
   }
 
+  async expectNotText(selector: DetoxSelector, text: string | RegExp): Promise<void> {
+    const elem = resolveElement(selector);
+    const selName = typeof selector === "string" ? selector : "custom matcher";
+    logger.debug(`Expecting text NOT to match in element: ${selName}`);
+    if (text instanceof RegExp) {
+      const attrs = await elem.getAttributes();
+      const actual = String((attrs as any).text ?? "");
+      if (text.test(actual)) {
+        throw new Error(
+          `Assertion Failed: expectNotText\n  Selector: "${selName}"\n  Expected: NOT /${text.source}/\n  Actual:   "${actual}"`
+        );
+      }
+    } else {
+      // 使用 detoxExpect + not 来断言文本不匹配
+      try {
+        await detoxExpect(elem).toHaveText(text);
+        // 如果没抛错，说明文本匹配了，断言失败
+        throw new Error(
+          `Assertion Failed: expectNotText\n  Selector: "${selName}"\n  Expected: NOT "${text}"\n  Actual:   "${text}"`
+        );
+      } catch (e: any) {
+        // 如果是因为 toHaveText 断言失败（即文本不匹配），则断言成功
+        if (e.message && e.message.includes("expectNotText")) {
+          throw e;
+        }
+        // toHaveText 断言失败 = 文本不匹配 = 断言成功
+      }
+    }
+  }
+
+  async expectAttribute(
+    selector: DetoxSelector,
+    attrName: string,
+    expectedValue: string | RegExp
+  ): Promise<void> {
+    const elem = resolveElement(selector);
+    const selName = typeof selector === "string" ? selector : "custom matcher";
+    logger.debug(`Expecting attribute ${attrName} on element: ${selName}`);
+    const attrs = await elem.getAttributes();
+    const actualValue = String((attrs as any)[attrName] ?? "");
+    if (expectedValue instanceof RegExp) {
+      if (!expectedValue.test(actualValue)) {
+        throw new Error(
+          `Assertion Failed: expectAttribute\n  Selector:  "${selName}"\n  Attribute: "${attrName}"\n  Expected:  /${expectedValue.source}/\n  Actual:    "${actualValue}"`
+        );
+      }
+    } else {
+      if (actualValue !== expectedValue) {
+        throw new Error(
+          `Assertion Failed: expectAttribute\n  Selector:  "${selName}"\n  Attribute: "${attrName}"\n  Expected:  "${expectedValue}"\n  Actual:    "${actualValue}"`
+        );
+      }
+    }
+  }
+
+  async expectValue(selector: DetoxSelector, expectedValue: string): Promise<void> {
+    const elem = resolveElement(selector);
+    const selName = typeof selector === "string" ? selector : "custom matcher";
+    logger.debug(`Expecting value on element: ${selName}`);
+    const attrs = await elem.getAttributes();
+    const actualValue = String((attrs as any).value ?? (attrs as any).text ?? "");
+    if (actualValue !== expectedValue) {
+      throw new Error(
+        `Assertion Failed: expectValue\n  Selector: "${selName}"\n  Expected: "${expectedValue}"\n  Actual:   "${actualValue}"`
+      );
+    }
+  }
+
+  async expectCount(selector: DetoxSelector, count: number): Promise<void> {
+    const selName = typeof selector === "string" ? selector : "custom matcher";
+    logger.debug(`Expecting element count: ${selName}`);
+    // Detox 不支持直接查询匹配元素数量，通过尝试解析元素判断是否存在
+    // 对于精确计数场景，使用 atIndex 逐个探测
+    let actualCount = 0;
+    if (typeof selector === "string") {
+      // 尝试逐步索引探测
+      for (let i = 0; i < count + 5; i++) {
+        try {
+          const elem = element(by.id(selector)).atIndex(i);
+          await detoxExpect(elem).toExist();
+          actualCount++;
+        } catch {
+          break;
+        }
+      }
+    } else {
+      // 非字符串选择器，尝试单个元素探测
+      try {
+        const elem = resolveElement(selector);
+        await detoxExpect(elem).toExist();
+        actualCount = 1;
+      } catch {
+        actualCount = 0;
+      }
+    }
+    if (actualCount !== count) {
+      throw new Error(
+        `Assertion Failed: expectCount\n  Selector: "${selName}"\n  Expected: ${count}\n  Actual:   ${actualCount}`
+      );
+    }
+  }
+
+  async expectFocused(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    const selName = typeof selector === "string" ? selector : "custom matcher";
+    logger.debug(`Expecting element focused: ${selName}`);
+    const attrs = await elem.getAttributes();
+    const isFocused = (attrs as any).focused === true;
+    if (!isFocused) {
+      throw new Error(`Assertion Failed: expectFocused\n  Selector: "${selName}"\n  Element is not focused`);
+    }
+  }
+
+  async expectNotFocused(selector: DetoxSelector): Promise<void> {
+    const elem = resolveElement(selector);
+    const selName = typeof selector === "string" ? selector : "custom matcher";
+    logger.debug(`Expecting element not focused: ${selName}`);
+    const attrs = await elem.getAttributes();
+    const isFocused = (attrs as any).focused === true;
+    if (isFocused) {
+      throw new Error(`Assertion Failed: expectNotFocused\n  Selector: "${selName}"\n  Element is focused`);
+    }
+  }
+
   // Gestures
   async swipe(direction: "up" | "down" | "left" | "right", _distance?: number): Promise<void> {
     logger.debug(`Swiping ${direction}`);

@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { Logger } from "../utils/logger";
 import { config } from "../utils/config";
 import { unifiedConfig } from "../utils/unifiedConfig";
+import { ApiResponseAssertion } from "./ApiAssertions";
 
 const logger = Logger.getInstance();
 
@@ -76,5 +77,55 @@ export class ApiClient {
 
   clearAuthToken(): void {
     delete this.client.defaults.headers.common["Authorization"];
+  }
+
+  /**
+   * 发送请求并返回断言对象，支持链式断言
+   * Send request and return assertion object for chained assertions
+   *
+   * @example
+   *   await apiClient
+   *     .getWithAssertion('/api/users')
+   *     .expectStatus(200)
+   *     .expectJsonProperty('data.length', 10)
+   *     .assert();
+   */
+  async getWithAssertion(url: string, config?: AxiosRequestConfig): Promise<ApiResponseAssertion> {
+    return this.requestWithAssertion("get", url, undefined, config);
+  }
+
+  async postWithAssertion(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<ApiResponseAssertion> {
+    return this.requestWithAssertion("post", url, data, config);
+  }
+
+  async requestWithAssertion(
+    method: "get" | "post" | "put" | "delete" | "patch",
+    url: string,
+    data?: any,
+    reqConfig?: AxiosRequestConfig
+  ): Promise<ApiResponseAssertion> {
+    const startTime = Date.now();
+    let response: AxiosResponse;
+    try {
+      response = await this.client.request({ method, url, data, ...reqConfig });
+    } catch (error: any) {
+      // 对于非 2xx 响应，axios 会抛错，但仍可提取响应信息
+      if (error.response) {
+        response = error.response;
+      } else {
+        throw error;
+      }
+    }
+    const responseTimeMs = Date.now() - startTime;
+    return new ApiResponseAssertion({
+      status: response.status,
+      data: response.data,
+      headers: response.headers as Record<string, string>,
+      responseTimeMs,
+    });
   }
 }
