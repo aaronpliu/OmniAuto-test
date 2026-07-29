@@ -950,6 +950,109 @@ export class AppiumActions extends BaseActions {
     }
   }
 
+  async expectNotText(selector: AppiumSelector, text: string | RegExp): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await this.resolveElement(driver, selector);
+    const selName = typeof selector === "string" ? selector : "custom element";
+    logger.debug(`Expecting text NOT to match in element: ${selName}`);
+    const actualText = await el.getText();
+    if (text instanceof RegExp) {
+      if (text.test(actualText)) {
+        throw new Error(
+          `Assertion Failed: expectNotText\n  Selector: "${selName}"\n  Expected: NOT /${text.source}/\n  Actual:   "${actualText}"`
+        );
+      }
+    } else {
+      if (actualText === text) {
+        throw new Error(
+          `Assertion Failed: expectNotText\n  Selector: "${selName}"\n  Expected: NOT "${text}"\n  Actual:   "${actualText}"`
+        );
+      }
+    }
+  }
+
+  async expectAttribute(
+    selector: AppiumSelector,
+    attrName: string,
+    expectedValue: string | RegExp
+  ): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await this.resolveElement(driver, selector);
+    const selName = typeof selector === "string" ? selector : "custom element";
+    logger.debug(`Expecting attribute ${attrName} on element: ${selName}`);
+    const actualValue = (await el.getAttribute(attrName)) ?? "";
+    if (expectedValue instanceof RegExp) {
+      if (!expectedValue.test(actualValue)) {
+        throw new Error(
+          `Assertion Failed: expectAttribute\n  Selector:  "${selName}"\n  Attribute: "${attrName}"\n  Expected:  /${expectedValue.source}/\n  Actual:    "${actualValue}"`
+        );
+      }
+    } else {
+      if (actualValue !== expectedValue) {
+        throw new Error(
+          `Assertion Failed: expectAttribute\n  Selector:  "${selName}"\n  Attribute: "${attrName}"\n  Expected:  "${expectedValue}"\n  Actual:    "${actualValue}"`
+        );
+      }
+    }
+  }
+
+  async expectValue(selector: AppiumSelector, expectedValue: string): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await this.resolveElement(driver, selector);
+    const selName = typeof selector === "string" ? selector : "custom element";
+    logger.debug(`Expecting value on element: ${selName}`);
+    const actualValue = (await el.getAttribute("value")) ?? "";
+    if (actualValue !== expectedValue) {
+      throw new Error(
+        `Assertion Failed: expectValue\n  Selector: "${selName}"\n  Expected: "${expectedValue}"\n  Actual:   "${actualValue}"`
+      );
+    }
+  }
+
+  async expectCount(selector: AppiumSelector, count: number): Promise<void> {
+    const driver = await this.getDriver();
+    const selName = typeof selector === "string" ? selector : "custom element";
+    logger.debug(`Expecting element count: ${selName}`);
+    let actualCount: number;
+    if (typeof selector === "string") {
+      const selectorStr = this.selectorToAppiumString(selector);
+      const elements = await driver.$$(selectorStr);
+      actualCount = elements.length;
+    } else {
+      // 非字符串选择器（已解析的元素），计数始终为 1
+      actualCount = 1;
+    }
+    if (actualCount !== count) {
+      throw new Error(
+        `Assertion Failed: expectCount\n  Selector: "${selName}"\n  Expected: ${count}\n  Actual:   ${actualCount}`
+      );
+    }
+  }
+
+  async expectFocused(selector: AppiumSelector): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await this.resolveElement(driver, selector);
+    const selName = typeof selector === "string" ? selector : "custom element";
+    logger.debug(`Expecting element focused: ${selName}`);
+    const activeEl = await driver.getActiveElement();
+    const isFocused = activeEl.elementId === el.elementId;
+    if (!isFocused) {
+      throw new Error(`Assertion Failed: expectFocused\n  Selector: "${selName}"\n  Element is not focused`);
+    }
+  }
+
+  async expectNotFocused(selector: AppiumSelector): Promise<void> {
+    const driver = await this.getDriver();
+    const el = await this.resolveElement(driver, selector);
+    const selName = typeof selector === "string" ? selector : "custom element";
+    logger.debug(`Expecting element not focused: ${selName}`);
+    const activeEl = await driver.getActiveElement();
+    const isFocused = activeEl.elementId === el.elementId;
+    if (isFocused) {
+      throw new Error(`Assertion Failed: expectNotFocused\n  Selector: "${selName}"\n  Element is focused`);
+    }
+  }
+
   // Gestures
   async swipe(direction: "up" | "down" | "left" | "right", distance?: number): Promise<void> {
     logger.debug(`Swiping ${direction}`);
