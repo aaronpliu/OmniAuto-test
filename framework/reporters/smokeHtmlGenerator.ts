@@ -114,33 +114,35 @@ export function generateSmokeHtmlReport(
       </p>
     </div>
 
-    <!-- Summary Cards -->
-    <div style="display:flex;gap:16px;padding:24px 32px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:120px;background:#f9fafb;border-radius:6px;padding:16px;text-align:center;border:1px solid #e5e7eb;">
-        <div style="font-size:28px;font-weight:700;color:#1e3a5f;">${summary.total}</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Total</div>
-      </div>
-      <div style="flex:1;min-width:120px;background:#f0fdf4;border-radius:6px;padding:16px;text-align:center;border:1px solid #bbf7d0;">
-        <div style="font-size:28px;font-weight:700;color:#16a34a;">${summary.passed}</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Passed</div>
-      </div>
-      <div style="flex:1;min-width:120px;background:#fef2f2;border-radius:6px;padding:16px;text-align:center;border:1px solid #fecaca;">
-        <div style="font-size:28px;font-weight:700;color:#dc2626;">${summary.failed}</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Failed</div>
-      </div>
-      <div style="flex:1;min-width:120px;background:#fffbeb;border-radius:6px;padding:16px;text-align:center;border:1px solid #fde68a;">
-        <div style="font-size:28px;font-weight:700;color:#d97706;">${summary.skipped}</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Skipped</div>
-      </div>
-      <div style="flex:1;min-width:120px;background:#f9fafb;border-radius:6px;padding:16px;text-align:center;border:1px solid #e5e7eb;">
-        <div style="font-size:28px;font-weight:700;color:#1e3a5f;">${summary.passRate}%</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Pass Rate</div>
-      </div>
-      <div style="flex:1;min-width:120px;background:#f9fafb;border-radius:6px;padding:16px;text-align:center;border:1px solid #e5e7eb;">
-        <div style="font-size:28px;font-weight:700;color:#1e3a5f;">${formatDuration(summary.duration)}</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Duration</div>
-      </div>
-    </div>
+    <!-- Summary Cards (table layout for Outlook compatibility) -->
+    <table role="presentation" cellpadding="0" cellspacing="8" border="0" width="100%" style="padding:16px 32px;">
+      <tr>
+        <td width="16.6%" style="background:#f9fafb;padding:16px;text-align:center;border:1px solid #e5e7eb;">
+          <div style="font-size:28px;font-weight:700;color:#1e3a5f;">${summary.total}</div>
+          <div style="font-size:12px;color:#6b7280;padding-top:4px;">Total</div>
+        </td>
+        <td width="16.6%" style="background:#f0fdf4;padding:16px;text-align:center;border:1px solid #bbf7d0;">
+          <div style="font-size:28px;font-weight:700;color:#16a34a;">${summary.passed}</div>
+          <div style="font-size:12px;color:#6b7280;padding-top:4px;">Passed</div>
+        </td>
+        <td width="16.6%" style="background:#fef2f2;padding:16px;text-align:center;border:1px solid #fecaca;">
+          <div style="font-size:28px;font-weight:700;color:#dc2626;">${summary.failed}</div>
+          <div style="font-size:12px;color:#6b7280;padding-top:4px;">Failed</div>
+        </td>
+        <td width="16.6%" style="background:#fffbeb;padding:16px;text-align:center;border:1px solid #fde68a;">
+          <div style="font-size:28px;font-weight:700;color:#d97706;">${summary.skipped}</div>
+          <div style="font-size:12px;color:#6b7280;padding-top:4px;">Skipped</div>
+        </td>
+        <td width="16.6%" style="background:#f9fafb;padding:16px;text-align:center;border:1px solid #e5e7eb;">
+          <div style="font-size:28px;font-weight:700;color:#1e3a5f;">${summary.passRate}%</div>
+          <div style="font-size:12px;color:#6b7280;padding-top:4px;">Pass Rate</div>
+        </td>
+        <td width="16.6%" style="background:#f9fafb;padding:16px;text-align:center;border:1px solid #e5e7eb;">
+          <div style="font-size:28px;font-weight:700;color:#1e3a5f;">${formatDuration(summary.duration)}</div>
+          <div style="font-size:12px;color:#6b7280;padding-top:4px;">Duration</div>
+        </td>
+      </tr>
+    </table>
 
     <!-- Test Cases Table -->
     <div style="padding:0 32px 32px;">
