@@ -221,6 +221,131 @@ export class PlaywrightActions extends BaseActions {
     }
   }
 
+  async expectNotText(selector: TSelector, text: string | RegExp): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting text NOT to match in element: ${sel}`);
+    const actualText = (await this.page.textContent(sel)) || "";
+    if (text instanceof RegExp) {
+      if (text.test(actualText)) {
+        throw new Error(
+          `Assertion Failed: expectNotText\n  Selector: "${sel}"\n  Expected: NOT /${text.source}/\n  Actual:   "${actualText}"`
+        );
+      }
+    } else {
+      if (actualText === text) {
+        throw new Error(
+          `Assertion Failed: expectNotText\n  Selector: "${sel}"\n  Expected: NOT "${text}"\n  Actual:   "${actualText}"`
+        );
+      }
+    }
+  }
+
+  async expectAttribute(
+    selector: TSelector,
+    attrName: string,
+    expectedValue: string | RegExp
+  ): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting attribute ${attrName} on element: ${sel}`);
+    const actualValue = (await this.page.getAttribute(sel, attrName)) ?? "";
+    if (expectedValue instanceof RegExp) {
+      if (!expectedValue.test(actualValue)) {
+        throw new Error(
+          `Assertion Failed: expectAttribute\n  Selector:  "${sel}"\n  Attribute: "${attrName}"\n  Expected:  /${expectedValue.source}/\n  Actual:    "${actualValue}"`
+        );
+      }
+    } else {
+      if (actualValue !== expectedValue) {
+        throw new Error(
+          `Assertion Failed: expectAttribute\n  Selector:  "${sel}"\n  Attribute: "${attrName}"\n  Expected:  "${expectedValue}"\n  Actual:    "${actualValue}"`
+        );
+      }
+    }
+  }
+
+  async expectValue(selector: TSelector, expectedValue: string): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting value on element: ${sel}`);
+    const actualValue = (await this.page.inputValue(sel)) ?? "";
+    if (actualValue !== expectedValue) {
+      throw new Error(
+        `Assertion Failed: expectValue\n  Selector: "${sel}"\n  Expected: "${expectedValue}"\n  Actual:   "${actualValue}"`
+      );
+    }
+  }
+
+  async expectCount(selector: TSelector, count: number): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element count: ${sel}`);
+    const actualCount = await this.page.locator(sel).count();
+    if (actualCount !== count) {
+      throw new Error(
+        `Assertion Failed: expectCount\n  Selector: "${sel}"\n  Expected: ${count}\n  Actual:   ${actualCount}`
+      );
+    }
+  }
+
+  async expectFocused(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element focused: ${sel}`);
+    const isFocused = await this.page.locator(sel).evaluate((el: any) => el === document.activeElement);
+    if (!isFocused) {
+      throw new Error(`Assertion Failed: expectFocused\n  Selector: "${sel}"\n  Element is not focused`);
+    }
+  }
+
+  async expectNotFocused(selector: TSelector): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Expecting element not focused: ${sel}`);
+    const isFocused = await this.page.locator(sel).evaluate((el: any) => el === document.activeElement);
+    if (isFocused) {
+      throw new Error(`Assertion Failed: expectNotFocused\n  Selector: "${sel}"\n  Element is focused`);
+    }
+  }
+
+  async waitForElementToExist(selector: TSelector, timeout = 10000): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Waiting for element to exist: ${sel}`);
+    await this.page.waitForSelector(sel, { state: "attached", timeout });
+  }
+
+  async waitForElementToDisappear(selector: TSelector, timeout = 5000): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Waiting for element to disappear: ${sel}`);
+    await this.page.waitForSelector(sel, { state: "hidden", timeout });
+  }
+
+  async waitForElementToBeEnabled(selector: TSelector, timeout = 10000): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Waiting for element to be enabled: ${sel}`);
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const isDisabled = await this.page.getAttribute(sel, "disabled");
+      if (isDisabled === null) {
+        return;
+      }
+      await this.page.waitForTimeout(200);
+    }
+    throw new Error(`Element did not become enabled within ${timeout}ms`);
+  }
+
+  async waitForText(selector: TSelector, text: string, timeout = 10000): Promise<void> {
+    const sel = this.resolveSelector(selector);
+    logger.debug(`Waiting for text "${text}" in element: ${sel}`);
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const actualText = (await this.page.textContent(sel)) || "";
+      if (actualText.includes(text)) {
+        return;
+      }
+      await this.page.waitForTimeout(200);
+    }
+    const finalText = (await this.page.textContent(sel)) || "";
+    throw new Error(
+      `Text "${text}" not found within ${timeout}ms. Actual text: "${finalText}"`
+    );
+  }
+
   // Gestures
   async swipe(direction: "up" | "down" | "left" | "right", distance?: number): Promise<void> {
     logger.debug(`Swiping ${direction}`);

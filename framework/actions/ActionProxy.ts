@@ -20,6 +20,10 @@ import {
   isIndexedSelector,
 } from "../utils/SelectorBuilder";
 import { TestSessionState } from "../utils/testSessionState";
+import {
+  captureDiagnostics,
+  attachDiagnosticsToAllure,
+} from "../utils/assertionDiagnostics";
 
 const logger = Logger.getInstance();
 
@@ -54,19 +58,25 @@ function writeStepToFile(step: Record<string, unknown>): void {
 let _lastAllureScreenshotPath: string | null = null;
 
 /**
- * 截图抑制标志位
- * 由 suppressScreenshot() 设置，告知 wrapWithAllureStep 和 Proxy catch
- * 跳过截图——用于业务脚本已用 .catch() 显式处理的预期失败操作。
+ * 可选操作标志位
+ * 由 tryAction() 设置，告知 wrapWithAllureStep 和 Proxy catch
+ * 跳过截图和失败记录——用于可能失败的可选操作（如关闭弹窗）。
  */
-let _suppressScreenshot = false;
+let _tryActionMode = false;
 
 /**
- * 抑制模式下的延迟错误
- * 当 _suppressScreenshot 为 true 且 fn() 抛出异常时，
- * 在 step() 内部吞掉错误（让 step 正常结束为 passed），
- * 然后在 step() 返回后重新抛出，避免 allure-js-commons 标记为 Broken。
+ * 软断言上下文
+ * 当 SoftAssert.check() 执行时，设置此变量以收集断言失败而不是抛出。
  */
-let _deferredError: unknown = null;
+let _activeSoftAssert: { collectError: (error: Error) => void } | null = null;
+
+/**
+ * 设置软断言上下文（由 SoftAssert 内部调用）
+ * @internal
+ */
+export function _setSoftAssertContext(ctx: { collectError: (error: Error) => void } | null): void {
+  _activeSoftAssert = ctx;
+}
 
 // ================================================================
 //  生成可读步骤名称
@@ -153,6 +163,23 @@ function buildStepName(method: string, args: unknown[]): string {
     parts.push("验证存在", selectorName(args[0]));
   } else if (method === "expectNotExist") {
     parts.push("验证不存在", selectorName(args[0]));
+  } else if (method === "expectNotText") {
+    const textArg = args[1];
+    if (textArg instanceof RegExp) {
+      parts.push("验证文本不匹配", selectorName(args[0]), `/${textArg.source}/`);
+    } else {
+      parts.push("验证文本不是", selectorName(args[0]), argName(args[1]));
+    }
+  } else if (method === "expectAttribute") {
+    parts.push("验证属性", selectorName(args[0]), argName(args[1]), argName(args[2]));
+  } else if (method === "expectValue") {
+    parts.push("验证值", selectorName(args[0]), argName(args[1]));
+  } else if (method === "expectCount") {
+    parts.push("验证元素数量", selectorName(args[0]), String(args[1]));
+  } else if (method === "expectFocused") {
+    parts.push("验证聚焦", selectorName(args[0]));
+  } else if (method === "expectNotFocused") {
+    parts.push("验证非聚焦", selectorName(args[0]));
   } else if (method.startsWith("waitForElement")) {
     if (method === "waitForElement") {
       const notVisible = args[2] === true;
@@ -243,19 +270,14 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target:
     return await fn();
   }
 
-  // step() 在此处调用，其内部异常（包括 fn() 抛出的业务异常）会原样向上传播
-  // 不再有外层 try-catch 吞异常 → 杜绝 fn() 被执行两次的 BUG
-  // 抑制模式：在 step() 内部吞掉错误（step 标记为 passed），之后再重新抛出
-  _deferredError = null;
   const result = await step(name, async () => {
     try {
       return await fn();
     } catch (innerErr: any) {
-      // 抑制模式（预期失败）：吞掉错误，让 step 正常结束为 passed
-      // 错误延迟到 step() 返回后由调用方重新抛出
-      if (_suppressScreenshot) {
-        _deferredError = innerErr;
-        return undefined as T; // step 正常返回，标记为 passed
+      // 可选操作模式（tryAction）：吞掉错误，让 step 正常结束为 passed
+      // 错误会由 tryAction 外层 catch 处理，不在 Allure 中标记为 Broken
+      if (_tryActionMode) {
+        return undefined as T;
       }
 
       // 步骤失败时截屏并附加到当前 Allure step 上下文中
@@ -276,48 +298,45 @@ async function wrapWithAllureStep<T>(name: string, fn: () => Promise<T>, target:
     }
   });
 
-  // step() 已正常结束（passed），现在重新抛出延迟的错误
-  if (_deferredError !== null) {
-    const err = _deferredError;
-    _deferredError = null;
-    throw err;
-  }
-
   return result;
 }
 
 // ================================================================
-//  截图抑制 API（供业务脚本标记预期失败操作）
+//  可选操作 API（tryAction）
 // ================================================================
 
 /**
- * 抑制截图及 Allure 失败记录 — 用于包裹已知可能失败且已用 .catch() 处理的操作。
+ * 尝试执行一个可选操作，失败时不抛出异常。
  *
- * 当 Page Object 中的某个操作属于「可选步骤」（如关闭可能不存在的弹窗），
- * 调用方通常用 `.catch()` 静默处理失败。此时框架应当：
- *   - 跳过失败截图（避免产生无意义截图噪音）
- *   - 跳过 Allure step 记录（避免将预期失败标记为 Broken）
- *   - 不写入失败步骤到 .pending-steps.jsonl（避免测试被误判为失败）
+ * 用于可能失败的可选步骤（如关闭可能不存在的弹窗），
+ * 内部自动抑制截图和 Allure 失败记录，返回布尔值表示成功与否。
+ *
+ * @param fn - 包含 actions 操作的异步函数
+ * @returns `true` 表示操作成功，`false` 表示操作失败（已静默处理）
  *
  * @example
  * ```ts
- * import { suppressScreenshot } from "@framework/actions";
+ * import { tryAction } from "@framework/actions";
  *
- * async closeDialogButton(): Promise<void> {
- *   await suppressScreenshot(
- *     this.actions.click(by.id("dialog_OK"))
- *   ).catch(() => {
- *     logger.warn("弹窗不存在，跳过");
- *   });
+ * async closeOptionalDialog(): Promise<void> {
+ *   const dismissed = await tryAction(
+ *     () => this.actions.click(by.id("dialog_OK"))
+ *   );
+ *   if (!dismissed) {
+ *     logger.debug("弹窗不存在，跳过");
+ *   }
  * }
  * ```
  */
-export async function suppressScreenshot<T>(promise: Promise<T>): Promise<T> {
-  _suppressScreenshot = true;
+export async function tryAction(fn: () => Promise<unknown>): Promise<boolean> {
+  _tryActionMode = true;
   try {
-    return await promise;
+    await fn();
+    return true;
+  } catch {
+    return false;
   } finally {
-    _suppressScreenshot = false;
+    _tryActionMode = false;
   }
 }
 
@@ -389,10 +408,10 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
 
           return result;
         } catch (error: any) {
-          // 抑制模式（预期失败）：不写入失败步骤、不截图、不记录 Broken
-          // 调用方的 .catch() 会处理此错误，不应影响测试结果
-          if (_suppressScreenshot) {
-            logger.info(`[Step] ⚠ ${stepName} (suppressed): ${error.message}`);
+          // 可选操作模式（tryAction）：不截图、不记录失败、不诊断
+          // tryAction 外层会捕获此错误并返回 false
+          if (_tryActionMode) {
+            logger.info(`[Step] ⚠ ${stepName} (optional, skipped): ${error.message}`);
             throw error;
           }
 
@@ -406,7 +425,7 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
             !screenshotPath &&
             !isJestEnvironmentTornDown(error) &&
             TestSessionState.isActive &&
-            !_suppressScreenshot
+            !_tryActionMode
           ) {
             try {
               if (typeof (target as any).takeScreenshot === "function") {
@@ -415,6 +434,28 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
               }
             } catch {
               /* 截图失败不影响步骤记录 */
+            }
+          }
+
+          // 断言失败自动诊断：当 expect* 方法失败时，收集元素属性和截图
+          if (
+            prop.startsWith("expect") &&
+            TestSessionState.isActive &&
+            !isJestEnvironmentTornDown(error) &&
+            !_tryActionMode
+          ) {
+            try {
+              const selector = args[0] as any;
+              const diagnostic = await captureDiagnostics(
+                target,
+                selector,
+                prop,
+                error.message || String(error)
+              );
+              await attachDiagnosticsToAllure(diagnostic);
+              logger.debug(`[Step] Diagnostics captured for ${prop}`);
+            } catch {
+              // 诊断收集失败不影响主流程
             }
           }
 
@@ -428,6 +469,15 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
             screenshot: screenshotPath || undefined,
           });
           logger.info(`[Step] ✗ ${stepName}: ${error.message}`);
+
+          // 软断言模式：断言失败收集到 SoftAssert 实例而不抛出
+          if (_activeSoftAssert && prop.startsWith("expect")) {
+            _activeSoftAssert.collectError(
+              error instanceof Error ? error : new Error(String(error))
+            );
+            logger.info(`[Step] ✗ ${stepName} (soft assert collected)`);
+            return undefined;
+          }
 
           throw error;
         }
