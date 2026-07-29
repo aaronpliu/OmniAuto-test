@@ -111,15 +111,29 @@ export interface IActions {
   // Assertions
   /** 等待元素可见（isNotVisible=false）或不可见（isNotVisible=true） */
   waitForElement(selector: TSelector, timeout?: number, isNotVisible?: boolean): Promise<void>;
+  /** 等待元素存在于 DOM/UI 层级中 */
+  waitForElementToExist(selector: TSelector, timeout?: number): Promise<void>;
+  /** 等待元素消失（不可见或不存在） */
+  waitForElementToDisappear(selector: TSelector, timeout?: number): Promise<void>;
+  /** 等待元素变为可交互状态 */
+  waitForElementToBeEnabled(selector: TSelector, timeout?: number): Promise<void>;
+  /** 等待元素文本包含指定内容 */
+  waitForText(selector: TSelector, text: string, timeout?: number): Promise<void>;
   /** 验证元素可见（isNotVisible=false）或不可见（isNotVisible=true） */
   expectVisible(selector: TSelector, isNotVisible?: boolean): Promise<void>;
   expectNotVisible(selector: TSelector): Promise<void>;
   expectExist(selector: TSelector): Promise<void>;
   expectNotExist(selector: TSelector): Promise<void>;
   expectText(selector: TSelector, text: string | RegExp): Promise<void>;
+  expectNotText(selector: TSelector, text: string | RegExp): Promise<void>;
   expectContainsText(selector: TSelector, text: string): Promise<void>;
   expectEnabled(selector: TSelector): Promise<void>;
   expectDisabled(selector: TSelector): Promise<void>;
+  expectAttribute(selector: TSelector, attrName: string, expectedValue: string | RegExp): Promise<void>;
+  expectValue(selector: TSelector, expectedValue: string): Promise<void>;
+  expectCount(selector: TSelector, count: number): Promise<void>;
+  expectFocused(selector: TSelector): Promise<void>;
+  expectNotFocused(selector: TSelector): Promise<void>;
 
   // Gestures
   swipe(direction: "up" | "down" | "left" | "right", distance?: number): Promise<void>;
