@@ -27,15 +27,29 @@ export abstract class BaseActions implements IActions {
     timeout?: number,
     isNotVisible?: boolean
   ): Promise<void>;
+  abstract waitForElementToExist(selector: TSelector, timeout?: number): Promise<void>;
+  abstract waitForElementToDisappear(selector: TSelector, timeout?: number): Promise<void>;
+  abstract waitForElementToBeEnabled(selector: TSelector, timeout?: number): Promise<void>;
+  abstract waitForText(selector: TSelector, text: string, timeout?: number): Promise<void>;
   /** 验证元素可见（isNotVisible=false）或不可见（isNotVisible=true） */
   abstract expectVisible(selector: TSelector, isNotVisible?: boolean): Promise<void>;
   abstract expectNotVisible(selector: TSelector): Promise<void>;
   abstract expectExist(selector: TSelector): Promise<void>;
   abstract expectNotExist(selector: TSelector): Promise<void>;
   abstract expectText(selector: TSelector, text: string | RegExp): Promise<void>;
+  abstract expectNotText(selector: TSelector, text: string | RegExp): Promise<void>;
   abstract expectContainsText(selector: TSelector, text: string): Promise<void>;
   abstract expectEnabled(selector: TSelector): Promise<void>;
   abstract expectDisabled(selector: TSelector): Promise<void>;
+  abstract expectAttribute(
+    selector: TSelector,
+    attrName: string,
+    expectedValue: string | RegExp
+  ): Promise<void>;
+  abstract expectValue(selector: TSelector, expectedValue: string): Promise<void>;
+  abstract expectCount(selector: TSelector, count: number): Promise<void>;
+  abstract expectFocused(selector: TSelector): Promise<void>;
+  abstract expectNotFocused(selector: TSelector): Promise<void>;
 
   // Gestures
   abstract swipe(direction: "up" | "down" | "left" | "right", distance?: number): Promise<void>;
