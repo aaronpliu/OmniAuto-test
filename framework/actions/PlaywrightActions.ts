@@ -288,18 +288,26 @@ export class PlaywrightActions extends BaseActions {
   async expectFocused(selector: TSelector): Promise<void> {
     const sel = this.resolveSelector(selector);
     logger.debug(`Expecting element focused: ${sel}`);
-    const isFocused = await this.page.locator(sel).evaluate((el: any) => el === document.activeElement);
+    const isFocused = await this.page
+      .locator(sel)
+      .evaluate((el: any) => el === document.activeElement);
     if (!isFocused) {
-      throw new Error(`Assertion Failed: expectFocused\n  Selector: "${sel}"\n  Element is not focused`);
+      throw new Error(
+        `Assertion Failed: expectFocused\n  Selector: "${sel}"\n  Element is not focused`
+      );
     }
   }
 
   async expectNotFocused(selector: TSelector): Promise<void> {
     const sel = this.resolveSelector(selector);
     logger.debug(`Expecting element not focused: ${sel}`);
-    const isFocused = await this.page.locator(sel).evaluate((el: any) => el === document.activeElement);
+    const isFocused = await this.page
+      .locator(sel)
+      .evaluate((el: any) => el === document.activeElement);
     if (isFocused) {
-      throw new Error(`Assertion Failed: expectNotFocused\n  Selector: "${sel}"\n  Element is focused`);
+      throw new Error(
+        `Assertion Failed: expectNotFocused\n  Selector: "${sel}"\n  Element is focused`
+      );
     }
   }
 
@@ -341,9 +349,7 @@ export class PlaywrightActions extends BaseActions {
       await this.page.waitForTimeout(200);
     }
     const finalText = (await this.page.textContent(sel)) || "";
-    throw new Error(
-      `Text "${text}" not found within ${timeout}ms. Actual text: "${finalText}"`
-    );
+    throw new Error(`Text "${text}" not found within ${timeout}ms. Actual text: "${finalText}"`);
   }
 
   // Gestures

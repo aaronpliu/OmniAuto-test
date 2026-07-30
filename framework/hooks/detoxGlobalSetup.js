@@ -12,6 +12,39 @@
 const fs = require("fs");
 const path = require("path");
 
+/**
+ * 清理 allure-results 目录中的旧文件，避免多次运行的结果混合导致
+ * Allure 报告出现重复测试用例或 "Unknown" 条目。
+ */
+function cleanAllureResults() {
+  var resultsDir = path.join(process.cwd(), "artifacts", "allure-results");
+  if (!fs.existsSync(resultsDir)) {
+    return;
+  }
+  try {
+    var files = fs.readdirSync(resultsDir);
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      if (
+        file.endsWith("-result.json") ||
+        file.endsWith("-container.json") ||
+        file.endsWith("-attachment.png") ||
+        file.endsWith("-attachment.txt") ||
+        file.endsWith("-attachment.md") ||
+        file.endsWith("-attachment.webm") ||
+        file.endsWith("-attachment.zip") ||
+        file === ".pending-steps.jsonl" ||
+        file === ".pending-attach.jsonl"
+      ) {
+        fs.unlinkSync(path.join(resultsDir, file));
+      }
+    }
+    console.log("[DetoxSetup] 已清理 allure-results 目录中的旧结果文件");
+  } catch (err) {
+    console.warn("[DetoxSetup] 清理 allure-results 失败: " + (err.message || err));
+  }
+}
+
 /** 生成会话目录名：omnitest-{platform}-2026-07-20T11-26-30+0800 */
 function generateSessionDirName() {
   var now = new Date();
@@ -58,6 +91,9 @@ function ensureSessionDir() {
 }
 
 module.exports = async function () {
+  // 0. 清理上次运行的 Allure 结果，防止新旧数据混合
+  cleanAllureResults();
+
   // 1. 先设置 OMNITEST_SESSION_DIR（在 Host 进程层面，全局可见）
   ensureSessionDir();
 

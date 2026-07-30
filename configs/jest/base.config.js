@@ -25,7 +25,7 @@ module.exports = {
     "^@tests/(.*)$": "<rootDir>/tests/$1",
     "^@configs/(.*)$": "<rootDir>/configs/$1",
   },
-  setupFilesAfterEnv: ["<rootDir>/framework/hooks/globalSetup.ts"],
+  setupFilesAfterEnv: [],
   reporters: ["default"],
   transform: {
     "^.+\\.tsx?$": [
