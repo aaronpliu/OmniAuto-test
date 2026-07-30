@@ -133,7 +133,11 @@
       }
     },
     {
-      "files": ["plugins/**/*.ts", "core/reporting/**/*.ts"],
+      "files": [
+        "plugins/**/*.ts",
+        "core/reporting/**/*.ts",
+        "platform-api/**/*.ts"
+      ],
       "rules": {
         "@typescript-eslint/no-explicit-any": "warn",
         "@typescript-eslint/no-unsafe-argument": "warn",

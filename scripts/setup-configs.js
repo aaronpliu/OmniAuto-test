@@ -56,3 +56,22 @@ if (skippedCount > 0) {
 if (createdCount === 0 && skippedCount === 0) {
   console.log("[setup-configs] 无需生成任何本地配置文件");
 }
+
+// ---- plugins.json 自动生成 ----
+const pluginsFile = path.join(CONFIGS_DIR, "plugins.json");
+if (!fs.existsSync(pluginsFile)) {
+  const defaultPlugins = {
+    detox: { enabled: true },
+    appium: { enabled: true },
+    playwright: { enabled: true },
+    api: { enabled: true },
+  };
+  try {
+    fs.writeFileSync(pluginsFile, JSON.stringify(defaultPlugins, null, 2) + "\n");
+    console.log("[setup-configs] 已生成 configs/plugins.json");
+  } catch (err) {
+    console.error(`[setup-configs] 生成 plugins.json 失败: ${err.message}`);
+  }
+} else {
+  console.log("[setup-configs] configs/plugins.json 已存在，跳过");
+}

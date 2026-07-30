@@ -1,0 +1,6 @@
+{
+  "detox": { "enabled": true },
+  "appium": { "enabled": true },
+  "playwright": { "enabled": true },
+  "api": { "enabled": true }
+}

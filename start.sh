@@ -60,6 +60,7 @@ show_help() {
     echo -e "  ${YELLOW}appium:start${NC}          启动本地 Appium Server / Start local Appium Server"
     echo -e "  ${YELLOW}appium:stop${NC}           停止本地 Appium Server / Stop local Appium Server"
     echo -e "  ${YELLOW}clean${NC}                 清理环境和缓存 / Clean environment and cache"
+    echo -e "  ${YELLOW}plugin${NC}                插件管理 / Plugin management"
     echo -e "  ${YELLOW}-h, --help${NC}            显示此帮助 / Show this help"
     echo ""
     echo -e "  ${DIM}不传参时显示交互式菜单 / Shows interactive menu when no args given${NC}"
@@ -98,6 +99,13 @@ show_help() {
     echo "    ./start.sh test:android tests/mobile/"
     echo "    ./start.sh test:android --testPathPattern=login"
     echo "    ./start.sh test:web -g \"用户登录\""
+    echo ""
+    echo -e "${GREEN}插件管理 / Plugin Management:${NC}"
+    echo ""
+    echo -e "  ${YELLOW}plugin list${NC}              列出插件状态 / List plugin status"
+    echo -e "  ${YELLOW}plugin enable${NC} <name>    启用插件 / Enable plugin"
+    echo -e "  ${YELLOW}plugin disable${NC} <name>   禁用插件 / Disable plugin"
+    echo -e "  ${DIM}可用插件: detox, appium, playwright, api${NC}"
     echo ""
     echo -e "${GREEN}示例 / Examples:${NC}"
     echo ""
@@ -381,10 +389,23 @@ run_api_test() {
     npm run test:api -- "$@"
 }
 
-# 运行所有测试
+# 运行所有测试（动态，仅运行已启用插件的测试）
 run_all_tests() {
-    print_info "运行所有测试..."
-    npm run test:all
+    print_info "运行所有已启用插件的测试..."
+    local failed=0
+    if is_plugin_enabled "detox"; then
+        run_ios_test || failed=1
+    fi
+    if is_plugin_enabled "appium"; then
+        run_android_test || failed=1
+    fi
+    if is_plugin_enabled "playwright"; then
+        run_web_test || failed=1
+    fi
+    if is_plugin_enabled "api"; then
+        run_api_test || failed=1
+    fi
+    return $failed
 }
 
 # 生成测试报告
@@ -410,22 +431,138 @@ clean_environment() {
     print_success "环境清理完成"
 }
 
-# 菜单项定义
-MENU_ITEMS=(
-    "安装依赖 / Install dependencies"
-    "启动本地 Appium Server / Start local Appium Server"
-    "停止本地 Appium Server / Stop local Appium Server"
-    "运行 iOS 测试 (Detox) / Run iOS tests (Detox)"
-    "运行 iOS 测试 (Appium) / Run iOS tests (Appium)"
-    "运行 Android 测试 (Appium) / Run Android tests (Appium)"
-    "运行 Android 测试 (Detox) / Run Android tests (Detox)"
-    "运行 Web 测试 / Run Web tests"
-    "运行 API 测试 / Run API tests"
-    "运行所有测试 / Run all tests"
-    "生成测试报告 / Generate test report"
-    "清理环境 / Clean environment"
-    "退出 / Exit"
-)
+# ========== 插件管理 / Plugin Management ==========
+
+# 检查指定插件是否启用
+is_plugin_enabled() {
+    local plugin="$1"
+    if [ -f "configs/plugins.json" ] && command -v node &>/dev/null; then
+        node -e "
+            const p = require('./configs/plugins.json');
+            process.exit(p['$plugin']?.enabled !== false ? 0 : 1);
+        " 2>/dev/null
+    else
+        return 0  # 无配置文件时默认全部启用（向后兼容）
+    fi
+}
+
+# 列出所有插件状态
+list_plugins() {
+    if [ ! -f "configs/plugins.json" ]; then
+        print_warning "configs/plugins.json 不存在，所有插件默认启用"
+        echo "  detox:      enabled"
+        echo "  appium:     enabled"
+        echo "  playwright: enabled"
+        echo "  api:        enabled"
+        return 0
+    fi
+    print_info "插件状态 / Plugin Status:"
+    node -e "
+        const p = require('./configs/plugins.json');
+        for (const [name, cfg] of Object.entries(p)) {
+            const status = cfg.enabled !== false ? 'enabled' : 'disabled';
+            console.log('  ' + name.padEnd(12) + status);
+        }
+    "
+}
+
+# 启用插件
+enable_plugin() {
+    local plugin="$1"
+    if [ -z "$plugin" ]; then
+        print_error "请指定插件名: detox, appium, playwright, api"
+        return 1
+    fi
+    if [ ! -f "configs/plugins.json" ]; then
+        print_error "configs/plugins.json 不存在"
+        return 1
+    fi
+    node -e "
+        const fs = require('fs');
+        const p = JSON.parse(fs.readFileSync('configs/plugins.json', 'utf-8'));
+        if (!p['$plugin']) { p['$plugin'] = {}; }
+        p['$plugin'].enabled = true;
+        fs.writeFileSync('configs/plugins.json', JSON.stringify(p, null, 2) + '\n');
+    " && print_success "插件 $plugin 已启用" || print_error "启用插件 $plugin 失败"
+}
+
+# 禁用插件
+disable_plugin() {
+    local plugin="$1"
+    if [ -z "$plugin" ]; then
+        print_error "请指定插件名: detox, appium, playwright, api"
+        return 1
+    fi
+    if [ ! -f "configs/plugins.json" ]; then
+        print_error "configs/plugins.json 不存在"
+        return 1
+    fi
+    node -e "
+        const fs = require('fs');
+        const p = JSON.parse(fs.readFileSync('configs/plugins.json', 'utf-8'));
+        if (!p['$plugin']) { p['$plugin'] = {}; }
+        p['$plugin'].enabled = false;
+        fs.writeFileSync('configs/plugins.json', JSON.stringify(p, null, 2) + '\n');
+    " && print_success "插件 $plugin 已禁用" || print_error "禁用插件 $plugin 失败"
+}
+
+# 动态菜单构建 — 仅显示已启用插件对应的操作
+MENU_ITEMS=()
+MENU_ACTIONS=()
+
+build_menu_items() {
+    MENU_ITEMS=()
+    MENU_ACTIONS=()
+
+    MENU_ITEMS+=("安装依赖 / Install dependencies")
+    MENU_ACTIONS+=("install_dependencies")
+
+    if is_plugin_enabled "appium"; then
+        MENU_ITEMS+=("启动本地 Appium Server / Start local Appium Server")
+        MENU_ACTIONS+=("start_appium_local")
+        MENU_ITEMS+=("停止本地 Appium Server / Stop local Appium Server")
+        MENU_ACTIONS+=("stop_appium_local")
+    fi
+
+    if is_plugin_enabled "detox"; then
+        MENU_ITEMS+=("运行 iOS 测试 (Detox) / Run iOS tests (Detox)")
+        MENU_ACTIONS+=("run_ios_test")
+    fi
+
+    if is_plugin_enabled "appium"; then
+        MENU_ITEMS+=("运行 iOS 测试 (Appium) / Run iOS tests (Appium)")
+        MENU_ACTIONS+=("run_ios_appium_test")
+        MENU_ITEMS+=("运行 Android 测试 (Appium) / Run Android tests (Appium)")
+        MENU_ACTIONS+=("run_android_test")
+    fi
+
+    if is_plugin_enabled "detox"; then
+        MENU_ITEMS+=("运行 Android 测试 (Detox) / Run Android tests (Detox)")
+        MENU_ACTIONS+=("run_android_detox_test")
+    fi
+
+    if is_plugin_enabled "playwright"; then
+        MENU_ITEMS+=("运行 Web 测试 / Run Web tests")
+        MENU_ACTIONS+=("run_web_test")
+    fi
+
+    if is_plugin_enabled "api"; then
+        MENU_ITEMS+=("运行 API 测试 / Run API tests")
+        MENU_ACTIONS+=("run_api_test")
+    fi
+
+    # 通用项（不依赖插件）
+    MENU_ITEMS+=("运行所有测试 / Run all tests")
+    MENU_ACTIONS+=("run_all_tests")
+    MENU_ITEMS+=("生成测试报告 / Generate test report")
+    MENU_ACTIONS+=("generate_report")
+    MENU_ITEMS+=("清理环境 / Clean environment")
+    MENU_ACTIONS+=("clean_environment")
+    MENU_ITEMS+=("插件管理 / Plugin management")
+    MENU_ACTIONS+=("list_plugins")
+    MENU_ITEMS+=("退出 / Exit")
+    MENU_ACTIONS+=("exit_program")
+}
 
 # 显示菜单（带高亮）
 # $1: 当前选中项索引
@@ -507,30 +644,35 @@ handle_menu_selection() {
     done
 }
 
-# 执行菜单对应的操作
+# 执行菜单对应的操作（通过 MENU_ACTIONS 数组动态分发）
 execute_menu_action() {
     local choice=$1
+    local action="${MENU_ACTIONS[$choice]}"
     local _menu_rc=0
 
-    case $choice in
-        0)  install_dependencies ;;
-        1)
+    case "$action" in
+        install_dependencies)  install_dependencies ;;
+        start_appium_local)
             check_appium
             start_appium_local
             ;;
-        2)  stop_appium_local ;;
-        3)  ensure_deps_and_run "iOS 测试运行失败" run_ios_test ;;
-        4)  ensure_deps_and_run "iOS (Appium) 测试运行失败" run_ios_appium_test ;;
-        5)  ensure_deps_and_run "Android (Appium) 测试运行失败" run_android_test ;;
-        6)  ensure_deps_and_run "Android (Detox) 测试运行失败" run_android_detox_test ;;
-        7)  ensure_deps_and_run "Web 测试运行失败" run_web_test ;;
-        8)  ensure_deps_and_run "API 测试运行失败" run_api_test ;;
-        9)  ensure_deps_and_run "测试运行失败" run_all_tests ;;
-        10) generate_report ;;
-        11) clean_environment ;;
-        12)
+        stop_appium_local)     stop_appium_local ;;
+        run_ios_test)          ensure_deps_and_run "iOS 测试运行失败" run_ios_test ;;
+        run_ios_appium_test)   ensure_deps_and_run "iOS (Appium) 测试运行失败" run_ios_appium_test ;;
+        run_android_test)      ensure_deps_and_run "Android (Appium) 测试运行失败" run_android_test ;;
+        run_android_detox_test) ensure_deps_and_run "Android (Detox) 测试运行失败" run_android_detox_test ;;
+        run_web_test)          ensure_deps_and_run "Web 测试运行失败" run_web_test ;;
+        run_api_test)          ensure_deps_and_run "API 测试运行失败" run_api_test ;;
+        run_all_tests)         ensure_deps_and_run "测试运行失败" run_all_tests ;;
+        generate_report)       generate_report ;;
+        clean_environment)     clean_environment ;;
+        list_plugins)          list_plugins ;;
+        exit_program)
             print_info "退出程序 / Exiting program"
             exit 0
+            ;;
+        *)
+            print_warning "未知操作: $action"
             ;;
     esac
     _menu_rc=$?
@@ -552,6 +694,7 @@ main() {
 
     # 如果没有参数，显示交互式菜单
     if [ $# -eq 0 ]; then
+        build_menu_items  # 动态构建菜单
         MENU_TMP=$(dirname "$(mktemp -u)")/omni-menu-choice 2>/dev/null || MENU_TMP=/tmp/omni-menu-choice
         while true; do
             MENU_SELECTION=""
@@ -572,6 +715,9 @@ main() {
             echo ""
             read -rs -n1 -p "按任意键返回菜单... / Press any key to return to menu..."
             echo ""
+
+            # 重新构建菜单（插件状态可能已变更）
+            build_menu_items
         done
     else
         # 根据参数执行对应操作
@@ -587,21 +733,51 @@ main() {
                 stop_appium_local || exit 1
                 ;;
             test:ios)
+                if ! is_plugin_enabled "detox"; then
+                    print_error "Detox 插件未启用，无法运行 iOS (Detox) 测试"
+                    print_info "启用命令: ./start.sh plugin enable detox"
+                    exit 1
+                fi
                 ensure_deps_and_run "iOS test failed" run_ios_test "${@:2}" || exit 1
                 ;;
             test:ios:appium)
+                if ! is_plugin_enabled "appium"; then
+                    print_error "Appium 插件未启用，无法运行 iOS (Appium) 测试"
+                    print_info "启用命令: ./start.sh plugin enable appium"
+                    exit 1
+                fi
                 ensure_deps_and_run "iOS (Appium) test failed" run_ios_appium_test "${@:2}" || exit 1
                 ;;
             test:android)
+                if ! is_plugin_enabled "appium"; then
+                    print_error "Appium 插件未启用，无法运行 Android (Appium) 测试"
+                    print_info "启用命令: ./start.sh plugin enable appium"
+                    exit 1
+                fi
                 ensure_deps_and_run "Android test failed" run_android_test "${@:2}" || exit 1
                 ;;
             test:android:detox)
+                if ! is_plugin_enabled "detox"; then
+                    print_error "Detox 插件未启用，无法运行 Android (Detox) 测试"
+                    print_info "启用命令: ./start.sh plugin enable detox"
+                    exit 1
+                fi
                 ensure_deps_and_run "Android (Detox) test failed" run_android_detox_test "${@:2}" || exit 1
                 ;;
             test:web)
+                if ! is_plugin_enabled "playwright"; then
+                    print_error "Playwright 插件未启用，无法运行 Web 测试"
+                    print_info "启用命令: ./start.sh plugin enable playwright"
+                    exit 1
+                fi
                 ensure_deps_and_run "Web test failed" run_web_test "${@:2}" || exit 1
                 ;;
             test:api)
+                if ! is_plugin_enabled "api"; then
+                    print_error "API 插件未启用，无法运行 API 测试"
+                    print_info "启用命令: ./start.sh plugin enable api"
+                    exit 1
+                fi
                 ensure_deps_and_run "API test failed" run_api_test "${@:2}" || exit 1
                 ;;
             test:all)
@@ -613,9 +789,20 @@ main() {
             clean)
                 clean_environment || exit 1
                 ;;
+            plugin)
+                case "$2" in
+                    list)    list_plugins ;;
+                    enable)  enable_plugin "$3" ;;
+                    disable) disable_plugin "$3" ;;
+                    *)
+                        print_error "用法: ./start.sh plugin [list|enable|disable] <name>"
+                        print_info "可用插件: detox, appium, playwright, api"
+                        ;;
+                esac
+                ;;
             *)
                 print_error "未知命令: $1"
-                echo "可用命令: install, appium:start, appium:stop, test:ios, test:ios:appium, test:android, test:android:detox, test:web, test:api, test:all, report, clean"
+                echo "可用命令: install, appium:start, appium:stop, test:ios, test:ios:appium, test:android, test:android:detox, test:web, test:api, test:all, report, clean, plugin"
                 exit 1
                 ;;
         esac
