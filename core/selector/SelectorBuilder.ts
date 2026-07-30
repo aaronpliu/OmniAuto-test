@@ -16,6 +16,7 @@ export {
   resolvePlatformSelector,
   platformSelectorToString,
   isChainableSelector,
+  isIndexedSelector,
   ChainableSelector,
   platform,
   by,
