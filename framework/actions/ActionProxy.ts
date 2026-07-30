@@ -20,10 +20,7 @@ import {
   isIndexedSelector,
 } from "../utils/SelectorBuilder";
 import { TestSessionState } from "../utils/testSessionState";
-import {
-  captureDiagnostics,
-  attachDiagnosticsToAllure,
-} from "../utils/assertionDiagnostics";
+import { captureDiagnostics, attachDiagnosticsToAllure } from "../utils/assertionDiagnostics";
 
 const logger = Logger.getInstance();
 
@@ -448,9 +445,10 @@ export function createActionProxy<T extends BaseActions>(actions: T): T {
               const selector = args[0] as any;
               const diagnostic = await captureDiagnostics(
                 target,
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 selector,
-                prop,
-                error.message || String(error)
+                String(prop),
+                String(error.message || error)
               );
               await attachDiagnosticsToAllure(diagnostic);
               logger.debug(`[Step] Diagnostics captured for ${prop}`);

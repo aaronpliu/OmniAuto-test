@@ -129,7 +129,11 @@ export interface IActions {
   expectContainsText(selector: TSelector, text: string): Promise<void>;
   expectEnabled(selector: TSelector): Promise<void>;
   expectDisabled(selector: TSelector): Promise<void>;
-  expectAttribute(selector: TSelector, attrName: string, expectedValue: string | RegExp): Promise<void>;
+  expectAttribute(
+    selector: TSelector,
+    attrName: string,
+    expectedValue: string | RegExp
+  ): Promise<void>;
   expectValue(selector: TSelector, expectedValue: string): Promise<void>;
   expectCount(selector: TSelector, count: number): Promise<void>;
   expectFocused(selector: TSelector): Promise<void>;

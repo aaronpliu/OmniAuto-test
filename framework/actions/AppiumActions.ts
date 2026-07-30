@@ -1035,9 +1035,11 @@ export class AppiumActions extends BaseActions {
     const selName = typeof selector === "string" ? selector : "custom element";
     logger.debug(`Expecting element focused: ${selName}`);
     const activeEl = await driver.getActiveElement();
-    const isFocused = activeEl.elementId === el.elementId;
+    const isFocused = activeEl === el.elementId;
     if (!isFocused) {
-      throw new Error(`Assertion Failed: expectFocused\n  Selector: "${selName}"\n  Element is not focused`);
+      throw new Error(
+        `Assertion Failed: expectFocused\n  Selector: "${selName}"\n  Element is not focused`
+      );
     }
   }
 
@@ -1047,9 +1049,11 @@ export class AppiumActions extends BaseActions {
     const selName = typeof selector === "string" ? selector : "custom element";
     logger.debug(`Expecting element not focused: ${selName}`);
     const activeEl = await driver.getActiveElement();
-    const isFocused = activeEl.elementId === el.elementId;
+    const isFocused = activeEl === el.elementId;
     if (isFocused) {
-      throw new Error(`Assertion Failed: expectNotFocused\n  Selector: "${selName}"\n  Element is focused`);
+      throw new Error(
+        `Assertion Failed: expectNotFocused\n  Selector: "${selName}"\n  Element is focused`
+      );
     }
   }
 

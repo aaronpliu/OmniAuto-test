@@ -174,7 +174,7 @@ start_appium_local() {
     fi
     
     # 检查 Appium 是否已经在运行
-    if pgrep -f "appium" > /dev/null; then
+    if pgrep -f "node.*appium" > /dev/null; then
         print_warning "Appium 服务器已经在运行"
         print_warning "Appium server is already running"
         return 0
@@ -185,7 +185,7 @@ start_appium_local() {
     
     # 启动 Appium 服务器（后台运行）
     print_info "启动 Appium 服务器（端口/Port: 4723）..."
-    nohup $APPIUM_CMD --allow-cors --relaxed-security > logs/appium.log 2>&1 &
+    nohup "$APPIUM_CMD" --allow-cors --relaxed-security > logs/appium.log 2>&1 &
     APPIUM_PID=$!
     echo $APPIUM_PID > /tmp/appium.pid
     
@@ -193,7 +193,7 @@ start_appium_local() {
     sleep 3
     
     # 检查是否启动成功
-    if pgrep -f "appium" > /dev/null; then
+    if pgrep -f "node.*appium" > /dev/null; then
         print_success "Appium 服务器已启动"
         print_success "Appium server started"
         print_info "进程 ID / Process ID: $APPIUM_PID"
@@ -226,8 +226,8 @@ stop_appium_local() {
         fi
     else
         # 尝试直接杀死 appium 进程
-        if pgrep -f "appium" > /dev/null; then
-            pkill -f "appium"
+        if pgrep -f "node.*appium" > /dev/null; then
+            pkill -f "node.*appium"
             print_success "Appium 服务器已停止"
             print_success "Appium server stopped"
         else
@@ -237,7 +237,7 @@ stop_appium_local() {
     fi
 }
 
-# 安装依赖
+# 确保依赖已安装（内部处理错误消息）
 install_dependencies() {
     print_info "检查并安装依赖..."
     if [ ! -d "node_modules" ]; then
@@ -260,6 +260,22 @@ install_dependencies() {
     return 0
 }
 
+# 辅助函数：先安装依赖，再执行指定命令
+# 用法: ensure_deps_and_run "错误消息" command_fn [args...]
+ensure_deps_and_run() {
+    local err_msg="$1"
+    local cmd_fn="$2"
+    shift 2
+    if ! install_dependencies; then
+        return 1
+    fi
+    if ! "$cmd_fn" "$@"; then
+        print_error "$err_msg"
+        return 1
+    fi
+    return 0
+}
+
 # 运行 iOS 测试（Detox）
 # 透传位置参数：文件/目录/匹配模式，如 tests/mobile/TestGround/login.spec.ts
 run_ios_test() {
@@ -269,7 +285,6 @@ run_ios_test() {
     else
         npm run test:mobile:ios -- "$@"
     fi
-    return $?
 }
 
 # 运行 iOS 测试（Appium）
@@ -279,7 +294,6 @@ run_ios_appium_test() {
     print_info "请确保 Appium Server 已启动并可访问"
     print_info "Please ensure Appium Server is running and accessible"
     npm run test:mobile:ios:appium -- "$@"
-    return $?
 }
 
 # 运行 Android 测试（Detox）
@@ -291,7 +305,6 @@ run_android_detox_test() {
     else
         npm run test:mobile:android:detox -- "$@"
     fi
-    return $?
 }
 
 # 检测 Android 设备
@@ -348,7 +361,6 @@ run_android_test() {
     print_info "请确保 Appium Server 已启动并可访问"
     print_info "Please ensure Appium Server is running and accessible"
     npm run test:mobile:android -- "$@"
-    return $?
 }
 
 # 运行 Web 测试
@@ -360,7 +372,6 @@ run_web_test() {
     else
         npm run test:web -- "$@"
     fi
-    return $?
 }
 
 # 运行 API 测试
@@ -368,14 +379,12 @@ run_web_test() {
 run_api_test() {
     print_info "运行 API 测试..."
     npm run test:api -- "$@"
-    return $?
 }
 
 # 运行所有测试
 run_all_tests() {
     print_info "运行所有测试..."
     npm run test:all
-    return $?
 }
 
 # 生成测试报告
@@ -396,9 +405,9 @@ clean_environment() {
     if [ $? -ne 0 ]; then
         print_warning "清理 npm 缓存失败"
         print_warning "Failed to clean npm cache"
+        return 1
     fi
     print_success "环境清理完成"
-    return 0
 }
 
 # 菜单项定义
@@ -501,101 +510,36 @@ handle_menu_selection() {
 # 执行菜单对应的操作
 execute_menu_action() {
     local choice=$1
+    local _menu_rc=0
 
     case $choice in
-        0)
-            install_dependencies
-            ;;
+        0)  install_dependencies ;;
         1)
             check_appium
-            if ! start_appium_local; then
-                print_warning "启动 Appium 失败，返回菜单"
-                print_warning "Failed to start Appium, returning to menu"
-                return 1
-            fi
+            start_appium_local
             ;;
-        2)
-            if ! stop_appium_local; then
-                print_warning "停止 Appium 失败，返回菜单"
-                print_warning "Failed to stop Appium, returning to menu"
-                return 1
-            fi
-            ;;
-        3)
-            install_dependencies
-            if ! run_ios_test; then
-                print_warning "iOS 测试运行失败，返回菜单"
-                print_warning "iOS test failed, returning to menu"
-                return 1
-            fi
-            ;;
-        4)
-            install_dependencies
-            if ! run_ios_appium_test; then
-                print_warning "iOS (Appium) 测试运行失败，返回菜单"
-                print_warning "iOS (Appium) test failed, returning to menu"
-                return 1
-            fi
-            ;;
-        5)
-            install_dependencies
-            if ! run_android_test; then
-                print_warning "Android (Appium) 测试运行失败，返回菜单"
-                print_warning "Android (Appium) test failed, returning to menu"
-                return 1
-            fi
-            ;;
-        6)
-            install_dependencies
-            if ! run_android_detox_test; then
-                print_warning "Android (Detox) 测试运行失败，返回菜单"
-                print_warning "Android (Detox) test failed, returning to menu"
-                return 1
-            fi
-            ;;
-        7)
-            install_dependencies
-            if ! run_web_test; then
-                print_warning "Web 测试运行失败，返回菜单"
-                print_warning "Web test failed, returning to menu"
-                return 1
-            fi
-            ;;
-        8)
-            install_dependencies
-            if ! run_api_test; then
-                print_warning "API 测试运行失败，返回菜单"
-                print_warning "API test failed, returning to menu"
-                return 1
-            fi
-            ;;
-        9)
-            install_dependencies
-            if ! run_all_tests; then
-                print_warning "测试运行失败，返回菜单"
-                print_warning "Test failed, returning to menu"
-                return 1
-            fi
-            ;;
-        10)
-            if ! generate_report; then
-                print_warning "生成报告失败，返回菜单"
-                print_warning "Failed to generate report, returning to menu"
-                return 1
-            fi
-            ;;
-        11)
-            if ! clean_environment; then
-                print_warning "清理环境失败，返回菜单"
-                print_warning "Failed to clean environment, returning to menu"
-                return 1
-            fi
-            ;;
+        2)  stop_appium_local ;;
+        3)  ensure_deps_and_run "iOS 测试运行失败" run_ios_test ;;
+        4)  ensure_deps_and_run "iOS (Appium) 测试运行失败" run_ios_appium_test ;;
+        5)  ensure_deps_and_run "Android (Appium) 测试运行失败" run_android_test ;;
+        6)  ensure_deps_and_run "Android (Detox) 测试运行失败" run_android_detox_test ;;
+        7)  ensure_deps_and_run "Web 测试运行失败" run_web_test ;;
+        8)  ensure_deps_and_run "API 测试运行失败" run_api_test ;;
+        9)  ensure_deps_and_run "测试运行失败" run_all_tests ;;
+        10) generate_report ;;
+        11) clean_environment ;;
         12)
             print_info "退出程序 / Exiting program"
             exit 0
             ;;
     esac
+    _menu_rc=$?
+
+    if [ $_menu_rc -ne 0 ]; then
+        print_warning "操作执行失败，返回菜单"
+        print_warning "Operation failed, returning to menu"
+        return 1
+    fi
     return 0
 }
 
@@ -633,124 +577,41 @@ main() {
         # 根据参数执行对应操作
         case $1 in
             install)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
-                    exit 1
-                fi
+                install_dependencies || exit 1
                 ;;
             appium:start)
                 check_appium
-                if ! start_appium_local; then
-                    print_error "启动 Appium 失败"
-                    print_error "Failed to start Appium"
-                    exit 1
-                fi
+                start_appium_local || exit 1
                 ;;
             appium:stop)
-                if ! stop_appium_local; then
-                    print_error "停止 Appium 失败"
-                    print_error "Failed to stop Appium"
-                    exit 1
-                fi
+                stop_appium_local || exit 1
                 ;;
             test:ios)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
-                    exit 1
-                fi
-                if ! run_ios_test "${@:2}"; then
-                    print_error "iOS 测试运行失败"
-                    print_error "iOS test failed"
-                    exit 1
-                fi
+                ensure_deps_and_run "iOS test failed" run_ios_test "${@:2}" || exit 1
                 ;;
             test:ios:appium)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
-                    exit 1
-                fi
-                if ! run_ios_appium_test "${@:2}"; then
-                    print_error "iOS (Appium) 测试运行失败"
-                    print_error "iOS (Appium) test failed"
-                    exit 1
-                fi
+                ensure_deps_and_run "iOS (Appium) test failed" run_ios_appium_test "${@:2}" || exit 1
                 ;;
             test:android)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
-                    exit 1
-                fi
-                if ! run_android_test "${@:2}"; then
-                    print_error "Android 测试运行失败"
-                    print_error "Android test failed"
-                    exit 1
-                fi
+                ensure_deps_and_run "Android test failed" run_android_test "${@:2}" || exit 1
                 ;;
             test:android:detox)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
-                    exit 1
-                fi
-                if ! run_android_detox_test "${@:2}"; then
-                    print_error "Android (Detox) 测试运行失败"
-                    print_error "Android (Detox) test failed"
-                    exit 1
-                fi
+                ensure_deps_and_run "Android (Detox) test failed" run_android_detox_test "${@:2}" || exit 1
                 ;;
             test:web)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
-                    exit 1
-                fi
-                if ! run_web_test "${@:2}"; then
-                    print_error "Web 测试运行失败"
-                    print_error "Web test failed"
-                    exit 1
-                fi
+                ensure_deps_and_run "Web test failed" run_web_test "${@:2}" || exit 1
                 ;;
             test:api)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
-                    exit 1
-                fi
-                if ! run_api_test "${@:2}"; then
-                    print_error "API 测试运行失败"
-                    print_error "API test failed"
-                    exit 1
-                fi
+                ensure_deps_and_run "API test failed" run_api_test "${@:2}" || exit 1
                 ;;
             test:all)
-                if ! install_dependencies; then
-                    print_error "安装依赖失败"
-                    print_error "Failed to install dependencies"
-                    exit 1
-                fi
-                if ! run_all_tests; then
-                    print_error "测试运行失败"
-                    print_error "Test failed"
-                    exit 1
-                fi
+                ensure_deps_and_run "Test failed" run_all_tests || exit 1
                 ;;
             report)
-                if ! generate_report; then
-                    print_error "生成报告失败"
-                    print_error "Failed to generate report"
-                    exit 1
-                fi
+                generate_report || exit 1
                 ;;
             clean)
-                if ! clean_environment; then
-                    print_error "清理环境失败"
-                    print_error "Failed to clean environment"
-                    exit 1
-                fi
+                clean_environment || exit 1
                 ;;
             *)
                 print_error "未知命令: $1"
@@ -823,37 +684,92 @@ while [ $i -lt $args_count ]; do
             ;;
         # ---- CI 动态配置参数 ----
         --appium-host)
-            i=$((i + 1)); APPIUM_HOST="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--appium-host 需要一个值"
+                exit 1
+            fi
+            APPIUM_HOST="${args_array[$i]}"
             ;;
         --appium-port)
-            i=$((i + 1)); APPIUM_PORT="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--appium-port 需要一个值"
+                exit 1
+            fi
+            APPIUM_PORT="${args_array[$i]}"
             ;;
         --android-device)
-            i=$((i + 1)); ANDROID_DEVICE_NAME="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--android-device 需要一个值"
+                exit 1
+            fi
+            ANDROID_DEVICE_NAME="${args_array[$i]}"
             ;;
         --android-version)
-            i=$((i + 1)); ANDROID_PLATFORM_VERSION="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--android-version 需要一个值"
+                exit 1
+            fi
+            ANDROID_PLATFORM_VERSION="${args_array[$i]}"
             ;;
         --ios-device)
-            i=$((i + 1)); IOS_DEVICE_NAME="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--ios-device 需要一个值"
+                exit 1
+            fi
+            IOS_DEVICE_NAME="${args_array[$i]}"
             ;;
         --ios-version)
-            i=$((i + 1)); IOS_PLATFORM_VERSION="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--ios-version 需要一个值"
+                exit 1
+            fi
+            IOS_PLATFORM_VERSION="${args_array[$i]}"
             ;;
         --mobile-app)
-            i=$((i + 1)); APP_PATH="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--mobile-app 需要一个值"
+                exit 1
+            fi
+            APP_PATH="${args_array[$i]}"
             ;;
         --app-package)
-            i=$((i + 1)); APP_PACKAGE="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--app-package 需要一个值"
+                exit 1
+            fi
+            APP_PACKAGE="${args_array[$i]}"
             ;;
         --app-activity)
-            i=$((i + 1)); APP_ACTIVITY="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--app-activity 需要一个值"
+                exit 1
+            fi
+            APP_ACTIVITY="${args_array[$i]}"
             ;;
         --bundle-id)
-            i=$((i + 1)); BUNDLE_ID="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--bundle-id 需要一个值"
+                exit 1
+            fi
+            BUNDLE_ID="${args_array[$i]}"
             ;;
         --system-port)
-            i=$((i + 1)); APPIUM_SYSTEM_PORT="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--system-port 需要一个值"
+                exit 1
+            fi
+            APPIUM_SYSTEM_PORT="${args_array[$i]}"
             ;;
         --no-reset)
             APPIUM_NO_RESET=true
@@ -862,10 +778,20 @@ while [ $i -lt $args_count ]; do
             APPIUM_FULL_RESET=true
             ;;
         --language)
-            i=$((i + 1)); APPIUM_LANGUAGE="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--language 需要一个值"
+                exit 1
+            fi
+            APPIUM_LANGUAGE="${args_array[$i]}"
             ;;
         --locale)
-            i=$((i + 1)); APPIUM_LOCALE="${args_array[$i]}"
+            i=$((i + 1))
+            if [ $i -ge $args_count ] || [ -z "${args_array[$i]}" ]; then
+                print_error "--locale 需要一个值"
+                exit 1
+            fi
+            APPIUM_LOCALE="${args_array[$i]}"
             ;;
         *)
             REMAINING_ARGS+=("$arg")
@@ -886,33 +812,18 @@ if [ "$LOG_LEVEL" = "trace" ]; then
     DEBUG_PLAYWRIGHT="pw:api"
 fi
 
-export SCREENSHOT_ON_FAILURE
-export VIDEO_RECORDING
-export LOG_LEVEL
-export DEBUG_PLAYWRIGHT
-export APPIUM_HOST
-export APPIUM_PORT
-export ANDROID_DEVICE_NAME
-export ANDROID_PLATFORM_VERSION
-export IOS_DEVICE_NAME
-export IOS_PLATFORM_VERSION
-export APP_PATH
-export APP_PACKAGE
-export APP_ACTIVITY
-export BUNDLE_ID
-export APPIUM_SYSTEM_PORT
-export APPIUM_NO_RESET
-export APPIUM_FULL_RESET
-export APPIUM_LANGUAGE
-export APPIUM_LOCALE
+export SCREENSHOT_ON_FAILURE VIDEO_RECORDING LOG_LEVEL DEBUG_PLAYWRIGHT DETOX_LOGLEVEL \
+    APPIUM_HOST APPIUM_PORT ANDROID_DEVICE_NAME ANDROID_PLATFORM_VERSION \
+    IOS_DEVICE_NAME IOS_PLATFORM_VERSION APP_PATH APP_PACKAGE APP_ACTIVITY BUNDLE_ID \
+    APPIUM_SYSTEM_PORT APPIUM_NO_RESET APPIUM_FULL_RESET APPIUM_LANGUAGE APPIUM_LOCALE
 
 # 打印非默认配置
 _has_custom_config=false
 [ "$SCREENSHOT_ON_FAILURE" != true ] && _has_custom_config=true
 [ "$VIDEO_RECORDING" = true ] && _has_custom_config=true
 [ "$LOG_LEVEL" != info ] && _has_custom_config=true
-[ -n "$APPIUM_HOST" ] || [ -n "$APPIUM_PORT" ] || [ -n "$ANDROID_DEVICE_NAME" ] || [ -n "$IOS_DEVICE_NAME" ] && _has_custom_config=true
-[ -n "$APP_PATH" ] || [ -n "$APP_PACKAGE" ] || [ -n "$BUNDLE_ID" ] && _has_custom_config=true
+{ [ -n "$APPIUM_HOST" ] || [ -n "$APPIUM_PORT" ] || [ -n "$ANDROID_DEVICE_NAME" ] || [ -n "$IOS_DEVICE_NAME" ]; } && _has_custom_config=true
+{ [ -n "$APP_PATH" ] || [ -n "$APP_PACKAGE" ] || [ -n "$BUNDLE_ID" ]; } && _has_custom_config=true
 
 if [ "$_has_custom_config" = true ]; then
     print_info "截图 / Screenshot: $([ "$SCREENSHOT_ON_FAILURE" = true ] && echo '开启(ON)' || echo '关闭(OFF)')"

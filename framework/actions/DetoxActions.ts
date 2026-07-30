@@ -760,7 +760,9 @@ export class DetoxActions extends BaseActions {
     const attrs = await elem.getAttributes();
     const isFocused = (attrs as any).focused === true;
     if (!isFocused) {
-      throw new Error(`Assertion Failed: expectFocused\n  Selector: "${selName}"\n  Element is not focused`);
+      throw new Error(
+        `Assertion Failed: expectFocused\n  Selector: "${selName}"\n  Element is not focused`
+      );
     }
   }
 
@@ -771,7 +773,9 @@ export class DetoxActions extends BaseActions {
     const attrs = await elem.getAttributes();
     const isFocused = (attrs as any).focused === true;
     if (isFocused) {
-      throw new Error(`Assertion Failed: expectNotFocused\n  Selector: "${selName}"\n  Element is focused`);
+      throw new Error(
+        `Assertion Failed: expectNotFocused\n  Selector: "${selName}"\n  Element is focused`
+      );
     }
   }
 
