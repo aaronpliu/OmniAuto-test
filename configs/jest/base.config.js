@@ -24,6 +24,8 @@ module.exports = {
     "^@applications/(.*)$": "<rootDir>/applications/$1",
     "^@tests/(.*)$": "<rootDir>/tests/$1",
     "^@configs/(.*)$": "<rootDir>/configs/$1",
+    "^@omnitest/core/(.*)$": "<rootDir>/core/$1",
+    "^@omnitest/plugins/(.*)$": "<rootDir>/plugins/$1",
   },
   setupFilesAfterEnv: [],
   reporters: ["default"],

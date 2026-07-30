@@ -18,11 +18,16 @@
       "@framework/*": ["framework/*"],
       "@applications/*": ["applications/*"],
       "@tests/*": ["tests/*"],
-      "@configs/*": ["configs/*"]
+      "@configs/*": ["configs/*"],
+      "@omnitest/core/*": ["core/*"],
+      "@omnitest/plugins/*": ["plugins/*"]
     },
     "typeRoots": ["./node_modules/@types", "./framework/types"]
   },
   "include": [
+    "core/**/*",
+    "plugins/**/*",
+    "platform-api/**/*",
     "framework/**/*",
     "applications/**/*",
     "tests/**/*",
