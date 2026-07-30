@@ -1,6 +1,17 @@
+/**
+ * 全局测试清理
+ * Global Test Teardown
+ *
+ * 框架级职责：调用 LifecycleManager.runAfterAll() 编排各插件的清理逻辑，
+ * 然后销毁 PluginRegistry。
+ *
+ * 插件级职责（通过 afterAll 钩子）：
+ *   AppiumPlugin: 清理 session + 停止 server + 清理环境变量
+ *   DetoxPlugin: 由 Detox CLI 管理（此处无操作）
+ */
 import { Logger } from "../utils/logger";
-import { getAppiumServer } from "../utils/appiumServer";
-import { mobileConfig } from "../utils/mobileConfig";
+import { PluginRegistry } from "../../core/registry/PluginRegistry";
+import { LifecycleManager } from "../../core/lifecycle/LifecycleManager";
 
 const logger = Logger.getInstance();
 
@@ -8,53 +19,12 @@ export default async function globalTeardown() {
   logger.info("========== 测试环境清理开始 ==========");
 
   try {
-    // 1) 强制杀掉 Appium session，释放 WebdriverIO 的 pending 请求
-    //    （避免 Jest 环境 teardown 后 WebdriverIO 内部持续 import 报错）
-    try {
-      const serverConfig = mobileConfig.getAppiumServerConfig();
-      const host = process.env.APPIUM_HOST || serverConfig.host || "0.0.0.0";
-      const port = process.env.APPIUM_PORT || String(serverConfig.port) || "4723";
-      const sessionBase = `http://${host}:${port}/session`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-      try {
-        const resp = await fetch(`${sessionBase}s`, { signal: controller.signal });
-        const body = JSON.parse(await resp.text());
-        const sessions = (body.value ?? []) as Array<{ id: string }>;
-        for (const s of sessions) {
-          await fetch(`${sessionBase}/${s.id}`, {
-            method: "DELETE",
-            signal: controller.signal,
-          }).catch(() => {});
-        }
-      } catch {
-        /* fetch 失败说明 Appium 已不在运行 */
-      } finally {
-        clearTimeout(timeout);
-      }
-    } catch {
-      /* ignore — getAppiumServer 可能未初始化 */
+    const registry = PluginRegistry.getInstance();
+    if (registry.isInitialized) {
+      const lifecycleManager = LifecycleManager.getInstance(registry);
+      await lifecycleManager.runAfterAll();
+      await registry.destroyAll();
     }
-
-    // 2) 等待飞行中的 WebdriverIO 客户端重试循环沉降
-    //    afterEach 中已通过 TestSessionState 守卫中止 AppiumActions 自控轮询，
-    //    但仍有少量 HTTP 层请求可能未完成，给予短暂沉降窗口以确保彻底清理
-    await new Promise((r) => setTimeout(r, 2000));
-
-    // 3) 停止 Appium server
-    logger.info("正在停止 Appium server...");
-    const appiumServer = getAppiumServer();
-    await appiumServer.stop();
-
-    // 4) 清理环境变量
-    logger.info("正在清理环境变量...");
-    delete process.env.ANDROID_DEVICE_NAME;
-    delete process.env.ANDROID_PLATFORM_VERSION;
-    delete process.env.ANDROID_DEVICE_TYPE;
-    delete process.env.IOS_DEVICE_NAME;
-    delete process.env.IOS_PLATFORM_VERSION;
-    delete process.env.IOS_UDID;
-    delete process.env.IOS_DEVICE_TYPE;
 
     logger.info("========== 测试环境清理完成 ==========");
   } catch (error: unknown) {

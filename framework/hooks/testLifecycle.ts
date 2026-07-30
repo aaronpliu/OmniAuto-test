@@ -2,36 +2,57 @@
  * 测试生命周期钩子 — 自动处理移动端截图和录屏
  * Test Lifecycle Hooks — Automated screenshot & recording for mobile tests
  *
- * 无需用户在测试代码中添加任何 step() 调用，
- * 所有操作通过 afterEach / beforeEach 自动完成。
+ * 截图/录屏通过 core/reporting/ 的 ScreenshotService 和 RecordingService
+ * 统一调用插件的 IMediaProvider 实现，不再直接引用 allure-js-commons。
  *
  * 控制方式（环境变量 / CLI 参数）：
  *   SCREENSHOT_ON_FAILURE=true   — 测试失败时自动截图（默认开启）
  *   VIDEO_RECORDING=true         — 每个测试自动录屏（默认关闭）
  */
 import * as fs from "fs";
-import { join, basename } from "path";
+import { join } from "path";
 import { TestContext } from "../utils/testContext";
 import { TestSessionState } from "../utils/testSessionState";
 import { Logger } from "../utils/logger";
 import { ensureSessionDir } from "../utils/sessionDir";
+import { PluginRegistry } from "../../core/registry/PluginRegistry";
+import { ReportManager } from "../../core/reporting/ReportManager";
+import { ScreenshotService } from "../../core/reporting/ScreenshotService";
+import { RecordingService } from "../../core/reporting/RecordingService";
 
 const logger = Logger.getInstance();
 
 // 确保会话目录已创建（兼容 Detox 模式下 globalSetup 未被调用的场景，幂等）
 ensureSessionDir();
 
-/** 安全地附加文件到 Allure 报告（使用 allure-js-commons 原生 API） */
-function allureAttachment(name: string, content: Buffer, type: string): void {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional runtime dependency
-    const { attachment } = require("allure-js-commons");
-    if (typeof attachment === "function") {
-      attachment(name, content, type);
-    }
-  } catch {
-    /* ignore */
+// ---- 服务实例（懒初始化） ----
+let screenshotService: ScreenshotService | null = null;
+let recordingService: RecordingService | null = null;
+
+/** 获取 ScreenshotService */
+function getScreenshotService(): ScreenshotService | null {
+  if (screenshotService) {
+    return screenshotService;
   }
+  const registry = PluginRegistry.getInstance();
+  if (!registry.isInitialized) {
+    return null;
+  }
+  screenshotService = new ScreenshotService(ReportManager.getInstance());
+  return screenshotService;
+}
+
+/** 获取 RecordingService */
+function getRecordingService(): RecordingService | null {
+  if (recordingService) {
+    return recordingService;
+  }
+  const registry = PluginRegistry.getInstance();
+  if (!registry.isInitialized) {
+    return null;
+  }
+  recordingService = new RecordingService(ReportManager.getInstance());
+  return recordingService;
 }
 
 /** 读取环境变量开关 */
@@ -43,25 +64,6 @@ function isRecordingEnabled(): boolean {
   return process.env.VIDEO_RECORDING === "true";
 }
 
-/**
- * 检测当前是否为 Detox 模式。
- * Detox 模式下录屏由 Detox artifacts video 插件接管（写入 artifacts/detox/），
- * testLifecycle 不需要调用 startRecording/stopRecording（避免 no-op 噪音）。
- * Appium 模式下录屏仍走 actions.startRecording/stopRecording buffer 链路。
- */
-function isDetoxMode(): boolean {
-  const platform = process.env.TEST_PLATFORM || "ios";
-  if (platform === "ios") {
-    // iOS 默认 Detox，仅 IOS_AUTOMATION_MODE=appium 时为 Appium
-    return process.env.IOS_AUTOMATION_MODE !== "appium";
-  }
-  if (platform === "android") {
-    // Android 默认 Appium，仅 ANDROID_AUTOMATION_MODE=detox 时为 Detox
-    return process.env.ANDROID_AUTOMATION_MODE === "detox";
-  }
-  return false;
-}
-
 /** 获取当前测试展示名 */
 function getTestName(): string {
   try {
@@ -71,34 +73,33 @@ function getTestName(): string {
   }
 }
 
-/** 判断当前测试是否失败：检查步骤文件中是否有失败步骤 */
+/** 判断当前测试是否失败 */
 function isTestFailed(): boolean {
-  // 方式1: expect.getState（Appium 环境有效）
   try {
-    const state = expect.getState() as any;
-    if (state.suppressedErrors?.length > 0) {
+    const state = expect.getState() as Record<string, unknown>;
+    if (Array.isArray(state.suppressedErrors) && (state.suppressedErrors as unknown[]).length > 0) {
       return true;
     }
-    if (state.errors?.length > 0) {
+    if (Array.isArray(state.errors) && (state.errors as unknown[]).length > 0) {
       return true;
     }
   } catch {
     /* ignore */
   }
 
-  // 方式2: 检查步骤文件中是否有失败步骤（Detox/Appium 通用）
   try {
     const stepsFile = join(process.cwd(), "artifacts", "allure-results", ".pending-steps.jsonl");
     if (fs.existsSync(stepsFile)) {
       const raw = fs.readFileSync(stepsFile, "utf-8");
-      const hasFailed = raw.split("\n").some((l: string) => {
-        try {
-          return JSON.parse(l).status === "failed";
-        } catch {
-          return false;
-        }
-      });
-      if (hasFailed) {
+      if (
+        raw.split("\n").some((l: string) => {
+          try {
+            return (JSON.parse(l) as { status: string }).status === "failed";
+          } catch {
+            return false;
+          }
+        })
+      ) {
         return true;
       }
     }
@@ -109,10 +110,7 @@ function isTestFailed(): boolean {
   return false;
 }
 
-/**
- * 检查步骤文件中是否已有失败步骤携带了截图。
- * 若已有步骤级截图，测试级截图纯属冗余（屏幕状态未变化）。
- */
+/** 检查步骤文件中是否已有失败截图 */
 function hasStepFailureScreenshot(): boolean {
   try {
     const stepsFile = join(process.cwd(), "artifacts", "allure-results", ".pending-steps.jsonl");
@@ -120,7 +118,7 @@ function hasStepFailureScreenshot(): boolean {
       const raw = fs.readFileSync(stepsFile, "utf-8");
       return raw.split("\n").some((l: string) => {
         try {
-          const step = JSON.parse(l);
+          const step = JSON.parse(l) as { status: string; screenshot?: string };
           return step.status === "failed" && !!step.screenshot;
         } catch {
           return false;
@@ -134,58 +132,7 @@ function hasStepFailureScreenshot(): boolean {
 }
 
 // ====================================================================
-//  录屏控制（Appium startRecordingScreen / stopRecordingScreen）
-// ====================================================================
-
-async function startRecording(): Promise<void> {
-  if (!isRecordingEnabled()) {
-    return;
-  }
-  if (isDetoxMode()) {
-    return;
-  } // Detox 录屏由 artifacts video 插件接管
-
-  const actions = TestContext.getActions();
-  if (!actions || typeof actions.startRecording !== "function") {
-    return;
-  }
-
-  try {
-    await actions.startRecording();
-    logger.info("[录屏] 已开始");
-  } catch (err: any) {
-    logger.warn(`[录屏] 开始失败: ${err.message}`);
-  }
-}
-
-async function stopRecording(): Promise<void> {
-  if (!isRecordingEnabled()) {
-    return;
-  }
-  if (isDetoxMode()) {
-    return;
-  } // Detox 录屏由 artifacts video 插件接管
-
-  const actions = TestContext.getActions();
-  if (!actions || typeof actions.stopRecording !== "function") {
-    return;
-  }
-
-  try {
-    const videoBuffer: Buffer | null = await actions.stopRecording();
-    if (!videoBuffer) {
-      return;
-    }
-
-    allureAttachment("Screen Recording / 录屏", videoBuffer, "video/mp4");
-    logger.info("[录屏] 已附加到 Allure 报告");
-  } catch (err: any) {
-    logger.warn(`[录屏] 停止失败: ${err.message}`);
-  }
-}
-
-// ====================================================================
-//  失败截图（Appium / Detox 原生 takeScreenshot API）
+//  失败截图（通过 ScreenshotService + IMediaProvider）
 // ====================================================================
 
 async function captureScreenshotOnFailure(): Promise<void> {
@@ -193,13 +140,36 @@ async function captureScreenshotOnFailure(): Promise<void> {
     return;
   }
 
-  // 步骤级已有失败截图时，跳过测试级截图（此时屏幕状态未变化，纯冗余）
   if (hasStepFailureScreenshot()) {
     logger.info("[截图] 步骤已有失败截图，跳过测试级截图");
     return;
   }
 
-  const actions = TestContext.getActions();
+  // 尝试通过 ScreenshotService（插件路径）截图
+  const svc = getScreenshotService();
+  if (svc) {
+    const registry = PluginRegistry.getInstance();
+    const platform = process.env.TEST_PLATFORM || "ios";
+    try {
+      const plugin = registry.getPluginForPlatform(platform);
+      const mediaProvider = plugin.getMediaProvider?.();
+      if (mediaProvider) {
+        svc.setMediaProvider(mediaProvider);
+        const screenshotPath = await svc.capture(`failure_${Date.now()}`);
+        if (screenshotPath) {
+          logger.info(`[截图] 已保存: ${screenshotPath}`);
+          return;
+        }
+      }
+    } catch {
+      /* 插件未注册时回退到 actions 路径 */
+    }
+  }
+
+  // 回退路径：通过 TestContext 中的 actions 截图
+  const actions = TestContext.getActions() as {
+    takeScreenshot?: (name: string) => Promise<string>;
+  };
   if (!actions || typeof actions.takeScreenshot !== "function") {
     return;
   }
@@ -208,22 +178,9 @@ async function captureScreenshotOnFailure(): Promise<void> {
   logger.info(`[截图] 测试失败，正在截屏: ${testName}`);
 
   try {
-    let screenshotPath: string = await actions.takeScreenshot(`failure_${Date.now()}`);
-
-    // 将截图复制到本次执行的会话目录（Detox 截图可能在 /tmp 中，Reporter 读取前会被清理）
-    const sessionDir = process.env.OMNITEST_SESSION_DIR || join(process.cwd(), "artifacts");
-    const permDir = join(sessionDir, "screenshots");
-    if (!fs.existsSync(permDir)) {
-      fs.mkdirSync(permDir, { recursive: true });
-    }
-    const permPath = join(permDir, `failure_${basename(screenshotPath)}`);
-    if (screenshotPath !== permPath) {
-      fs.copyFileSync(screenshotPath, permPath);
-      screenshotPath = permPath;
-    }
+    const screenshotPath = await actions.takeScreenshot(`failure_${Date.now()}`);
     logger.info(`[截图] 已保存: ${screenshotPath}`);
 
-    // 通过文件系统传给 Reporter（Detox / Appium 通用）
     try {
       const attachFile = join(
         process.cwd(),
@@ -237,18 +194,87 @@ async function captureScreenshotOnFailure(): Promise<void> {
     }
 
     logger.info("[截图] 测试级截图已记录");
-  } catch (err: any) {
-    // 环境 teardown 后的错误不需要警告（属于正常流程）
-    const msg = err.message || "";
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     if (
-      (err instanceof ReferenceError &&
-        msg.includes("after the Jest environment has been torn down")) ||
+      msg.includes("after the Jest environment has been torn down") ||
       msg.includes("Provided module is not an instance of Module") ||
       msg.includes("A session is either terminated or not started")
     ) {
       logger.debug("[截图] 环境已销毁，跳过截图");
     } else {
-      logger.warn(`[截图] 失败: ${msg || err}`);
+      logger.warn(`[截图] 失败: ${msg}`);
+    }
+  }
+}
+
+// ====================================================================
+//  录屏控制（通过 RecordingService + IMediaProvider）
+// ====================================================================
+
+async function startRecording(): Promise<void> {
+  if (!isRecordingEnabled()) {
+    return;
+  }
+
+  const svc = getRecordingService();
+  if (!svc || !svc.supportsRecording) {
+    return;
+  }
+
+  const registry = PluginRegistry.getInstance();
+  const platform = process.env.TEST_PLATFORM || "ios";
+  try {
+    const plugin = registry.getPluginForPlatform(platform);
+    const mediaProvider = plugin.getMediaProvider?.();
+    if (mediaProvider) {
+      svc.setMediaProvider(mediaProvider);
+      const started = await svc.start();
+      if (started) {
+        logger.info("[录屏] 已开始");
+      }
+    }
+  } catch {
+    // 回退路径
+    const actions = TestContext.getActions() as { startRecording?: () => Promise<void> };
+    if (actions && typeof actions.startRecording === "function") {
+      try {
+        await actions.startRecording();
+        logger.info("[录屏] 已开始 (fallback)");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.warn(`[录屏] 开始失败: ${msg}`);
+      }
+    }
+  }
+}
+
+async function stopRecording(): Promise<void> {
+  if (!isRecordingEnabled()) {
+    return;
+  }
+
+  const svc = getRecordingService();
+  if (svc) {
+    const buffer = await svc.stop();
+    if (buffer) {
+      logger.info("[录屏] 已附加到报告");
+    }
+    return;
+  }
+
+  const actions = TestContext.getActions() as {
+    stopRecording?: () => Promise<Buffer | null>;
+  };
+  if (actions && typeof actions.stopRecording === "function") {
+    try {
+      const videoBuffer = await actions.stopRecording();
+      if (videoBuffer) {
+        logger.info("[录屏] 已停止 (fallback)");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn(`[录屏] 停止失败: ${msg}`);
     }
   }
 }
@@ -259,7 +285,6 @@ async function captureScreenshotOnFailure(): Promise<void> {
 
 function clearSteps() {
   try {
-    // 清空步骤文件
     const stepsFile = join(process.cwd(), "artifacts", "allure-results", ".pending-steps.jsonl");
     const attachFile = join(process.cwd(), "artifacts", "allure-results", ".pending-attach.jsonl");
     if (fs.existsSync(stepsFile)) {
@@ -273,7 +298,6 @@ function clearSteps() {
   }
 }
 
-// 保存原始方法，供 afterEach 安装过滤器、beforeEach 恢复
 let _origConsoleWarn: typeof console.warn | null = null;
 let _origConsoleError: typeof console.error | null = null;
 let _origStderrWrite: typeof process.stderr.write | null = null;
@@ -286,10 +310,8 @@ const SUPPRESS_PATTERNS = [
 ];
 
 beforeEach(async () => {
-  // 重置会话状态（新测试开始）
   TestSessionState.reset();
 
-  // 恢复 console 和 stderr（上一个 afterEach 可能安装了过滤器）
   if (_origConsoleWarn) {
     console.warn = _origConsoleWarn;
     _origConsoleWarn = null;
@@ -303,7 +325,6 @@ beforeEach(async () => {
     _origStderrWrite = null;
   }
 
-  // 清空上一条测试的步骤记录（文件系统）
   clearSteps();
 
   if (isRecordingEnabled()) {
@@ -312,16 +333,13 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  // 第一行标记会话正在销毁 — 阻断飞行中异步操作的 driver 调用
   TestSessionState.markTearingDown();
 
   logger.info("[Lifecycle] afterEach running...");
   const failed = isTestFailed();
   logger.info(`[Lifecycle] testFailed=${failed}`);
 
-  // 0) 安装进程级 stderr 过滤器 — 抑制 Jest teardown 后的模块/会话错误噪音
-  //    console.warn/error 在 Jest sandbox 内，teardown 时会被恢复，无法拦截
-  //    process.stderr.write 是 Node.js 进程级别的，Jest teardown 不会恢复它
+  // 安装进程级 stderr 过滤器
   _origConsoleWarn = console.warn;
   _origConsoleError = console.error;
   _origStderrWrite = process.stderr.write.bind(process.stderr);
@@ -348,14 +366,18 @@ afterEach(async () => {
     return _origStderrWrite!(chunk as string);
   }) as typeof process.stderr.write;
 
-  // 1) Appium 模式：删除 session 以断开连接，并为下次测试重建
-  if (!isDetoxMode()) {
+  // Appium 模式：删除 session
+  const registry = PluginRegistry.getInstance();
+  const isAppiumMode = registry.hasPlugin("appium") && !registry.hasPlugin("detox");
+  if (isAppiumMode) {
     try {
-      const actions = TestContext.getActions();
+      const actions = TestContext.getActions() as {
+        driver?: { deleteSession: () => Promise<void> } | null;
+      };
       const driver = actions?.driver;
       if (driver) {
         await driver.deleteSession().catch(() => {});
-        actions.driver = null;
+        (actions as Record<string, unknown>).driver = null;
         logger.debug("[Lifecycle] Appium session deleted");
       }
     } catch {
@@ -363,12 +385,10 @@ afterEach(async () => {
     }
   }
 
-  // 2) 失败截图
   if (failed) {
     await captureScreenshotOnFailure();
   }
 
-  // 3) 停止录屏（失败时只会保存，通过时丢弃）
   if (isRecordingEnabled()) {
     await stopRecording();
   }

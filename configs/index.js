@@ -32,6 +32,12 @@ function loadConfig(name) {
 }
 
 module.exports = {
+  /**
+   * 已启用的插件列表
+   * 由 PluginRegistry 在初始化时读取，决定是否注册对应插件。
+   * 可选值: 'detox', 'appium', 'playwright', 'api'
+   */
+  plugins: ["detox", "appium", "playwright", "api"],
   mobile: loadConfig("mobile"),
   web: loadConfig("web"),
   api: loadConfig("api"),
