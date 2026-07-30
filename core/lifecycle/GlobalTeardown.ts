@@ -9,7 +9,7 @@
  *   AppiumPlugin: 清理 session + 停止 server + 清理环境变量
  *   DetoxPlugin: 由 Detox CLI 管理（此处无操作）
  */
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils/Logger";
 import { PluginRegistry } from "../../core/registry/PluginRegistry";
 import { LifecycleManager } from "../../core/lifecycle/LifecycleManager";
 

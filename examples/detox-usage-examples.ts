@@ -5,7 +5,7 @@
  */
 
 import { by } from "detox";
-import { DetoxActions } from "../framework/actions/DetoxActions";
+import { DetoxActions } from "../plugins/detox/DetoxActions";
 
 // Initialize DetoxActions
 const actions = new DetoxActions();

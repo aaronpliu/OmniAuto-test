@@ -7,10 +7,10 @@
  *
  * 由 ActionProxy 在 expect* 方法失败时自动调用，无需手动集成。
  */
-import { BaseActions } from "../../framework/actions/BaseActions";
-import { TSelector } from "../../framework/types/actions";
+import { BaseActions } from "../actions/BaseActions";
+import { TSelector } from "../types/actions";
 import { Logger } from "../utils/Logger";
-import { TestSessionState } from "../../framework/utils/testSessionState";
+import { TestSessionState } from "../utils/TestSessionState";
 
 const logger = Logger.getInstance();
 

@@ -4,7 +4,7 @@
  * Quick guide to using flexible selectors in DetoxActions
  */
 
-import { DetoxActions } from "../framework/actions/DetoxActions";
+import { DetoxActions } from "../plugins/detox/DetoxActions";
 import { by, element } from "detox";
 
 const actions = new DetoxActions();

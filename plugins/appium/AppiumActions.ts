@@ -1,9 +1,9 @@
 import { remote, RemoteOptions } from "webdriverio";
-import { BaseActions } from "../../framework/actions/BaseActions";
-import { TSelector } from "../../framework/types/actions";
+import { BaseActions } from "../../core/actions/BaseActions";
+import { TSelector } from "../../core/types/actions";
 import { Logger } from "../../core/utils/Logger";
 import { mobileConfig } from "../../core/config/MobileConfigLoader";
-import { TestSessionState } from "../../framework/utils/testSessionState";
+import { TestSessionState } from "../../core/utils/TestSessionState";
 import {
   parseSelector,
   isIndexedSelector,
@@ -11,7 +11,7 @@ import {
   resolvePlatformSelector,
   isChainableSelector,
 } from "../../core/selector/SelectorBuilder";
-import { CompoundSelectorNode } from "../../framework/types/actions";
+import { CompoundSelectorNode } from "../../core/types/actions";
 import { resizeScreenshot } from "../../core/reporting/ImageResizer";
 
 const logger = Logger.getInstance();

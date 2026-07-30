@@ -1,16 +1,16 @@
 import { BaseActions } from "./BaseActions";
-import { DetoxActions } from "./DetoxActions";
-import { AppiumActions } from "./AppiumActions";
-import { PlaywrightActions } from "./PlaywrightActions";
+import { DetoxActions } from "../../plugins/detox/DetoxActions";
+import { AppiumActions } from "../../plugins/appium/AppiumActions";
+import { PlaywrightActions } from "../../plugins/playwright/PlaywrightActions";
 import { createActionProxy } from "./ActionProxy";
-import { TestContext } from "../utils/testContext";
+import { TestContext } from "../utils/TestContext";
 import {
   Platform,
   ActionFactoryConfig,
   IosAutomationMode,
   AndroidAutomationMode,
 } from "../types/actions";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils/Logger";
 
 const logger = Logger.getInstance();
 

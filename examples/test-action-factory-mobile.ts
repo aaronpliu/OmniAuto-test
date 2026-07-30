@@ -2,7 +2,7 @@
  * Test file to verify ActionFactory still works for mobile platforms
  */
 
-import { ActionFactory } from "../framework/actions/ActionFactory";
+import { ActionFactory } from "../core/actions/ActionFactory";
 
 function testActionFactoryMobile(): void {
   console.log("Testing ActionFactory mobile platform support...\n");

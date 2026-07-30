@@ -1,4 +1,4 @@
-import { BaseActions } from "@framework/actions/BaseActions";
+import { BaseActions } from "@omnitest/core/actions/BaseActions";
 
 export class LoginPage {
   private actions: BaseActions;

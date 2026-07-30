@@ -1,5 +1,5 @@
 import { device, element, by, expect as detoxExpect } from "detox";
-import { BaseActions } from "../../framework/actions/BaseActions";
+import { BaseActions } from "../../core/actions/BaseActions";
 import { Logger } from "../../core/utils/Logger";
 import { resizeScreenshot } from "../../core/reporting/ImageResizer";
 import {
@@ -9,11 +9,7 @@ import {
   resolvePlatformSelector,
   isChainableSelector,
 } from "../../core/selector/SelectorBuilder";
-import {
-  ChainableSelectorLike,
-  CompoundSelectorNode,
-  TSelector,
-} from "../../framework/types/actions";
+import { ChainableSelectorLike, CompoundSelectorNode, TSelector } from "../../core/types/actions";
 
 const logger = Logger.getInstance();
 

@@ -8,7 +8,7 @@
  * 阶段一期间通过 re-export 保持与现有 IActions 兼容，
  * 阶段五迁移完成后将类型定义收归 core。
  */
-import { TSelector } from "../../framework/types/actions";
+import { TSelector } from "../types/actions";
 
 /**
  * 统一操作接口 — 所有插件的 Actions 必须实现此接口。

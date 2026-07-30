@@ -7,15 +7,15 @@ module.exports = {
     ...baseConfig.testEnvironmentOptions,
     platform: "ios",
   },
-  globalSetup: "<rootDir>/framework/hooks/detoxGlobalSetup.js",
-  globalTeardown: "<rootDir>/framework/hooks/detoxGlobalTeardown.js",
+  globalSetup: "<rootDir>/configs/jest/detoxGlobalSetup.js",
+  globalTeardown: "<rootDir>/configs/jest/detoxGlobalTeardown.js",
   testEnvironment: "detox/runners/jest/testEnvironment",
   // Detox reporter + 自定义 Allure reporter
   reporters: [
     "default",
-    "<rootDir>/framework/reporters/detoxAllureReporter.ts",
+    "<rootDir>/plugins/detox/reporters/DetoxAllureReporter.ts",
     "<rootDir>/configs/jest/smokeReportReporter.js",
   ],
-  setupFilesAfterEnv: ["<rootDir>/framework/hooks/testLifecycle.ts"],
+  setupFilesAfterEnv: ["<rootDir>/core/lifecycle/TestLifecycle.ts"],
   maxWorkers: 1,
 };

@@ -1,5 +1,5 @@
-import { BaseActions } from "@framework/actions/BaseActions";
-import { by } from "@framework/utils";
+import { BaseActions } from "@omnitest/core/actions/BaseActions";
+import { by } from "@omnitest/core/selector";
 
 /**
  * LoginPage — 同时兼容 Detox (iOS) 和 Appium (Android)

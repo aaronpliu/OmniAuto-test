@@ -5,7 +5,7 @@
  */
 
 import { test } from "@playwright/test";
-import { ActionFactory, PlaywrightActions } from "../framework/actions";
+import { ActionFactory, PlaywrightActions } from "../core/actions";
 
 // ============================================
 // QUICK REFERENCE: CREATING WEB ACTIONS

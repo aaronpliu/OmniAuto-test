@@ -12,7 +12,7 @@ import { writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { SmokeReport, SmokeSummary, SmokeTestCase, SmokeTestStatus } from "../types/smokeReport";
 import { generateSmokeHtmlReport } from "./smokeHtmlGenerator";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils/Logger";
 
 const logger = Logger.getInstance();
 

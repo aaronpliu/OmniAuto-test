@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { SmokeReport } from "../types/smokeReport";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils/Logger";
 
 const logger = Logger.getInstance();
 

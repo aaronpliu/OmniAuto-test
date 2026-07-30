@@ -9,9 +9,9 @@
  */
 import * as path from "path";
 import * as fs from "fs";
-import { Logger } from "../utils/logger";
-import { config } from "../utils/config";
-import { ensureSessionDir } from "../utils/sessionDir";
+import { Logger } from "../utils/Logger";
+import { config } from "../config/ConfigManager";
+import { ensureSessionDir } from "../utils/SessionDir";
 import { PluginRegistry } from "../../core/registry/PluginRegistry";
 import { LifecycleManager } from "../../core/lifecycle/LifecycleManager";
 import { AppiumPlugin } from "../../plugins/appium/AppiumPlugin";

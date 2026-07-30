@@ -1,6 +1,6 @@
 import { Browser, Page } from "playwright";
-import { BaseActions } from "../../framework/actions/BaseActions";
-import { TSelector } from "../../framework/types/actions";
+import { BaseActions } from "../../core/actions/BaseActions";
+import { TSelector } from "../../core/types/actions";
 import { Logger } from "../../core/utils/Logger";
 import { parseSelector, isPlatformSelector } from "../../core/selector/SelectorBuilder";
 

@@ -10,7 +10,7 @@
  */
 import { BaseActions } from "./BaseActions";
 import { IActions } from "../types/actions";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils/Logger";
 import { appendFileSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
 import {
@@ -18,9 +18,9 @@ import {
   resolvePlatformSelector,
   isChainableSelector,
   isIndexedSelector,
-} from "../utils/SelectorBuilder";
-import { TestSessionState } from "../utils/testSessionState";
-import { captureDiagnostics, attachDiagnosticsToAllure } from "../utils/assertionDiagnostics";
+} from "../selector/SelectorBuilder";
+import { TestSessionState } from "../utils/TestSessionState";
+import { captureDiagnostics, attachDiagnosticsToAllure } from "../reporting/DiagnosticsCollector";
 
 const logger = Logger.getInstance();
 

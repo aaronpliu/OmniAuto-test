@@ -3,12 +3,12 @@ const baseConfig = require("./base.config");
 module.exports = {
   ...baseConfig,
   testMatch: ["**/tests/mobile/**/*.spec.ts"],
-  globalSetup: "<rootDir>/framework/hooks/globalSetup.ts",
+  globalSetup: "<rootDir>/core/lifecycle/GlobalSetup.ts",
   setupFilesAfterEnv: [
-    "<rootDir>/framework/hooks/appiumSetup.ts",
-    "<rootDir>/framework/hooks/testLifecycle.ts",
+    "<rootDir>/core/lifecycle/hooks/AppiumSetup.ts",
+    "<rootDir>/core/lifecycle/TestLifecycle.ts",
   ],
-  globalTeardown: "<rootDir>/framework/hooks/globalTeardown.ts",
+  globalTeardown: "<rootDir>/core/lifecycle/GlobalTeardown.ts",
   forceExit: true,
   reporters: ["default", "<rootDir>/configs/jest/smokeReportReporter.js"],
   testEnvironmentOptions: {

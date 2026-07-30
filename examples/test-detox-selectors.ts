@@ -4,7 +4,7 @@
  */
 
 import { by, element } from "detox";
-import { DetoxActions } from "../framework/actions/DetoxActions";
+import { DetoxActions } from "../plugins/detox/DetoxActions";
 
 // Mock Detox globals for testing
 (global as any).device = {

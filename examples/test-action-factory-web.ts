@@ -2,7 +2,7 @@
  * Test file to verify ActionFactory web platform support
  */
 
-import { ActionFactory } from "../framework/actions/ActionFactory";
+import { ActionFactory } from "../core/actions/ActionFactory";
 
 // Mock Page and Browser objects for testing
 const mockPage = {

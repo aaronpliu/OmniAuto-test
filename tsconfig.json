@@ -15,20 +15,18 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "@framework/*": ["framework/*"],
       "@applications/*": ["applications/*"],
       "@tests/*": ["tests/*"],
       "@configs/*": ["configs/*"],
       "@omnitest/core/*": ["core/*"],
       "@omnitest/plugins/*": ["plugins/*"]
     },
-    "typeRoots": ["./node_modules/@types", "./framework/types"]
+    "typeRoots": ["./node_modules/@types", "./core/types"]
   },
   "include": [
     "core/**/*",
     "plugins/**/*",
     "platform-api/**/*",
-    "framework/**/*",
     "applications/**/*",
     "tests/**/*",
     "examples/**/*",

@@ -7,8 +7,8 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { Logger } from "./logger";
-import { TestContext } from "./testContext";
+import { Logger } from "../utils/Logger";
+import { TestContext } from "../utils/TestContext";
 
 const logger = Logger.getInstance();
 

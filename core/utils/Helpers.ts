@@ -1,7 +1,9 @@
-/**
- * Helpers — Core wrapper
- *
- * Phase 1: Re-export from existing framework/utils/helpers.ts
- * Phase 5: Move implementation here, extend with more utility methods
- */
-export { Helpers } from "../../framework/utils/helpers";
+export class Helpers {
+  /**
+   * 固定等待指定毫秒数
+   * @param ms 等待的毫秒数
+   */
+  static async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}

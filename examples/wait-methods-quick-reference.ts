@@ -4,7 +4,7 @@
  * Quick guide to choosing the right wait strategy in DetoxActions
  */
 
-import { DetoxActions } from "../framework/actions/DetoxActions";
+import { DetoxActions } from "../plugins/detox/DetoxActions";
 
 const actions = new DetoxActions();
 

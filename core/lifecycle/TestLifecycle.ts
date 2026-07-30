@@ -11,10 +11,10 @@
  */
 import * as fs from "fs";
 import { join } from "path";
-import { TestContext } from "../utils/testContext";
-import { TestSessionState } from "../utils/testSessionState";
-import { Logger } from "../utils/logger";
-import { ensureSessionDir } from "../utils/sessionDir";
+import { TestContext } from "../utils/TestContext";
+import { TestSessionState } from "../utils/TestSessionState";
+import { Logger } from "../utils/Logger";
+import { ensureSessionDir } from "../utils/SessionDir";
 import { PluginRegistry } from "../../core/registry/PluginRegistry";
 import { ReportManager } from "../../core/reporting/ReportManager";
 import { ScreenshotService } from "../../core/reporting/ScreenshotService";

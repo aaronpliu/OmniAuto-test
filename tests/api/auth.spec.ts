@@ -1,5 +1,5 @@
 import { describe, it, beforeAll } from "@jest/globals";
-import { ApiClient } from "@framework/api/ApiClient";
+import { ApiClient } from "@omnitest/plugins/api/ApiClient";
 
 describe("API Authentication Tests", () => {
   let apiClient: ApiClient;

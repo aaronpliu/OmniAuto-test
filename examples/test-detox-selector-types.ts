@@ -4,7 +4,7 @@
  */
 
 import { by, element } from "detox";
-import { DetoxActions } from "../framework/actions/DetoxActions";
+import { DetoxActions } from "../plugins/detox/DetoxActions";
 
 // This file is for TypeScript compilation checking only
 // It verifies that all selector types are accepted by the action methods

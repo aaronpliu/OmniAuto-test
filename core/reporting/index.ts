@@ -1,9 +1,11 @@
-/**
- * Core Reporting — 统一导出
- */
 export { ReportManager } from "./ReportManager";
 export { StepRecorder } from "./StepRecorder";
 export { ScreenshotService } from "./ScreenshotService";
 export { RecordingService } from "./RecordingService";
 export { step, stepSync } from "./StepLogger";
 export { resizeScreenshot } from "./ImageResizer";
+export { captureDiagnostics, attachDiagnosticsToAllure } from "./DiagnosticsCollector";
+export { ScreenRecorder, createScreenRecorder, getScreenRecorder } from "./ScreenRecorder";
+export type { RecorderPlatform, VideoQuality, RecordingOptions } from "./ScreenRecorder";
+export { default as SmokeReportReporter } from "./SmokeReportReporter";
+export { generateSmokeHtmlReport } from "./smokeHtmlGenerator";

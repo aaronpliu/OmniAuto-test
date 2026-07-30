@@ -20,7 +20,6 @@ module.exports = {
   testMatch: ["**/*.spec.ts"],
   moduleDirectories: ["node_modules", "<rootDir>"],
   moduleNameMapper: {
-    "^@framework/(.*)$": "<rootDir>/framework/$1",
     "^@applications/(.*)$": "<rootDir>/applications/$1",
     "^@tests/(.*)$": "<rootDir>/tests/$1",
     "^@configs/(.*)$": "<rootDir>/configs/$1",

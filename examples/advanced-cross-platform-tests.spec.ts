@@ -12,7 +12,7 @@ import {
   isAppiumActions,
   DetoxActions,
   BaseActions,
-} from "@framework/actions";
+} from "@omnitest/core/actions";
 import { HomePage } from "@applications/your-app/pages/HomePage";
 
 describe("Advanced Cross-Platform Tests", () => {
