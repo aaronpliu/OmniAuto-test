@@ -9,6 +9,6 @@
  *
  * The Jest config points to this file instead of the .ts source directly.
  */
-require('ts-node/register/transpile-only');
+require("ts-node/register/transpile-only");
 
-module.exports = require('../../framework/reporters/smokeReportReporter').default;
+module.exports = require("../../core/reporting/SmokeReportReporter").default;
