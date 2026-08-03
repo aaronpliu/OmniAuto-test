@@ -2,8 +2,7 @@ const baseConfig = require("./base.config");
 
 module.exports = {
   ...baseConfig,
-  testMatch: ["**/tests/**/*.spec.ts"],
-  testPathIgnorePatterns: ["/node_modules/", "/web/", "/api/"],
+  testMatch: ["**/tests/mobile/**/*.spec.ts"],
   testEnvironmentOptions: {
     ...baseConfig.testEnvironmentOptions,
     platform: "ios",

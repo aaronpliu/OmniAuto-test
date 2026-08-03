@@ -71,8 +71,8 @@ OmniAutoTest/
 
 ```typescript
 import { describe, it, beforeAll } from "@jest/globals";
-import { ActionFactory } from "@framework/actions";
-import { LoginPage } from "@tests/TestGround/pages/LoginPage";
+import { ActionFactory } from "@omnitest/core/actions";
+import { LoginPage } from "@tests/mobile/TestGround/pages/LoginPage";
 
 describe("Login Tests", () => {
   let loginPage: LoginPage;
@@ -92,7 +92,7 @@ describe("Login Tests", () => {
 ## Page Object Example
 
 ```typescript
-import { by } from "@framework/utils";
+import { by } from "@omnitest/core/selector";
 // by.id() / by.text() / by.label() — unified across all platforms
 
 export class LoginPage {

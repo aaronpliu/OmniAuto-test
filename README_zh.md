@@ -71,8 +71,8 @@ OmniAutoTest/
 
 ```typescript
 import { describe, it, beforeAll } from "@jest/globals";
-import { ActionFactory } from "@framework/actions";
-import { LoginPage } from "@tests/TestGround/pages/LoginPage";
+import { ActionFactory } from "@omnitest/core/actions";
+import { LoginPage } from "@tests/mobile/TestGround/pages/LoginPage";
 
 describe("登录测试", () => {
   let loginPage: LoginPage;
@@ -92,7 +92,7 @@ describe("登录测试", () => {
 ## Page Object 示例
 
 ```typescript
-import { by } from "@framework/utils";
+import { by } from "@omnitest/core/selector";
 // by.id() / by.text() / by.label() 跨平台统一
 
 export class LoginPage {

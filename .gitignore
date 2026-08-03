@@ -69,4 +69,4 @@ apps/TestGround/android/*
 apps/TestGround/ios/*
 !apps/TestGround/ios/.gitkeep
 apps/3in1
-tests/3in1/uitree
+tests/mobile/3in1/

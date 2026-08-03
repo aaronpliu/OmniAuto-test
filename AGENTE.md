@@ -89,17 +89,21 @@ apps/            # Binary app/apk/ipa files organized by project and platform
     ├── android/
     └── ios/
 
-tests/           # Project-centric organization (pages + tests co-located)
-├── 3in1/
-│   ├── pages/       # Page objects for 3in1 project
-│   ├── Smoke/       # Smoke test suite
-│   └── uitree/      # UI tree analysis reports
-├── TestGround/
-│   ├── pages/       # Page objects for TestGround project
-│   ├── mobile/      # Mobile tests
-│   └── web/         # Web tests
-└── api/
-    └── auth.spec.ts # Cross-project API tests
+tests/           # Platform-first, then project (pages + tests co-located)
+├── mobile/      # Mobile tests (iOS + Android shared)
+│   ├── 3in1/
+│   │   ├── pages/       # Page objects for 3in1 project
+│   │   ├── Smoke/       # Smoke test suite
+│   │   └── uitree/      # UI tree analysis reports
+│   ├── TestGround/
+│   │   ├── pages/
+│   │   └── login.spec.ts
+│   └── your-app/        # Template project
+├── web/         # Web tests (Playwright)
+│   └── TestGround/
+│       └── login.spec.ts
+└── api/         # API tests (Jest + Axios)
+    └── auth.spec.ts
 ```
 
 ### Platform Routing
@@ -276,13 +280,12 @@ request/response noise.
 
 ### Import Path Conventions
 
-| Alias                 | Maps to     | Usage                                    |
-| --------------------- | ----------- | ---------------------------------------- |
-| `@omnitest/core/*`    | `core/*`    | Framework base layer imports             |
-| `@omnitest/plugins/*` | `plugins/*` | Plugin-specific imports                  |
-| `@tests/*`            | `tests/*`   | Page objects (now co-located with tests) |
-| `@tests/*`            | `tests/*`   | Test utilities                           |
-| `@configs/*`          | `configs/*` | Configuration access                     |
+| Alias                 | Maps to     | Usage                                  |
+| --------------------- | ----------- | -------------------------------------- |
+| `@omnitest/core/*`    | `core/*`    | Framework base layer imports           |
+| `@omnitest/plugins/*` | `plugins/*` | Plugin-specific imports                |
+| `@tests/*`            | `tests/*`   | Pages + tests (co-located per project) |
+| `@configs/*`          | `configs/*` | Configuration access                   |
 
 ### .detoxrc.js
 
