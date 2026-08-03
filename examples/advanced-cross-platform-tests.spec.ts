@@ -13,7 +13,7 @@ import {
   DetoxActions,
   BaseActions,
 } from "@omnitest/core/actions";
-import { HomePage } from "@applications/your-app/pages/HomePage";
+import { HomePage } from "@tests/your-app/pages/HomePage";
 
 describe("Advanced Cross-Platform Tests", () => {
   let actions: BaseActions;

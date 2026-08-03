@@ -57,7 +57,7 @@ OmniAutoTest/
 │   ├── reporters/             # Custom Allure reporter for Detox
 │   ├── types/                 # TypeScript type definitions
 │   └── utils/                 # Logger, config, selectors, etc.
-├── applications/              # Page Object Models
+├── applications/              # Legacy - use tests/<project>/pages/ instead
 │   └── TestGround/pages/      # LoginPage, HomePage
 ├── tests/                     # Test scripts
 │   ├── mobile/                # Mobile tests (iOS + Android shared)
@@ -72,7 +72,7 @@ OmniAutoTest/
 ```typescript
 import { describe, it, beforeAll } from "@jest/globals";
 import { ActionFactory } from "@framework/actions";
-import { LoginPage } from "@applications/TestGround/pages/LoginPage";
+import { LoginPage } from "@tests/TestGround/pages/LoginPage";
 
 describe("Login Tests", () => {
   let loginPage: LoginPage;

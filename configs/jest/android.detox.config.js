@@ -2,12 +2,12 @@ const baseConfig = require("./base.config");
 
 module.exports = {
   ...baseConfig,
-  testMatch: ["**/tests/mobile/**/*.spec.ts"],
+  testMatch: ["**/tests/**/*.spec.ts"],
+  testPathIgnorePatterns: ["/node_modules/", "/web/", "/api/"],
   testEnvironmentOptions: {
     ...baseConfig.testEnvironmentOptions,
-    platform: "android",
+    platform: "ios",
   },
-  // 使用 Detox 运行器
   globalSetup: "<rootDir>/configs/jest/detoxGlobalSetup.js",
   globalTeardown: "<rootDir>/configs/jest/detoxGlobalTeardown.js",
   testEnvironment: "detox/runners/jest/testEnvironment",

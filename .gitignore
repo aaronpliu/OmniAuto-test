@@ -63,9 +63,10 @@ videos/
 logs/
 *.log
 
-applications/TestGround/android-app/*
-!applications/TestGround/android-app/.gitkeep
-applications/TestGround/ios-app/*
-!applications/TestGround/ios-app/.gitkeep
-applications/3in1
-tests/mobile/3in1
+# App binaries (organized by project and platform under apps/)
+apps/TestGround/android/*
+!apps/TestGround/android/.gitkeep
+apps/TestGround/ios/*
+!apps/TestGround/ios/.gitkeep
+apps/3in1
+tests/3in1/uitree

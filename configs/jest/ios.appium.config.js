@@ -2,17 +2,21 @@ const baseConfig = require("./base.config");
 
 module.exports = {
   ...baseConfig,
-  testMatch: ["**/tests/mobile/**/*.spec.ts"],
-  globalSetup: "<rootDir>/core/lifecycle/GlobalSetup.ts",
-  setupFilesAfterEnv: [
-    "<rootDir>/core/lifecycle/hooks/AppiumSetup.ts",
-    "<rootDir>/core/lifecycle/TestLifecycle.ts",
-  ],
-  globalTeardown: "<rootDir>/core/lifecycle/GlobalTeardown.ts",
-  forceExit: true,
-  reporters: ["default", "<rootDir>/configs/jest/smokeReportReporter.js"],
+  testMatch: ["**/tests/**/*.spec.ts"],
+  testPathIgnorePatterns: ["/node_modules/", "/web/", "/api/"],
   testEnvironmentOptions: {
     ...baseConfig.testEnvironmentOptions,
     platform: "ios",
   },
+  globalSetup: "<rootDir>/configs/jest/detoxGlobalSetup.js",
+  globalTeardown: "<rootDir>/configs/jest/detoxGlobalTeardown.js",
+  testEnvironment: "detox/runners/jest/testEnvironment",
+  // Detox reporter + 自定义 Allure reporter
+  reporters: [
+    "default",
+    "<rootDir>/plugins/detox/reporters/DetoxAllureReporter.ts",
+    "<rootDir>/configs/jest/smokeReportReporter.js",
+  ],
+  setupFilesAfterEnv: ["<rootDir>/core/lifecycle/TestLifecycle.ts"],
+  maxWorkers: 1,
 };

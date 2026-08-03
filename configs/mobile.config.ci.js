@@ -52,13 +52,13 @@ module.exports = {
       },
       "android.debug": {
         type: "android.apk",
-        binaryPath: process.env.APP_PATH || "applications/TestGround/android-app/app-debug.apk",
+        binaryPath: process.env.APP_PATH || "apps/TestGround/android/app-debug.apk",
         build:
           "cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug && cd ..",
       },
       "android.release": {
         type: "android.apk",
-        binaryPath: process.env.APP_PATH || "applications/TestGround/android-app/app-release.apk",
+        binaryPath: process.env.APP_PATH || "apps/TestGround/android/app-release.apk",
         build:
           "cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release && cd ..",
       },
@@ -188,7 +188,7 @@ module.exports = {
   // 应用路径（统一管理，消除 .detoxrc 与 configs/*.json 重复）
   // ============================================================
   applications: {
-    androidApk: process.env.APP_PATH || "applications/TestGround/android-app/app-debug.apk",
-    iosApp: process.env.APP_PATH || "applications/TestGround/ios-app/TestingGround.app",
+    androidApk: process.env.APP_PATH || "apps/TestGround/android/app-debug.apk",
+    iosApp: process.env.APP_PATH || "apps/TestGround/ios/TestingGround.app",
   },
 };

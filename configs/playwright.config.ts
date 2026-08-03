@@ -19,7 +19,7 @@ const projects = webConfig.projects.map((p: any) => ({
 }));
 
 export default defineConfig({
-  testDir: "../tests/web",
+  testDir: "../tests/**/web",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: webConfig.retries,

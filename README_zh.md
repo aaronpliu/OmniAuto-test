@@ -57,7 +57,7 @@ OmniAutoTest/
 │   ├── reporters/             # Detox 自定义 Allure Reporter
 │   ├── types/                 # TypeScript 类型定义
 │   └── utils/                 # 日志、配置、选择器等
-├── applications/              # Page Object Models
+├── applications/              # Legacy - use tests/<project>/pages/ instead
 │   └── TestGround/pages/      # LoginPage, HomePage
 ├── tests/                     # 测试脚本
 │   ├── mobile/                # 移动端测试（iOS + Android 共享）
@@ -72,7 +72,7 @@ OmniAutoTest/
 ```typescript
 import { describe, it, beforeAll } from "@jest/globals";
 import { ActionFactory } from "@framework/actions";
-import { LoginPage } from "@applications/TestGround/pages/LoginPage";
+import { LoginPage } from "@tests/TestGround/pages/LoginPage";
 
 describe("登录测试", () => {
   let loginPage: LoginPage;

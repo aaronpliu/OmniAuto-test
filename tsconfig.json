@@ -15,7 +15,6 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "@applications/*": ["applications/*"],
       "@tests/*": ["tests/*"],
       "@configs/*": ["configs/*"],
       "@omnitest/core/*": ["core/*"],
@@ -27,7 +26,6 @@
     "core/**/*",
     "plugins/**/*",
     "platform-api/**/*",
-    "applications/**/*",
     "tests/**/*",
     "examples/**/*",
     "configs/**/*"

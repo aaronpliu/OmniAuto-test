@@ -1,6 +1,6 @@
 import { describe, it, beforeAll } from "@jest/globals";
 import { ActionFactory } from "@omnitest/core/actions";
-import { LoginPage } from "@applications/TestGround/pages/LoginPage";
+import { LoginPage } from "@tests/TestGround/pages/LoginPage";
 
 describe("Mobile Login Tests", () => {
   let loginPage: LoginPage;
