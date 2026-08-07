@@ -7,9 +7,17 @@ import { defineConfig, devices } from "@playwright/test";
  * 配置文件位于 configs/ 目录，testDir 和 outputDir 通过相对路径指向项目根。
  */
 // eslint-disable-next-line @typescript-eslint/no-var-requires -- Playwright config loads JS config at runtime
-const webConfig = require("./web.config.local.js");
+const isCI = !!process.env.CI;
 
-// 将 web.config.local.js 中的 projects 定义展开为 Playwright 所需格式
+let webConfig;
+try {
+  webConfig = isCI ? require("./web.config.ci.js") : require("./web.config.local.js");
+} catch (_e) {
+  // 回退到另一版本
+  webConfig = isCI ? require("./web.config.local.js") : require("./web.config.ci.js");
+}
+
+// 将 web.config.{ci,local}.js 中的 projects 定义展开为 Playwright 所需格式
 const projects = webConfig.projects.map((p: any) => ({
   name: p.name,
   use: {

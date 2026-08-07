@@ -5,7 +5,7 @@ module.exports = {
   testMatch: ["**/tests/mobile/**/*.spec.ts"],
   testEnvironmentOptions: {
     ...baseConfig.testEnvironmentOptions,
-    platform: "ios",
+    platform: "android",
   },
   globalSetup: "<rootDir>/configs/jest/detoxGlobalSetup.js",
   globalTeardown: "<rootDir>/configs/jest/detoxGlobalTeardown.js",
