@@ -19,6 +19,14 @@ ios/build/
 android/app/build/
 android/build/
 
+# Prebuilt app binaries under apps/**/artifacts/{ios,android}
+# Keep the folders (via .gitkeep) but never commit the built app/APK.
+# Only the binaries are ignored; .gitkeep stays tracked so the dirs are kept.
+apps/**/artifacts/ios/*.app/
+apps/**/artifacts/ios/*.app
+apps/**/artifacts/android/*.apk
+apps/**/artifacts/android/*.aab
+
 # Screenshots captured during tests
 *.png
 *.jpg

@@ -13,21 +13,26 @@
 
 /** @type {Detox.DetoxConfig} */
 module.exports = {
+  // Prebuilt app binaries are kept under `apps/<app>/artifacts/{ios,android}/`
+  // (git-ignored — never committed). `build` rebuilds them into those paths.
   apps: {
     'ios.debug': {
       type: 'ios.app',
-      binaryPath:
-        'ios/build/Build/Products/Debug-iphonesimulator/OmniAutoTest.app',
+      binaryPath: 'apps/mock/artifacts/ios/OmniAutoTest.app',
       build:
-        'xcodebuild -workspace ios/OmniAutoTest.xcworkspace -scheme OmniAutoTest -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
+        'xcodebuild -workspace ios/OmniAutoTest.xcworkspace -scheme OmniAutoTest -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build && ' +
+        'cp -R ios/build/Build/Products/Debug-iphonesimulator/OmniAutoTest.app apps/mock/artifacts/ios/OmniAutoTest.app',
     },
     'android.debug': {
       type: 'android.apk',
-      binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
+      binaryPath: 'apps/mock/artifacts/android/app-debug.apk',
       build:
-        'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
+        'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug && ' +
+        'cp android/app/build/outputs/apk/debug/app-debug.apk apps/mock/artifacts/android/app-debug.apk',
       testBinaryPath:
-        'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
+        'apps/mock/artifacts/android/app-debug-androidTest.apk',
+      // testBinaryPath is copied alongside the app APK during build:
+      // cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk apps/mock/artifacts/android/app-debug-androidTest.apk
     },
   },
 
