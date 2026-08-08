@@ -16,13 +16,13 @@ export interface ElementLocator {
 }
 
 /**
- * `DetoxElementMatcher` turns a declarative {@link ElementLocator} into a
+ * `DetoxMatcher` turns a declarative {@link ElementLocator} into a
  * Detox `NativeElement` and wraps it in a {@link DetoxActions}.
  *
  * Detox's `element(by...)` returns the handle lazily; we only resolve the
  * native element once and reuse it for every action.
  */
-export class DetoxElementMatcher {
+export class DetoxMatcher {
   /** Lazily resolved native Detox element. */
   private native: Detox.NativeElement | undefined;
 

@@ -1,2 +1,2 @@
 export * from './DetoxActions';
-export * from './DetoxElementMatcher';
+export * from './DetoxMatcher';

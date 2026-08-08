@@ -12,7 +12,6 @@ import type {
 // Detox is shipped as `export = Detox`, so we import the namespace as a type
 // and reference its real element/type definitions instead of re-declaring a
 // duplicate structural interface.
-import type Detox from 'detox';
 import { Logger } from '@utils/logger';
 
 // Module-level logger; shared singleton from @utils/logger.
