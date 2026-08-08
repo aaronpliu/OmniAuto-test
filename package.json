@@ -8,7 +8,9 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "detox test",
+    "test:ios": "detox test --configuration ios.sim.debug",
+    "test:android": "detox test --configuration android.emu.debug"
   },
   "repository": {
     "type": "git",
