@@ -13,6 +13,10 @@ import type {
 // and reference its real element/type definitions instead of re-declaring a
 // duplicate structural interface.
 import type Detox from 'detox';
+import { Logger } from '@utils/logger';
+
+// Module-level logger; shared singleton from @utils/logger.
+const logger = Logger.getInstance();
 
 /**
  * `DetoxActions` adapts the platform-agnostic {@link IActions} contract to
@@ -52,6 +56,7 @@ export class DetoxActions extends BaseActions {
   /* --------------------------- tap / press ------------------------------ */
 
   async tap(point?: Point): Promise<void> {
+    logger.debug(`tap(${JSON.stringify(point)}) on ${this.description}`);
     await this.native.tap(point);
   }
 
@@ -136,6 +141,7 @@ export class DetoxActions extends BaseActions {
 
   async typeText(text: string): Promise<void> {
     this.assertNonEmpty(text, 'text');
+    logger.debug(`typeText on ${this.description}`);
     await this.native.typeText(text);
   }
 
@@ -195,6 +201,7 @@ export class DetoxActions extends BaseActions {
 
   async toBeVisible(percent?: number): Promise<void> {
     if (percent !== undefined) this.assertInRange(percent, 1, 100, 'percent');
+    logger.debug(`expect toBeVisible(${percent ?? ''}) on ${this.description}`);
     await this.expect(this.native).toBeVisible(percent);
   }
 
