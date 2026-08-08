@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@omni": ["src/index.ts"],
+      "@contracts/*": ["src/contracts/*"],
+      "@utils/*": ["src/utils/*"],
+      "@configs/*": ["src/configs/*"],
+      "@adapters/*": ["src/adapters/*"],
+      "@factory/*": ["src/factory/*"],
+      "@setup/*": ["src/setup/*"],
+      "@apps/*": ["apps/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "reports"]
+}

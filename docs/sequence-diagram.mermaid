@@ -1,0 +1,168 @@
+%% OmniAutoTest 跨自动化框架统一 E2E 测试工程 —— 关键时序图
+%% 图 A：正常执行流（CLI → 组合校验 → globalSetup → Factory → Driver → 用例 → 失败截图 → teardown）
+%% 图 B：dry-run 无设备自检流
+%% 源：docs/ARCHITECTURE.md §5
+
+%% ══════════════════════════════════════════════════════════
+%% 图 A：正常执行流
+%% ══════════════════════════════════════════════════════════
+sequenceDiagram
+    autonumber
+    actor Dev as 测试工程师 / CI
+    participant CLI as src/index.ts + src/cli
+    participant Valid as cli/validation.ts
+    participant Cfg as configs/index.ts
+    participant Jest as jest 主进程
+    participant GS as setup/globalSetup.ts
+    participant W as jest worker
+    participant AfterEnv as setup/jestSetupAfterEnv.ts
+    participant Ctx as setup/testContext.ts
+    participant Fac as factory/AdapterFactory
+    participant Ad as XxxAdapter
+    participant Drv as XxxDriver
+    participant SDK as 第三方 SDK / 子进程
+    participant Spec as tests/mock/smoke/*.spec.ts
+    participant Shot as utils/screenshot.ts
+    participant Rep as utils/report.ts
+    participant GT as setup/globalTeardown.ts
+
+    Dev->>CLI: npm test -- --framework=appium --app=mock --platform=android --device=emulator
+    CLI->>CLI: args.parse(argv)
+    CLI->>Valid: validateCombination(options)
+    Valid->>Fac: getCapability('appium')
+    Fac-->>Valid: {platforms:[ios,android], deviceKinds:{...}}
+    alt 组合非法（如 xcuitest+android）
+        Valid-->>CLI: ValidationResult{ok:false}
+        CLI-->>Dev: 打印 issues + exit(2)  ← AC-3
+    end
+    Valid-->>CLI: ok
+    CLI->>Cfg: resolveRunConfig(options)
+    Cfg->>Cfg: 五级合并 framework默认 → device → app → env → CLI
+    Cfg->>Cfg: validateResolvedRunConfig()
+    Cfg-->>CLI: Object.freeze(ResolvedRunConfig)
+    CLI->>CLI: 落盘 reports/.run/<runId>/run-config.json
+    CLI->>Jest: spawn(jest --config configs/jest/jest.appium.config.ts)<br/>env: OMNI_RUN_CONFIG_FILE
+
+    Jest->>GS: globalSetup()
+    GS->>GS: 读 run-config.json + 建 reports 目录 + 记录 startedAt
+    Note over GS: ⚠ 不建 Adapter 会话（worker 进程隔离）
+    GS-->>Jest: void
+
+    Jest->>W: 派发测试文件
+    W->>AfterEnv: beforeAll()
+    AfterEnv->>Ctx: initTestContext(loadRunConfigFromEnv())
+    Ctx->>Fac: create(runConfig, logger)
+    Fac->>Fac: registry['appium'].loadAdapterModule()（动态 import）
+    Fac-->>Ctx: adapter = createAdapter({runConfig, logger})
+    Ctx->>Ad: init()
+    Ad->>Drv: connect()
+    Drv->>Drv: lazyImport('webdriverio')
+    alt 依赖缺失
+        Drv-->>Ad: FrameworkNotInstalledError（exit 6）
+    end
+    Drv->>SDK: remote(capabilities)
+    SDK-->>Drv: session
+    Drv-->>Ad: connected
+    Ad->>Ad: device.launchApp()
+    Ad-->>Ctx: state = 'ready'
+    Ctx-->>AfterEnv: TestContext
+
+    W->>Spec: it('登录成功')
+    Spec->>Ctx: getActions()（惰性代理，脚本内零框架名）
+    Ctx-->>Spec: IActions
+    Spec->>Ad: actions.typeText(loginLocators.usernameInput, 'demo')
+    Ad->>Ad: locatorResolver.resolve(locator) → NativeSelector
+    Ad->>Drv: findElement(selector)
+    Drv->>SDK: findElement('accessibility id', 'login-username')
+    SDK-->>Drv: element
+    Drv-->>Ad: element
+    Ad->>SDK: element.setValue('demo')
+    Ad-->>Spec: void
+
+    Spec->>Ad: actions.assertText(homeLocators.title, '首页')
+    Ad->>Ad: 实际文本不匹配
+    Ad-->>Spec: throw AssertionFailedError
+
+    Note over AfterEnv: jest-circus 事件 test_fn_failure
+    AfterEnv->>Ctx: getDevice()
+    AfterEnv->>Ad: device.captureScreenshotBuffer()
+    Ad->>Drv: screenshot()
+    Drv->>SDK: takeScreenshot()
+    SDK-->>Drv: base64
+    Drv-->>Ad: Buffer
+    Ad-->>AfterEnv: Buffer
+    AfterEnv->>Shot: saveScreenshot(buffer, paths, {testName})
+    Shot-->>AfterEnv: ArtifactRef(reports/screenshots/xxx.png)  ← US-07
+    AfterEnv->>Rep: appendCaseRecord({status:'failed', artifacts})
+
+    W->>AfterEnv: afterAll()
+    AfterEnv->>Ctx: disposeTestContext()
+    Ctx->>Ad: dispose()
+    Ad->>Drv: disconnect()
+    Drv->>SDK: deleteSession()
+    AfterEnv->>Rep: flushShard()
+
+    Jest->>GT: globalTeardown()
+    GT->>Rep: mergeShards(runId)
+    Rep->>Rep: writeJUnitXml / writeJsonReport / writeHtmlReport
+    Rep-->>GT: RunReport
+    GT-->>Jest: 打印摘要
+    Jest-->>CLI: exitCode
+    CLI-->>Dev: exit(0 | 10)  ← AC-7
+
+
+%% ══════════════════════════════════════════════════════════
+%% 图 B：dry-run 自检流（无设备 / 无 detox / 无 webdriverio）
+%% ══════════════════════════════════════════════════════════
+sequenceDiagram
+    autonumber
+    actor Dev as 工程师 / CI
+    participant CLI as src/cli/index.ts
+    participant Args as cli/args.ts
+    participant DR as cli/dryRun.ts
+    participant FS as node:fs（结构扫描）
+    participant Cfg as configs/**
+    participant Fac as factory/AdapterFactory
+    participant TSC as child_process: npx tsc --noEmit
+    participant Rep as utils/report.ts
+
+    Dev->>CLI: npm run dry-run
+    CLI->>Args: parse(['--dry-run'])
+    Args-->>CLI: options{dryRun:true}
+    Note over CLI: dry-run 下 framework/app/platform/device 可缺省，<br/>缺省即对全组合矩阵做校验
+    CLI->>DR: runDryRun(options)
+
+    DR->>FS: [1] structure —— 比对 EXPECTED_FILES（71 个文件）
+    FS-->>DR: DryRunCheckResult
+    DR->>FS: [2] dependency-direction —— 正则扫描 import，校验分层依赖矩阵
+    FS-->>DR: DryRunCheckResult
+    DR->>Cfg: [3] config-load —— 动态 import 全部 configs/**，逐项 validate()
+    Cfg-->>DR: ValidationIssue[]
+    DR->>Cfg: [4] env-spec —— ENV_SPEC 与 .env.example 逐条比对（US-12）
+    Cfg-->>DR: DryRunCheckResult
+    DR->>Fac: [5] combination-matrix —— 枚举 framework×platform×device×app
+    Fac->>Fac: 合法组合必须 resolve 成功；非法组合必须被拒（xcuitest+android）
+    Fac-->>DR: DryRunCheckResult  ← AC-3 的自动化回归
+    DR->>Fac: [6] adapter-registry —— 逐个 loadAdapterModule()，断言导出 createAdapter
+    Note over Fac: 只 import 适配器模块本身，不触发<br/>lazyImport('detox'/'webdriverio')，<br/>无依赖环境下也能通过（D-1）
+    Fac-->>DR: DryRunCheckResult
+    DR->>FS: [7] locator-purity —— 扫描 apps/** tests/**，命中框架专有关键字黑名单即失败
+    Note over FS: 黑名单：by.id( / by.text( / element( / device. /<br/>driver. / browser. / $( / $$( / -ios / -android /<br/>XCUIElement / UiSelector / from 'detox' / from 'webdriverio'
+    FS-->>DR: DryRunCheckResult  ← C-01 自动化守卫
+    DR->>FS: [8] test-structure —— *.spec.ts 命名、至少 1 个 it、import 仅来自 '@omni' 与 apps/**
+    FS-->>DR: DryRunCheckResult
+    DR->>FS: [9] artifacts-writable —— reports/screenshots|videos|.run 可写探针
+    FS-->>DR: DryRunCheckResult
+    DR->>TSC: [10] typecheck —— spawn npx tsc --noEmit
+    TSC-->>DR: exitCode + stdout  ← AC-1
+
+    DR->>Rep: writeDryRunReport(reports/dry-run-report.json)
+    DR->>DR: 渲染控制台表格（✔/✘ + 耗时 + issue 明细）
+    alt 全部通过
+        DR-->>CLI: DryRunReport{ok:true, exitCode:0}
+        CLI-->>Dev: exit(0)  ← AC-2
+    else typecheck 失败
+        CLI-->>Dev: exit(4)
+    else 其它检查失败
+        CLI-->>Dev: exit(5)
+    end

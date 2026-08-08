@@ -1,0 +1,45 @@
+{
+  "name": "omni-auto-test-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OmniAutoTest 跨自动化框架统一 E2E 测试工程：一份脚本零改动运行于 Detox / Appium / XCUITest",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.18.0",
+    "npm": ">=9"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dry-run": "tsx src/index.ts --dry-run",
+    "test": "tsx src/index.ts",
+    "test:appium:android": "tsx src/index.ts --framework=appium --app=mock --platform=android --device=emulator",
+    "test:appium:ios": "tsx src/index.ts --framework=appium --app=mock --platform=ios --device=simulator",
+    "test:detox:ios": "tsx src/index.ts --framework=detox --app=mock --platform=ios --device=simulator",
+    "test:xcuitest:ios": "tsx src/index.ts --framework=xcuitest --app=mock --platform=ios --device=simulator"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.7.5",
+    "jest": "^29.7.0",
+    "jest-environment-node": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  },
+  "peerDependencies": {
+    "detox": "^20.20.0",
+    "webdriverio": "^9.0.0 || ^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "detox": {
+      "optional": true
+    },
+    "webdriverio": {
+      "optional": true
+    }
+  }
+}
