@@ -1,0 +1,34 @@
+{
+  "name": "omniauto-test",
+  "version": "0.1.0",
+  "description": "Cross-platform test automation framework for application",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aaronpliu/OmniAuto-test.git"
+  },
+  "keywords": [
+    "detox",
+    "appium",
+    "xcuitest",
+    "jest"
+  ],
+  "author": "Aaron LIU",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/aaronpliu/OmniAuto-test/issues"
+  },
+  "homepage": "https://github.com/aaronpliu/OmniAuto-test#readme",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.0",
+    "detox": "^20.51.4"
+  }
+}

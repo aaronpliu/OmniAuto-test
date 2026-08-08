@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build / compile output
+dist/
+build/
+*.tsbuildinfo
+
+# Test reports & artifacts
+reports/
+artifacts/
+coverage/
+*.log
+
+# Detox native build output
+ios/build/
+android/app/build/
+android/build/
+
+# Screenshots captured during tests
+*.png
+*.jpg
+
+# Environment / secrets
+.env
+.env.local
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
