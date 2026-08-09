@@ -1,3 +1,4 @@
+import type { IActions } from '@contracts/IActions';
 import { DetoxActions } from './DetoxActions';
 
 /**
@@ -19,13 +20,12 @@ export interface ElementLocator {
  * `DetoxMatcher` turns a declarative {@link ElementLocator} into a
  * Detox `NativeElement` and wraps it in a {@link DetoxActions}.
  *
- * Detox's `element(by...)` returns the handle lazily; we only resolve the
- * native element once and reuse it for every action.
+ * Element resolution is synchronous: Detox's `element(by...)` returns the
+ * handle immediately (actions only become async when dispatched via `.tap()`
+ * etc.), so there is no reason to `await` the resolver. This keeps page-object
+ * element access free of nested `await (await …)` calls.
  */
 export class DetoxMatcher {
-  /** Lazily resolved native Detox element. */
-  private native: Detox.NativeElement | undefined;
-
   constructor(private readonly locator: ElementLocator) {}
 
   /**
@@ -33,8 +33,7 @@ export class DetoxMatcher {
    * runtime; we import it dynamically to keep this module usable in non-Detox
    * contexts (e.g. unit tests of the contract layer).
    */
-  private async buildNative(): Promise<Detox.NativeElement> {
-    if (this.native) return this.native;
+  private buildNative(): Detox.NativeElement {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const detox = require('detox') as typeof import('detox');
     const { element, by } = detox;
@@ -44,14 +43,12 @@ export class DetoxMatcher {
     if (this.locator.traits && this.locator.traits.length) {
       matcher = by.traits(this.locator.traits);
     }
-    this.native = element(matcher);
-    return this.native;
+    return element(matcher);
   }
 
-  /** Resolve this locator into a contract-compliant {@link DetoxActions}. */
-  async resolve(): Promise<DetoxActions> {
-    const native = await this.buildNative();
+  /** Resolve this locator into a contract-compliant {@link IActions}. */
+  resolve(): IActions {
     const description = JSON.stringify(this.locator);
-    return new DetoxActions(native, description);
+    return new DetoxActions(this.buildNative(), description);
   }
 }
