@@ -1,4 +1,5 @@
 import type { IActions } from '@contracts/IActions';
+import type { ElementLocator } from '@adapters/detox';
 import { DetoxMatcher } from '@adapters/detox';
 import { Logger } from '@utils/logger';
 import { loginLocators } from '../locators/login.locators';
@@ -11,29 +12,34 @@ const logger = Logger.getInstance();
  * test specs stay declarative and resilient to locator changes.
  */
 export class LoginPage {
+  /** Resolve a locator into a contract-compliant action. */
+  private resolve(locator: ElementLocator): Promise<IActions> {
+    return new DetoxMatcher(locator).resolve();
+  }
+
   /** Resolve the username field as a contract-compliant action. */
-  async usernameField(): Promise<IActions> {
-    return new DetoxMatcher(loginLocators.username).resolve();
+  usernameField(): Promise<IActions> {
+    return this.resolve(loginLocators.username);
   }
 
   /** Resolve the password field. */
-  async passwordField(): Promise<IActions> {
-    return new DetoxMatcher(loginLocators.password).resolve();
+  passwordField(): Promise<IActions> {
+    return this.resolve(loginLocators.password);
   }
 
   /** Resolve the submit button. */
-  async submitButton(): Promise<IActions> {
-    return new DetoxMatcher(loginLocators.submit).resolve();
+  submitButton(): Promise<IActions> {
+    return this.resolve(loginLocators.submit);
   }
 
   /** Resolve the inline error message element. */
-  async errorText(): Promise<IActions> {
-    return new DetoxMatcher(loginLocators.error).resolve();
+  errorText(): Promise<IActions> {
+    return this.resolve(loginLocators.error);
   }
 
   /** Resolve the post-login welcome banner. */
-  async welcomeBanner(): Promise<IActions> {
-    return new DetoxMatcher(loginLocators.welcome).resolve();
+  welcomeBanner(): Promise<IActions> {
+    return this.resolve(loginLocators.welcome);
   }
 
   /**
