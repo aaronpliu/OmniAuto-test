@@ -6,9 +6,15 @@
  * talks to the device over a separate bridge — it is not a DOM/jsdom env.
  */
 module.exports = {
-  testEnvironment: 'node',
-  testMatch: ['<rootDir>/tests/**/*.e2e.ts'],
+  maxWorkers: 1,
   testTimeout: 120000,
-  reporters: ['detox/runners/jest/streamlineReporter'],
   verbose: true,
+  testMatch: ['<rootDir>/tests/**/*.e2e.ts'],
+  transform: {
+    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+  },
+  reporters: ['detox/runners/jest/reporter'],
+  globalSetup: 'detox/runners/jest/globalSetup',
+  globalTeardown: 'detox/runners/jest/globalTeardown',
+  testEnvironment: 'detox/runners/jest/testEnvironment',
 };

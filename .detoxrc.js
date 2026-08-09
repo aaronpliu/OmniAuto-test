@@ -18,10 +18,10 @@ module.exports = {
   apps: {
     'ios.debug': {
       type: 'ios.app',
-      binaryPath: 'apps/mock/artifacts/ios/OmniAutoTest.app',
+      binaryPath: 'apps/mock/artifacts/ios/TestingGround.app',
       build:
         'xcodebuild -workspace ios/OmniAutoTest.xcworkspace -scheme OmniAutoTest -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build && ' +
-        'cp -R ios/build/Build/Products/Debug-iphonesimulator/OmniAutoTest.app apps/mock/artifacts/ios/OmniAutoTest.app',
+        'cp -R ios/build/Build/Products/Debug-iphonesimulator/TestingGround.app apps/mock/artifacts/ios/TestingGround.app',
     },
     'android.debug': {
       type: 'android.apk',
@@ -40,8 +40,7 @@ module.exports = {
     simulator: {
       type: 'ios.simulator',
       device: {
-        type: 'iPhone 15',
-        os: 'iOS 17.0',
+        type: 'iPhone 15 Pro',
       },
     },
     emulator: {
