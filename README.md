@@ -37,8 +37,9 @@ untouched** because they only depend on `IActions`.
 
 - Node 20+ (matches `@types/node ^20`).
 - macOS for iOS; Android SDK + emulator for Android.
-- iOS only: [`applesimutils`](https://github.com/wix/AppleSimulatorUtils)
-  (`brew tap wix/brew && brew install applesimutils`).
+- iOS only: [`applesimutils`](https://github.com/wix/AppleSimulatorUtils) — a
+  Detox iOS runtime dependency (permissions / biometrics / location). It is a
+  **Homebrew system tool, not an npm package**.
 
 ## Install
 
@@ -46,7 +47,38 @@ untouched** because they only depend on `IActions`.
 npm install
 ```
 
-This installs `detox`, `jest`, `ts-jest`, `winston` and their peer deps.
+This installs `detox`, `jest`, `ts-jest`, `winston`, `eslint`, `husky` and
+`lint-staged`. Two lifecycle hooks run automatically:
+
+- **`postinstall`** — installs `applesimutils` from the bundled offline binary
+  (macOS only; no-op elsewhere) so iOS testing works without Homebrew/internet.
+  See `offline_library/README.md`.
+- **`prepare`** — initializes [Husky](https://typicode.github.io/husky/), wiring
+  the git pre-commit hook.
+
+> The binary itself is version-managed in `offline_library/` (see
+> `offline_library/README.md`); `postinstall` only links it into
+> `node_modules/.bin`. No manual step is required on a fresh clone.
+
+## Git hooks & linting
+
+[Husky](https://typicode.github.io/husky/) + [lint-staged](https://github.com/lint-staged/lint-staged)
+run on every commit:
+
+- `.husky/pre-commit` ⇒ `npx lint-staged`
+- lint-staged lints staged `*.ts` files with `eslint --fix` and type-checks via
+  `tsc --noEmit`.
+
+You can also run these manually:
+
+```bash
+npm run lint        # eslint over all .ts
+npm run typecheck   # tsc --noEmit
+```
+
+> **Note:** `applesimutils` is a **Homebrew system tool, not an npm package**, so
+> it is not installed by `npm install` itself — the `postinstall` script copies
+> the bundled prebuilt binary into the system PATH.
 
 ## App binaries & `.gitignore`
 

@@ -3,6 +3,9 @@ node_modules/
 .pnp/
 .pnp.js
 
+# Husky internal (hook runner)
+.husky/_/
+
 # Build / compile output
 dist/
 build/
