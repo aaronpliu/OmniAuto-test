@@ -9,9 +9,21 @@ module.exports = {
   maxWorkers: 1,
   testTimeout: 120000,
   verbose: true,
+  rootDir: __dirname,
   testMatch: ['<rootDir>/tests/**/*.e2e.ts'],
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+  },
+  // jest does not read tsconfig `paths`; map them explicitly so @aliases resolve.
+  moduleNameMapper: {
+    '^@omni$': '<rootDir>/src/index.ts',
+    '^@contracts/(.*)$': '<rootDir>/src/contracts/$1',
+    '^@utils/(.*)$': '<rootDir>/src/utils/$1',
+    '^@configs/(.*)$': '<rootDir>/src/configs/$1',
+    '^@adapters/(.*)$': '<rootDir>/src/adapters/$1',
+    '^@factory/(.*)$': '<rootDir>/src/factory/$1',
+    '^@setup/(.*)$': '<rootDir>/src/setup/$1',
+    '^@apps/(.*)$': '<rootDir>/apps/$1',
   },
   reporters: ['detox/runners/jest/reporter'],
   globalSetup: 'detox/runners/jest/globalSetup',
