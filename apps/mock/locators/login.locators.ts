@@ -7,11 +7,11 @@ import type { ElementLocator } from '@adapters/detox';
  */
 export const loginLocators = {
   /** Username / email text field. */
-  username: { id: 'login.username' } as ElementLocator,
+  username: { id: 'usernameInput' } as ElementLocator,
   /** Password secure text field. */
-  password: { id: 'login.password' } as ElementLocator,
+  password: { id: 'passwordInput' } as ElementLocator,
   /** Submit button. */
-  submit: { id: 'login.submit' } as ElementLocator,
+  submit: { id: 'loginButton' } as ElementLocator,
   /** Inline error message shown on failed login. */
   error: { id: 'login.error' } as ElementLocator,
   /** Welcome banner shown after a successful login (on the home screen). */

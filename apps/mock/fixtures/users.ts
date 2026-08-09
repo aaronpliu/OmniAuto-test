@@ -6,8 +6,8 @@ export interface UserCredentials {
 
 /** A known-good account provisioned in the mock/test environment. */
 export const validUser: UserCredentials = {
-  username: 'testuser',
-  password: 'Passw0rd!',
+  username: 'admin',
+  password: '123456',
 };
 
 /** An intentionally invalid account to exercise the error path. */
