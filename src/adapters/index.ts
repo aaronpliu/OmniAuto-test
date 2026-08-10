@@ -9,14 +9,25 @@
 import { registerDriver, type IDriver } from '@core/Driver';
 import { DetoxMatcherFactory } from './detox/DetoxMatcher';
 import { detoxAppLauncher } from './detox/DetoxAppLauncher';
+import { AppiumMatcherFactory } from './appium/AppiumMatcherFactory';
+import { appiumAppLauncher } from './appium/AppiumAppLauncher';
 
-// Register the Detox driver. Appium (and others) register themselves the same
-// way once their adapter folder exists.
+// Register the Detox driver.
 registerDriver('detox', (): IDriver => ({
   name: 'detox',
   matcher: new DetoxMatcherFactory(),
   launcher: detoxAppLauncher,
 }));
 
+// Register the Appium driver. Each framework registers itself the same way;
+// pages and tests never need to change when a new driver is added.
+registerDriver('appium', (): IDriver => ({
+  name: 'appium',
+  matcher: new AppiumMatcherFactory(),
+  launcher: appiumAppLauncher,
+}));
+
 // Re-export the concrete adapters for direct imports where useful.
 export * from './detox';
+export * from './appium';
+
