@@ -16,4 +16,6 @@ export const loginLocators = {
   error: { id: 'login.error' } as ElementLocator,
   /** Welcome banner shown after a successful login (on the home screen). */
   welcome: { id: 'home.welcome' } as ElementLocator,
+  /** Optional promo banner (CMS-configured); may be absent. */
+  promoBanner: { id: 'home.promoBanner' } as ElementLocator,
 };

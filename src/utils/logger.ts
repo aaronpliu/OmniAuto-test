@@ -8,9 +8,9 @@ export class Logger {
   private fileLogReady = false;
 
   private constructor() {
-    // 只初始化 console transport，file transport 延迟到会话目录就绪后再挂载
+    // Only initialize the console transport; defer the file transport until the session directory is ready.
     const rawLevel = process.env.LOG_LEVEL || "info";
-    // Winston 没有 trace 级别，trace 映射为 debug（最详细）
+    // Winston has no "trace" level, so map "trace" to "debug" (most verbose).
     const winstonLevel = rawLevel === "trace" ? "debug" : rawLevel;
     this.logger = winston.createLogger({
       level: winstonLevel,
@@ -38,7 +38,7 @@ export class Logger {
       ],
     });
 
-    // 若环境变量已设置（test worker 场景），立即挂载 file transport
+    // If the env var is already set (test worker scenario), mount the file transport immediately.
     if (process.env.OMNITEST_SESSION_DIR) {
       this.ensureFileLogging(process.env.OMNITEST_SESSION_DIR);
     }
@@ -52,9 +52,10 @@ export class Logger {
   }
 
   /**
-   * 确保 file transport 已挂载到指定目录下的 test.log。
-   * 幂等：多次调用不会创建重复的 file transport。
-   * 由 globalSetup 在会话目录创建后调用；test worker 自动在构造时完成。
+   * Ensure the file transport is mounted to test.log under the given directory.
+   * Idempotent: repeated calls will not create duplicate file transports.
+   * Called by globalSetup after the session directory is created; test workers
+   * mount it automatically during construction.
    */
   ensureFileLogging(logDir: string): void {
     if (this.fileLogReady) {

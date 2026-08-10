@@ -52,6 +52,18 @@ export class DetoxActions extends BaseActions {
     return this.expectFacade;
   }
 
+  /** Detox's `waitFor` facade, resolved lazily from the `detox` module. */
+  private waitForFacade: Detox.WaitForFacade | undefined;
+
+  /** Lazily obtain Detox's `waitFor` facade. */
+  private get waitFor(): Detox.WaitForFacade {
+    if (!this.waitForFacade) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      this.waitForFacade = require('detox').waitFor as Detox.WaitForFacade;
+    }
+    return this.waitForFacade;
+  }
+
   /* --------------------------- tap / press ------------------------------ */
 
   async tap(point?: Point): Promise<void> {
@@ -197,6 +209,18 @@ export class DetoxActions extends BaseActions {
   }
 
   /* ---------------------------- expectations ---------------------------- */
+
+  async isVisible(): Promise<boolean> {
+    // Detox throws when an element is not visible; treat that as "not visible"
+    // rather than an error so optional/business-driven steps can be skipped.
+    // NOTE: `.withTimeout()` belongs to `waitFor(...)`, not `expect(...)`.
+    try {
+      await this.waitFor(this.native).toBeVisible().withTimeout(2000);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   async toBeVisible(percent?: number): Promise<void> {
     if (percent !== undefined) this.assertInRange(percent, 1, 100, 'percent');

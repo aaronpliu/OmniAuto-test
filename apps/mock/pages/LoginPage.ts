@@ -46,4 +46,13 @@ export class LoginPage {
   async expectErrorVisible(): Promise<void> {
     await this.find(loginLocators.error).toBeVisible();
   }
+
+  /**
+   * Dismiss the optional promo banner if it is present. The banner is
+   * CMS-configured, so it may be absent — use `tapIfExists` so a missing
+   * banner never fails the suite. Returns whether the banner was dismissed.
+   */
+  async dismissPromoIfPresent(): Promise<boolean> {
+    return this.find(loginLocators.promoBanner).tapIfExists();
+  }
 }

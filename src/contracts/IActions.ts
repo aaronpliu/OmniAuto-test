@@ -23,6 +23,14 @@ export interface IActions {
   /** Tap the element's activation point. Optionally at a specific local point. */
   tap(point?: Point): Promise<void>;
 
+  /**
+   * Tap the element only if it is currently visible; otherwise do nothing.
+   * Never throws when the element is absent — use this for optional/business-
+   * driven steps (e.g. a CMS-configured banner) that must not fail the suite.
+   * Returns whether the tap was actually performed.
+   */
+  tapIfExists(): Promise<boolean>;
+
   /** Tap the activation point `times` times as a single gesture. */
   multiTap(times: number): Promise<void>;
 
@@ -121,6 +129,9 @@ export interface IActions {
   /* ---------------------------------------------------------------------- */
   /* Expectations / assertions                                              */
   /* ---------------------------------------------------------------------- */
+
+  /** Probe whether the element is currently visible, without asserting. */
+  isVisible(): Promise<boolean>;
 
   /** Assert the element is visible (optionally with a 1–100 visibility %). */
   toBeVisible(percent?: number): Promise<void>;
