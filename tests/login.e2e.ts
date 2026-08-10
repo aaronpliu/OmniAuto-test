@@ -14,7 +14,7 @@ const driver = getDriver();
  *
  * App launch is handled by the active driver's launcher. Switch frameworks with:
  *   E2E_DRIVER=detox  detox test --configuration ios.sim.debug
- *   E2E_DRIVER=appium npx jest tests/login.e2e.ts
+ *   E2E_DRIVER=appium npx wdio wdio.conf.ts   (or: npm run test:appium)
  */
 describe('Login flow', () => {
   beforeAll(async () => {

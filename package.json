@@ -11,10 +11,12 @@
     "test": "detox test",
     "test:ios": "detox test --configuration ios.sim.debug",
     "test:android": "detox test --configuration android.emu.debug",
+    "test:appium": "E2E_DRIVER=appium npx wdio wdio.conf.ts",
     "prepare": "husky",
     "postinstall": "node -e \"const fs=require('fs'),path=require('path'),p=process.cwd();const s=path.join(p,'offline_library','applesimutils');const d=path.join(p,'node_modules','.bin','applesimutils');if(fs.existsSync(s)){try{fs.mkdirSync(path.dirname(d),{recursive:true});fs.rmSync(d,{force:true});fs.symlinkSync(s,d,'file');console.log('[postinstall] linked applesimutils -> node_modules/.bin/applesimutils');}catch(e){console.warn('[postinstall] applesimutils link skipped:',e.message);}}else{console.log('[postinstall] skipping applesimutils (binary not found in offline_library)');}\"",
     "lint": "eslint . --ext .ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:appium": "tsc --noEmit -p tsconfig.appium.json"
   },
   "repository": {
     "type": "git",
@@ -37,6 +39,11 @@
     "@types/node": "^20.14.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "@wdio/appium-service": "^9.0.0",
+    "@wdio/cli": "^9.0.0",
+    "@wdio/mocha-framework": "^9.0.0",
+    "@wdio/types": "^9.0.0",
+    "appium": "^2.5.0",
     "detox": "^20.51.4",
     "eslint": "^8.57.0",
     "husky": "^9.1.6",

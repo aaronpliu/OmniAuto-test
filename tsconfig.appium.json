@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "jest", "@wdio/types"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "apps/**/*.ts",
+    "tests/**/*.ts",
+    "wdio.conf.ts"
+  ],
+  "exclude": ["node_modules", "reports"]
+}

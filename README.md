@@ -16,6 +16,11 @@ adapters/detox/   Concrete Detox adapter
   DetoxMatcher    ElementLocator → Detox element(by…)
   DetoxActions    Implements IActions on top of Detox NativeElement
 
+adapters/appium/  Concrete Appium (WebdriverIO) adapter
+  AppiumMatcherFactory  ElementLocator → wdio `~id` / predicate selector
+  AppiumActions          Implements IActions on top of a wdio element
+  AppiumAppLauncher      (re)starts the app via launchApp/restartApp
+
 apps/             App-specific assets (per app)
   <app>/locators  Declarative element locators (id/text/label/traits)
   <app>/fixtures  Test data (users, …)
@@ -122,6 +127,32 @@ npm run test:android
 > **Note:** testIDs in `apps/*/locators/**` must match the app's accessibility
 > identifiers. If assertions fail, align the locators with the app's testIDs.
 
+## Run with Appium (alternative driver)
+
+The same specs run under Appium via WebdriverIO — no page/test changes needed.
+The only switch is the `E2E_DRIVER` env var, which tells `getDriver()` to
+resolve the Appium adapter instead of Detox.
+
+```bash
+# Install the Appium/wdio toolchain (one-time)
+npm install
+
+# Point Appium at your built app (absolute path) and device
+export APPIUM_APP_PATH=/path/to/TestingGround.app
+export DEVICE_NAME="iPhone 15 Pro"
+export PLATFORM_VERSION="17.0"
+
+# Run
+npm run test:appium        # = E2E_DRIVER=appium npx wdio wdio.conf.ts
+```
+
+`wdio.conf.ts` starts a local Appium server (`@wdio/appium-service`), injects
+the wdio session into `globalThis.driver` (the bridge `AppiumActions` /
+`AppiumAppLauncher` use), and reuses the Jest specs with the same path aliases.
+
+> To use an existing Appium server instead of the bundled one, remove the
+> `services: ['appium']` line and set `hostname` / `port` in `wdio.conf.ts`.
+
 ## Add a new test
 
 1. **Locator** — add entries in `apps/<app>/locators/*.locators.ts`.
@@ -139,7 +170,12 @@ npm run test:android
 - `.detoxrc.js` — apps, devices, configurations, behavior, artifacts, logger.
   Uses Detox 20 Jest runner (`detox/runners/jest/*`).
 - `jest.config.js` — `ts-jest` transform for `*.ts`, Detox global setup/teardown.
-- `tsconfig.json` — path aliases (`@contracts`, `@adapters`, `@utils`, `@apps`).
+- `tsconfig.json` — path aliases (`@contracts`, `@adapters`, `@utils`, `@apps`);
+  checked by `npm run typecheck` (covers `src`, `apps`, `tests`).
+- `tsconfig.appium.json` — extends `tsconfig.json`, adds `wdio.conf.ts` and the
+  `@wdio/types` lib; checked by `npm run typecheck:appium` (run after
+  `npm install` so the WebdriverIO types are present).
+- `wdio.conf.ts` — WebdriverIO/Appium runner config for `E2E_DRIVER=appium`.
 
 ## Notes
 
