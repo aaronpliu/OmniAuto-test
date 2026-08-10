@@ -14,8 +14,8 @@
 export * from './contracts';
 
 // Neutral locator model + driver selector (registry-backed, env-switchable).
-export * from './core/locator';
-export { getDriver, registerDriver } from './core/drivers';
+export * from './core/ILocator';
+export { getDriver, registerDriver } from './core/index';
 
 // Utilities (logger, …).
 export * from './utils';

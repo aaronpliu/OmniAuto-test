@@ -1,4 +1,4 @@
-import type { ILocator } from '@core/locator';
+import type { ILocator } from '@core/ILocator';
 
 /**
  * Declarative locators for the login screen. These are driver-neutral

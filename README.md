@@ -30,6 +30,12 @@ apps/             App-specific assets (per app)
 
 tests/            Jest + Detox specs (*.e2e.ts)
 utils/            Shared helpers (logger, …)
+
+core/             Driver-neutral core (env-switchable entry point)
+  ILocator        Neutral locator model + IMatcherFactory (locator → IActions)
+  IDriver         Driver facade types (matcher + launcher) + DriverName
+  Driver          Registry / selector — getDriver(E2E_DRIVER), registerDriver
+  index           Entry point (`@core`): re-exports getDriver + types
 ```
 
 ### Why the indirection?
@@ -37,6 +43,30 @@ utils/            Shared helpers (logger, …)
 (`DetoxActions` today). To add another driver (e.g. Appium) you only implement
 a new `adapters/<driver>/` package — **existing pages, workflows and tests are
 untouched** because they only depend on `IActions`.
+
+### Naming conventions
+
+Follow these rules so the driver-agnostic core stays consistent with `contracts/`:
+
+- **Interface files use an `I` prefix** — e.g. `IActions.ts`, `IAppLauncher.ts`,
+  `ILocator.ts`, `IDriver.ts`. The `I` is the file name, not just the type:
+  a file that *only* declares interfaces is named `I<Name>.ts`.
+- **`index.ts` is the entry point** of a directory. For `src/core`, import the
+  driver selector and types from `@core/index` (aliased as `@core`) — not from
+  a concrete module like `@core/Driver` or `@core/ILocator`.
+- **Concrete (non-interface) modules keep their PascalCase name** — e.g.
+  `Driver.ts` (registry logic), `BaseActions.ts`, `DetoxActions.ts`.
+- **Pages/workflows/specs must never import a concrete adapter** (e.g.
+  `@adapters/detox/*`); they depend only on `@core` and `IActions`.
+
+```ts
+// ✅ correct
+import { getDriver } from '@core';          // entry point
+import type { ILocator } from '@core/ILocator';
+
+// ❌ avoid
+import { getDriver } from '@core/Driver';   // concrete module
+```
 
 ## Prerequisites
 

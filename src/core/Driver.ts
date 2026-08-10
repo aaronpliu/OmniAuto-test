@@ -7,20 +7,7 @@
  * (`matcher` + `launcher`). The active driver is chosen by `E2E_DRIVER` env
  * (defaults to `detox`), so the same test/Page code runs under any framework.
  */
-import type { IMatcherFactory } from './locator';
-import type { IAppLauncher } from '@contracts/IAppLauncher';
-
-/** The set of drivers this project knows how to run. */
-export type DriverName = 'detox' | 'appium';
-
-/** Driver-neutral facade handed to pages/tests. */
-export interface IDriver {
-  name: DriverName;
-  /** Resolves neutral locators into driver-agnostic {@link IActions}. */
-  matcher: IMatcherFactory;
-  /** Launches / reloads the app under test. */
-  launcher: IAppLauncher;
-}
+import type { IDriver, DriverName } from './IDriver';
 
 const registry = new Map<DriverName, () => IDriver>();
 

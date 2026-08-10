@@ -1,6 +1,6 @@
 import type { IActions } from '@contracts/index';
-import type { ILocator } from '@core/locator';
-import { getDriver } from '@core/drivers';
+import type { ILocator } from '@core/ILocator';
+import { getDriver } from '@core/index';
 import { Logger } from '@utils/logger';
 import { loginLocators } from '../locators/login.locators';
 

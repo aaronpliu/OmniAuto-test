@@ -1,4 +1,4 @@
-import type { IMatcherFactory, ILocator } from '@core/locator';
+import type { IMatcherFactory, ILocator } from '@core/ILocator';
 import type { IActions } from '@contracts/index';
 import { AppiumActions } from './AppiumActions';
 import { Logger } from '@utils/logger';

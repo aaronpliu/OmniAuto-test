@@ -1,4 +1,4 @@
-import { getDriver } from '@core/drivers';
+import { getDriver } from '@core/index';
 import { LoginPage } from '@apps/mock/pages/LoginPage';
 import { loginWithValidUser } from '@apps/mock/workflows/loginWorkflow';
 import { validUser, invalidUser } from '@apps/mock/fixtures/users';

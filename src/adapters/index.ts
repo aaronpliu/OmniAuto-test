@@ -6,7 +6,8 @@
  * contracts (IMatcherFactory + IAppLauncher). Add a new framework by creating
  * `./<driver>/` and registering it below — no page or test needs to change.
  */
-import { registerDriver, type IDriver } from '@core/Driver';
+import { registerDriver } from '@core/Driver';
+import type { IDriver } from '@core/IDriver';
 import { DetoxMatcherFactory } from './detox/DetoxMatcher';
 import { detoxAppLauncher } from './detox/DetoxAppLauncher';
 import { AppiumMatcherFactory } from './appium/AppiumMatcherFactory';
