@@ -29,6 +29,15 @@ export class LoginPage {
   }
 
   /**
+   * Public locator entry point. Use this from tests/specs that need to assert
+   * directly on an element (e.g. visibility checks in a smoke suite). Internal
+   * page steps use the private {@link find} helper.
+   */
+  locate(locator: ILocator): IActions {
+    return this.find(locator);
+  }
+
+  /**
    * Perform a login: type the credentials and tap submit.
    * Demonstrates the basic methods `typeText` and `tap`.
    */

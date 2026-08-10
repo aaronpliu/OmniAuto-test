@@ -12,6 +12,8 @@
     "test:ios": "detox test --configuration ios.sim.debug",
     "test:android": "detox test --configuration android.emu.debug",
     "test:appium": "E2E_DRIVER=appium npx wdio wdio.conf.ts",
+    "test:smoke": "detox test --configuration ios.sim.debug --spec tests/smoke.e2e.ts",
+    "test:smoke:appium": "E2E_DRIVER=appium REPORT_DIR=reports npx wdio wdio.conf.ts --spec tests/smoke.e2e.ts",
     "prepare": "husky",
     "postinstall": "node -e \"const fs=require('fs'),path=require('path'),p=process.cwd();const s=path.join(p,'offline_library','applesimutils');const d=path.join(p,'node_modules','.bin','applesimutils');if(fs.existsSync(s)){try{fs.mkdirSync(path.dirname(d),{recursive:true});fs.rmSync(d,{force:true});fs.symlinkSync(s,d,'file');console.log('[postinstall] linked applesimutils -> node_modules/.bin/applesimutils');}catch(e){console.warn('[postinstall] applesimutils link skipped:',e.message);}}else{console.log('[postinstall] skipping applesimutils (binary not found in offline_library)');}\"",
     "lint": "eslint . --ext .ts",

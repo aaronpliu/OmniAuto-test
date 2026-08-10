@@ -29,7 +29,7 @@ apps/             App-specific assets (per app)
   <app>/artifacts Prebuilt app binaries (git-ignored, see below)
 
 tests/            Jest + Detox specs (*.e2e.ts)
-utils/            Shared helpers (logger, …)
+utils/            Shared helpers (logger, SmokeReporter, …)
 
 core/             Driver-neutral core (env-switchable entry point)
   ILocator        Neutral locator model + IMatcherFactory (locator → IActions)
@@ -154,6 +154,13 @@ npm run test:ios
 npm run test:android
 ```
 
+Smoke-only runs (fast checks via the framework-agnostic `SmokeReporter`):
+
+```bash
+npm run test:smoke              # Detox (Jest) — tests/smoke.e2e.ts
+npm run test:smoke:appium       # Appium (Mocha) — same spec, writes reports/*.json
+```
+
 > **Note:** testIDs in `apps/*/locators/**` must match the app's accessibility
 > identifiers. If assertions fail, align the locators with the app's testIDs.
 
@@ -182,6 +189,32 @@ the wdio session into `globalThis.driver` (the bridge `AppiumActions` /
 
 > To use an existing Appium server instead of the bundled one, remove the
 > `services: ['appium']` line and set `hostname` / `port` in `wdio.conf.ts`.
+
+## Smoke reporter
+
+`src/utils/SmokeReporter.ts` is a **framework-agnostic** reporter, so the same
+summary is produced on both runners (Detox→Jest and Appium→Mocha). It does not
+implement a Jest or wdio reporter interface — smoke cases just record their
+outcome and call `finish()`.
+
+```ts
+import { SmokeReporter, runSmoke } from '@utils/SmokeReporter';
+
+const reporter = new SmokeReporter({ reportDir: process.env.REPORT_DIR });
+await runSmoke('app-launch', () => getDriver().launcher.launchApp(), reporter);
+await runSmoke('promo-dismiss', () => page.dismissPromoIfPresent(), reporter);
+
+const summary = await reporter.finish(); // prints summary, writes JSON if reportDir set
+if (!summary.success) throw new Error('Smoke failed');
+```
+
+- `runSmoke(name, fn, reporter)` — measures duration, captures errors, records
+  the result automatically.
+- `reporter.finish()` — logs a `[PASS]/[FAIL]/[SKIP]` summary + counts, and
+  (when `reportDir` is given) writes `reports/<name>-<ts>.json`.
+- See `tests/smoke.e2e.ts` for a full example that runs under both drivers.
+
+> The JSON artifact is written under `reports/`, which is already git-ignored.
 
 ## Add a new test
 
