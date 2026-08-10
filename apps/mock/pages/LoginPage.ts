@@ -1,6 +1,6 @@
 import type { IActions } from '@contracts/index';
-import type { ElementLocator } from '@adapters/detox';
-import { DetoxMatcher } from '@adapters/detox';
+import type { ILocator } from '@core/locator';
+import { getDriver } from '@core/drivers';
 import { Logger } from '@utils/logger';
 import { loginLocators } from '../locators/login.locators';
 
@@ -10,10 +10,10 @@ const logger = Logger.getInstance();
  * Page object for the login screen.
  *
  * Element resolution is a single thin helper (`find`) that delegates to the
- * Detox adapter; the underlying `element(by.id()).tap()` mechanics live inside
- * the adapter, not here. `find` is deliberately not named `element` to avoid
- * colliding with Detox's API. Callers compose resolved {@link IActions} with a
- * single `await`:
+ * active driver's matcher factory (Detox by default, Appium later). The
+ * underlying `element(by.id()).tap()` mechanics live inside the adapter, not
+ * here. `find` is deliberately not named `element` to avoid colliding with
+ * driver APIs. Callers compose resolved {@link IActions} with a single `await`:
  *
  * ```ts
  * await page.find(loginLocators.username).typeText(user);
@@ -21,9 +21,11 @@ const logger = Logger.getInstance();
  * ```
  */
 export class LoginPage {
-  /** Resolve a locator into a contract-compliant {@link IActions}. */
-  private find(locator: ElementLocator): IActions {
-    return new DetoxMatcher(locator).resolve();
+  /** Resolve a neutral locator into a contract-compliant {@link IActions}. */
+  private find(locator: ILocator): IActions {
+    // The active driver (from E2E_DRIVER) supplies the matcher implementation,
+    // so this page is identical under Detox, Appium, or any future adapter.
+    return getDriver().matcher.resolve(locator);
   }
 
   /**

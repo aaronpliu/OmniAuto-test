@@ -19,6 +19,7 @@
     "baseUrl": ".",
     "paths": {
       "@omni": ["src/index.ts"],
+      "@core/*": ["src/core/*"],
       "@contracts/*": ["src/contracts/*"],
       "@utils/*": ["src/utils/*"],
       "@configs/*": ["src/configs/*"],

@@ -13,5 +13,9 @@
 // Driver-agnostic contracts (element actions + app-launch contract).
 export * from './contracts';
 
+// Neutral locator model + driver selector (registry-backed, env-switchable).
+export * from './core/locator';
+export { getDriver, registerDriver } from './core/drivers';
+
 // Utilities (logger, …).
 export * from './utils';

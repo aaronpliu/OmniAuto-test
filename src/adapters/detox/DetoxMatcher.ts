@@ -1,54 +1,45 @@
-import type { IActions } from '@contracts/IActions';
+import type { IMatcherFactory, ILocator } from '@core/locator';
+import type { IActions } from '@contracts/index';
 import { DetoxActions } from './DetoxActions';
 
 /**
- * Matcher strategies supported for locating a UI element. These map 1:1 onto
- * Detox's `by` matchers so the framework can stay declarative.
- */
-export interface ElementLocator {
-  /** Match by testID / accessibility identifier. */
-  id?: string;
-  /** Match by visible text. */
-  text?: string;
-  /** Match by accessibility label. */
-  label?: string;
-  /** Match by trait (e.g. 'button', 'link'). */
-  traits?: string[];
-}
-
-/**
- * `DetoxMatcher` turns a declarative {@link ElementLocator} into a
- * Detox `NativeElement` and wraps it in a {@link DetoxActions}.
+ * Detox implementation of {@link IMatcherFactory}.
  *
- * Element resolution is synchronous: Detox's `element(by...)` returns the
- * handle immediately (actions only become async when dispatched via `.tap()`
- * etc.), so there is no reason to `await` the resolver. This keeps page-object
- * element access free of nested `await (await …)` calls.
+ * Translates a neutral {@link ILocator} into Detox's `element(by.id(...))`
+ * handle, wrapped as the driver-agnostic {@link IActions}. Detox composes a
+ * single matcher, so `text`/`label`/`traits` are applied via `.and()`; `raw`
+ * lets a test pass a prebuilt Detox matcher to escape the neutral model.
+ *
+ * Detox is required at runtime; we import it dynamically (via `require`) so the
+ * contract/matcher-factory layer stays usable in non-Detox contexts.
  */
-export class DetoxMatcher {
-  constructor(private readonly locator: ElementLocator) {}
+export class DetoxMatcherFactory implements IMatcherFactory {
+  resolve(locator: ILocator): IActions {
+    const native = this.buildNative(locator);
+    const description = JSON.stringify(locator);
+    return new DetoxActions(native, description);
+  }
 
-  /**
-   * Build the Detox `NativeElement` from the locator. Detox is required at
-   * runtime; we import it dynamically to keep this module usable in non-Detox
-   * contexts (e.g. unit tests of the contract layer).
-   */
-  private buildNative(): Detox.NativeElement {
+  /** Build a Detox native matcher from a neutral locator. */
+  private buildNative(locator: ILocator): Detox.NativeElement {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const detox = require('detox') as typeof import('detox');
     const { element, by } = detox;
-    let matcher = by.id(this.locator.id!);
-    if (this.locator.text !== undefined) matcher = by.text(this.locator.text);
-    if (this.locator.label !== undefined) matcher = by.label(this.locator.label);
-    if (this.locator.traits && this.locator.traits.length) {
-      matcher = by.traits(this.locator.traits);
-    }
-    return element(matcher);
-  }
 
-  /** Resolve this locator into a contract-compliant {@link IActions}. */
-  resolve(): IActions {
-    const description = JSON.stringify(this.locator);
-    return new DetoxActions(this.buildNative(), description);
+    if (locator.raw?.ios) {
+      return locator.raw.ios as Detox.NativeElement;
+    }
+    if (!locator.id && !locator.text && !locator.label && !locator.traits) {
+      throw new Error(
+        `[DetoxMatcherFactory] locator has no id/text/label/traits: ${JSON.stringify(locator)}`,
+      );
+    }
+
+    let matcher = by.id(locator.id ?? '');
+    if (locator.text) matcher = matcher.and(by.text(locator.text));
+    if (locator.label) matcher = matcher.and(by.label(locator.label));
+    if (locator.traits?.length) matcher = matcher.and(by.traits(locator.traits));
+
+    return element(matcher);
   }
 }

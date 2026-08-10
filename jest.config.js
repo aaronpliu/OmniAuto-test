@@ -17,9 +17,11 @@ module.exports = {
   // jest does not read tsconfig `paths`; map them explicitly so @aliases resolve.
   moduleNameMapper: {
     '^@omni$': '<rootDir>/src/index.ts',
+    '^@core/(.*)$': '<rootDir>/src/core/$1',
     '^@contracts/(.*)$': '<rootDir>/src/contracts/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@configs/(.*)$': '<rootDir>/src/configs/$1',
+    '^@adapters$': '<rootDir>/src/adapters/index.ts',
     '^@adapters/(.*)$': '<rootDir>/src/adapters/$1',
     '^@factory/(.*)$': '<rootDir>/src/factory/$1',
     '^@setup/(.*)$': '<rootDir>/src/setup/$1',
