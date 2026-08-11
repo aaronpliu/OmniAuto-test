@@ -141,7 +141,7 @@ export abstract class BaseActions implements IActions {
   /* ---------------------------- expectations ---------------------------- */
 
   /** Probe whether the element is currently visible, without asserting. */
-  abstract isVisible(): Promise<boolean>;
+  abstract isVisible(timeoutMs?: number): Promise<boolean>;
 
   abstract toBeVisible(percent?: number): Promise<void>;
   abstract toExist(): Promise<void>;

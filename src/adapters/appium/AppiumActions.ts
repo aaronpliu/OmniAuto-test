@@ -52,6 +52,13 @@ interface AppiumDriver {
   capabilities?: { platformName?: string };
   launchApp(): Promise<void>;
   restartApp?(): Promise<void>;
+  // WebdriverIO's declarative wait — the Appium equivalent of Detox's
+  // waitFor(element).toBeVisible().withTimeout(ms). Re-runs condition until it
+  // holds or `timeout` elapses; rejects (TimeoutError) on timeout.
+  waitUntil(
+    condition: () => Promise<boolean>,
+    options: { timeout?: number; timeoutMsg?: string; interval?: number },
+  ): Promise<boolean>;
 }
 
 /** Thrown for {@link IActions} methods a given driver cannot service natively. */
@@ -286,15 +293,47 @@ export class AppiumActions extends BaseActions {
 
   /* ---------------------------- expectations ---------------------------- */
 
-  async isVisible(): Promise<boolean> {
-    // WebdriverIO's isDisplayed() returns false (not throws) for absent/hidden
-    // elements, which is exactly what tapIfExists needs.
-    try {
-      const elem = await this.element();
-      return await elem.isDisplayed();
-    } catch {
-      return false;
+  async isVisible(timeoutMs = 0): Promise<boolean> {
+    // timeoutMs <= 0: probe the current state, no waiting.
+    if (timeoutMs <= 0) {
+      try {
+        return await (await this.element()).isDisplayed();
+      } catch (err) {
+        if (this.isVisibilityConditionFailure(err)) return false;
+        throw err; // real failure (driver not ready, bad handle) — do not mask
+      }
     }
+
+    // timeoutMs > 0: wait up to `timeoutMs` for the element to become displayed.
+    // Use WebdriverIO's declarative `waitUntil` (the Appium equivalent of Detox's
+    // waitFor(element).toBeVisible().withTimeout(ms)). It re-runs the condition
+    // on its own interval — re-resolving the element each time — so it covers
+    // BOTH "element not yet present" and "present but hidden", and only rejects
+    // (TimeoutError) once the budget is exhausted. A hand-rolled sleep loop would
+    // bail early on the first `no such element` from element() and never wait.
+    try {
+      await getDriver().waitUntil(
+        async () => (await this.element()).isDisplayed(),
+        { timeout: timeoutMs, timeoutMsg: `${this.description} to become visible` },
+      );
+      return true;
+    } catch (err) {
+      if (this.isVisibilityConditionFailure(err)) return false;
+      throw err;
+    }
+  }
+
+  /**
+   * Whether an error means "element absent / not visible / wait timed out"
+   * (-> return false) versus a real failure (driver not ready, invalid handle,
+   * programming error) that must be rethrown so the root cause is not masked.
+   * Covers both the immediate `element()` throw and a `waitUntil` timeout.
+   */
+  private isVisibilityConditionFailure(err: unknown): boolean {
+    if (!err || typeof err !== 'object') return false;
+    const e = err as { name?: string; message?: string };
+    const message = (e.message ?? '').toLowerCase();
+    return /no such element|stale element|not (visible|found)|timed out|could not be (located|matched)|wait until|waituntil|to become visible/.test(message);
   }
 
   async toBeVisible(): Promise<void> {

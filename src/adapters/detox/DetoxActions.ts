@@ -210,16 +210,37 @@ export class DetoxActions extends BaseActions {
 
   /* ---------------------------- expectations ---------------------------- */
 
-  async isVisible(): Promise<boolean> {
-    // Detox throws when an element is not visible; treat that as "not visible"
-    // rather than an error so optional/business-driven steps can be skipped.
+  async isVisible(timeoutMs = 2000): Promise<boolean> {
+    // Detox rejects (via waitFor) when the element is not visible within the
+    // timeout — that is a legitimate "not visible", so return false. BUT a bare
+    // `catch { return false }` would also swallow real failures (detox not
+    // initialized, invalid element handle, programming errors), masking bugs.
+    // We therefore only treat a *visibility-condition* failure as "not visible"
+    // and rethrow anything else.
     // NOTE: `.withTimeout()` belongs to `waitFor(...)`, not `expect(...)`.
     try {
-      await this.waitFor(this.native).toBeVisible().withTimeout(2000);
+      await this.waitFor(this.native).toBeVisible().withTimeout(timeoutMs);
       return true;
-    } catch {
-      return false;
+    } catch (err) {
+      if (this.isVisibilityConditionFailure(err)) {
+        logger.debug(`isVisible(${this.description}) -> false after ${timeoutMs}ms`);
+        return false;
+      }
+      throw err;
     }
+  }
+
+  /**
+   * Decide whether an error from `waitFor(...).toBeVisible().withTimeout()` is a
+   * "condition not met" (element absent / not visible) versus a real failure.
+   * Condition failures are Detox's own error classes or visibility-wait messages;
+   * everything else (e.g. detox not initialized, bad handle) is rethrown.
+   */
+  private isVisibilityConditionFailure(err: unknown): boolean {
+    if (!err || typeof err !== 'object') return false;
+    const e = err as { name?: string; message?: string };
+    if ((e.name ?? '').includes('Detox')) return true;
+    return /timed out|WaitFor|not (visible|found)|could not be (located|matched)/i.test(e.message ?? '');
   }
 
   async toBeVisible(percent?: number): Promise<void> {

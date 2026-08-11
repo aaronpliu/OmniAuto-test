@@ -131,7 +131,7 @@ export interface IActions {
   /* ---------------------------------------------------------------------- */
 
   /** Probe whether the element is currently visible, without asserting. */
-  isVisible(): Promise<boolean>;
+  isVisible(timeoutMs?: number): Promise<boolean>;
 
   /** Assert the element is visible (optionally with a 1–100 visibility %). */
   toBeVisible(percent?: number): Promise<void>;
