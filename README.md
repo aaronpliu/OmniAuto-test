@@ -13,7 +13,7 @@ contracts/        Unified interface + abstract base (driver-agnostic)
   types           Shared primitives (Point, Direction, ElementAttributes, …)
 
 adapters/detox/   Concrete Detox adapter
-  DetoxMatcher    ElementLocator → Detox element(by…)
+  DetoxMatcherFactory  ElementLocator → Detox element(by…)
   DetoxActions    Implements IActions on top of Detox NativeElement
 
 adapters/appium/  Concrete Appium (WebdriverIO) adapter

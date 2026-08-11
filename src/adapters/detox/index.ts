@@ -1,3 +1,3 @@
 export * from './DetoxActions';
-export * from './DetoxMatcher';
+export * from './DetoxMatcherFactory';
 export * from './DetoxAppLauncher';

@@ -8,7 +8,7 @@
  */
 import { registerDriver } from '@core/Driver';
 import type { IDriver } from '@core/IDriver';
-import { DetoxMatcherFactory } from './detox/DetoxMatcher';
+import { DetoxMatcherFactory } from './detox/DetoxMatcherFactory';
 import { detoxAppLauncher } from './detox/DetoxAppLauncher';
 import { AppiumMatcherFactory } from './appium/AppiumMatcherFactory';
 import { appiumAppLauncher } from './appium/AppiumAppLauncher';
