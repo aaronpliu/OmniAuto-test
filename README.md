@@ -167,25 +167,41 @@ npm run test:smoke:appium       # Appium (Mocha) — same spec, writes reports/*
 ## Run with Appium (alternative driver)
 
 The same specs run under Appium via WebdriverIO — no page/test changes needed.
-The only switch is the `E2E_DRIVER` env var, which tells `getDriver()` to
-resolve the Appium adapter instead of Detox.
+Two env vars select the setup: `E2E_DRIVER=appium` (resolve the Appium adapter)
+and `PLATFORM` (`ios` default / `android`, selects the Appium capability).
+
+`wdio.conf.ts` defines **both** iOS (XCUITest) and Android (UiAutomator2)
+capabilities; `PLATFORM` picks which one is active. App paths default to the
+same git-ignored artifacts Detox uses:
+
+| Platform | Automation | App path                                       | Device / AVD        |
+| -------- | ---------- | ---------------------------------------------- | ------------------- |
+| iOS      | XCUITest   | `apps/mock/artifacts/ios/TestingGround.app`     | `iPhone 15 Pro`     |
+| Android  | UiAutomator2 | `apps/mock/artifacts/android/app-debug.apk`   | `Pixel_6_API_34`    |
 
 ```bash
 # Install the Appium/wdio toolchain (one-time)
 npm install
 
-# Point Appium at your built app (absolute path) and device
-export APPIUM_APP_PATH=/path/to/TestingGround.app
-export DEVICE_NAME="iPhone 15 Pro"
-export PLATFORM_VERSION="17.0"
+# --- iOS (default) ---
+npm run test:appium                 # E2E_DRIVER=appium PLATFORM=ios
 
-# Run
-npm run test:appium        # = E2E_DRIVER=appium npx wdio wdio.conf.ts
+# --- Android ---
+npm run test:appium:android         # E2E_DRIVER=appium PLATFORM=android
+
+# Override any default via env vars (all optional):
+export APPIUM_APP_PATH=/abs/path/to/app.apk   # override the default artifact path
+export DEVICE_NAME="iPhone 15 Pro"            # or "Pixel_6_API_34"
+export PLATFORM_VERSION="17.0"                # or "14.0"
+export AVD_NAME="Pixel_6_API_34"              # Android emulator to launch
+export UDID="<sim-udid>"                      # iOS: pin a specific simulator
+export APPIUM_APP_PACKAGE="com.testingground" # Android only
+export APPIUM_APP_ACTIVITY="com.testingground.MainActivity"  # Android only
 ```
 
 `wdio.conf.ts` starts a local Appium server (`@wdio/appium-service`), injects
 the wdio session into `globalThis.driver` (the bridge `AppiumActions` /
-`AppiumAppLauncher` use), and reuses the Jest specs with the same path aliases.
+`AppiumAppLauncher` use), and reuses the specs with the same path aliases.
 
 > To use an existing Appium server instead of the bundled one, remove the
 > `services: ['appium']` line and set `hostname` / `port` in `wdio.conf.ts`.
