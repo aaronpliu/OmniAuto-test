@@ -15,10 +15,11 @@ import { getDriver } from '@core/index';
 import { SmokeReporter, runSmoke } from '@utils/SmokeReporter';
 import { LoginPage } from '@apps/mock/pages/LoginPage';
 import { loginLocators } from '@apps/mock/locators/login.locators';
+import { env } from '@configs/env';
 
 const reporter = new SmokeReporter({
-  reportDir: process.env.REPORT_DIR, // optional; writes reports/<name>-<ts>.json
-  reportName: `smoke-${process.env.E2E_DRIVER ?? 'detox'}`,
+  reportDir: env.REPORT_DIR, // optional; writes reports/<name>-<ts>.json
+  reportName: `smoke-${env.E2E_DRIVER}`,
 });
 
 describe('smoke', () => {

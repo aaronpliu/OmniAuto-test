@@ -8,6 +8,7 @@
  * (defaults to `detox`), so the same test/Page code runs under any framework.
  */
 import type { IDriver, DriverName } from './IDriver';
+import { env } from '@configs/env';
 
 const registry = new Map<DriverName, () => IDriver>();
 
@@ -28,9 +29,9 @@ export function getDriver(name: DriverName = driverFromEnv()): IDriver {
 }
 
 function driverFromEnv(): DriverName {
-  const v = process.env.E2E_DRIVER;
-  if (v && v !== 'detox' && v !== 'appium') {
+  const v = env.E2E_DRIVER;
+  if (v !== 'detox' && v !== 'appium') {
     throw new Error(`[getDriver] E2E_DRIVER must be "detox" or "appium", got "${v}"`);
   }
-  return (v as DriverName) ?? 'detox';
+  return v;
 }

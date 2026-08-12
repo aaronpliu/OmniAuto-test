@@ -23,19 +23,20 @@
  * Override with `APPIUM_APP_PATH` if your build outputs elsewhere.
  */
 import type { Options } from '@wdio/types';
+import { env } from './src/configs/env';
 
-const PLATFORM = (process.env.PLATFORM ?? 'ios').toLowerCase();
+const PLATFORM = env.PLATFORM;
 
 // --- iOS (XCUITest) -------------------------------------------------------
 const IOS_CAPS = {
   platformName: 'iOS',
   'appium:automationName': 'XCUITest',
-  'appium:deviceName': process.env.DEVICE_NAME ?? 'iPhone 15 Pro',
-  'appium:platformVersion': process.env.PLATFORM_VERSION ?? '17.0',
+  'appium:deviceName': env.DEVICE_NAME,
+  'appium:platformVersion': env.PLATFORM_VERSION,
   // Simulator UDID (optional — omit to let Appium pick the default simulator).
-  ...(process.env.UDID ? { 'appium:udid': process.env.UDID } : {}),
+  ...(env.UDID ? { 'appium:udid': env.UDID } : {}),
   // Absolute path to the built .app bundle.
-  'appium:app': process.env.APPIUM_APP_PATH ?? 'apps/mock/artifacts/ios/TestingGround.app',
+  'appium:app': env.APPIUM_APP_PATH,
   'appium:newCommandTimeout': 240,
   // Keep app data between sessions; flip to true for a clean install each run.
   'appium:noReset': true,
@@ -45,15 +46,15 @@ const IOS_CAPS = {
 const ANDROID_CAPS = {
   platformName: 'Android',
   'appium:automationName': 'UiAutomator2',
-  'appium:deviceName': process.env.DEVICE_NAME ?? 'Pixel_6_API_34',
-  'appium:platformVersion': process.env.PLATFORM_VERSION ?? '14.0',
+  'appium:deviceName': env.DEVICE_NAME,
+  'appium:platformVersion': env.PLATFORM_VERSION,
   // AVD to launch if no device is connected. Matches Detox's emulator config.
-  'appium:avd': process.env.AVD_NAME ?? 'Pixel_6_API_34',
+  'appium:avd': env.AVD_NAME,
   // Absolute path to the built .apk.
-  'appium:app': process.env.APPIUM_APP_PATH ?? 'apps/mock/artifacts/android/app-debug.apk',
+  'appium:app': env.APPIUM_APP_PATH,
   // Replace with your app's package/activity if Appium should not auto-detect.
-  'appium:appPackage': process.env.APPIUM_APP_PACKAGE ?? 'com.testingground',
-  'appium:appActivity': process.env.APPIUM_APP_ACTIVITY ?? 'com.testingground.MainActivity',
+  'appium:appPackage': env.APPIUM_APP_PACKAGE,
+  'appium:appActivity': env.APPIUM_APP_ACTIVITY,
   'appium:newCommandTimeout': 240,
   'appium:noReset': true,
 } as const;

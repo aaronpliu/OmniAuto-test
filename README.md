@@ -216,7 +216,7 @@ outcome and call `finish()`.
 ```ts
 import { SmokeReporter, runSmoke } from '@utils/SmokeReporter';
 
-const reporter = new SmokeReporter({ reportDir: process.env.REPORT_DIR });
+const reporter = new SmokeReporter({ reportDir: env.REPORT_DIR });
 await runSmoke('app-launch', () => getDriver().launcher.launchApp(), reporter);
 await runSmoke('promo-dismiss', () => page.dismissPromoIfPresent(), reporter);
 
@@ -255,6 +255,29 @@ if (!summary.success) throw new Error('Smoke failed');
   `@wdio/types` lib; checked by `npm run typecheck:appium` (run after
   `npm install` so the WebdriverIO types are present).
 - `wdio.conf.ts` — WebdriverIO/Appium runner config for `E2E_DRIVER=appium`.
+- `src/configs/env.ts` — **single source of truth** for all environment
+  variables. Centralizes defaults, types (`E2E_DRIVER`, `PLATFORM`, …) and
+  platform-aware logic, and loads `.env` via `dotenv`. All call sites import
+  from here instead of reading `process.env` directly. See `.env.example`.
+
+### Environment variables
+
+All variables are consolidated in `src/configs/env.ts` and documented in
+`.env.example` (copy to `.env` to override locally). Summary:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `E2E_DRIVER` | `detox` | `detox` \| `appium` |
+| `PLATFORM` | `ios` | `ios` \| `android` (Appium only) |
+| `DEVICE_NAME` | `iPhone 15 Pro` / `Pixel_6_API_34` | platform-aware |
+| `PLATFORM_VERSION` | `17.0` / `14.0` | platform-aware |
+| `UDID` | — | iOS simulator UDID (optional) |
+| `AVD_NAME` | `Pixel_6_API_34` | Android AVD |
+| `APPIUM_APP_PATH` | per-platform artifact path | override app binary |
+| `APPIUM_APP_PACKAGE` / `APPIUM_APP_ACTIVITY` | `com.testingground` / `…MainActivity` | Android |
+| `REPORT_DIR` | — | smoke JSON output dir |
+| `LOG_LEVEL` | `info` | trace\|debug\|info\|warn\|error |
+| `OMNITEST_SESSION_DIR` | — | injected by global setup |
 
 ## Notes
 

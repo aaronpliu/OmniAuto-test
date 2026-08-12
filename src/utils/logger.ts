@@ -1,6 +1,7 @@
 import winston from "winston";
 import * as path from "path";
 import * as fs from "fs";
+import { env } from "@configs/env";
 
 export class Logger {
   private static instance: Logger;
@@ -9,7 +10,7 @@ export class Logger {
 
   private constructor() {
     // Only initialize the console transport; defer the file transport until the session directory is ready.
-    const rawLevel = process.env.LOG_LEVEL || "info";
+    const rawLevel = env.LOG_LEVEL;
     // Winston has no "trace" level, so map "trace" to "debug" (most verbose).
     const winstonLevel = rawLevel === "trace" ? "debug" : rawLevel;
     this.logger = winston.createLogger({
@@ -39,8 +40,8 @@ export class Logger {
     });
 
     // If the env var is already set (test worker scenario), mount the file transport immediately.
-    if (process.env.OMNITEST_SESSION_DIR) {
-      this.ensureFileLogging(process.env.OMNITEST_SESSION_DIR);
+    if (env.OMNITEST_SESSION_DIR) {
+      this.ensureFileLogging(env.OMNITEST_SESSION_DIR);
     }
   }
 

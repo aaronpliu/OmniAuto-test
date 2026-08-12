@@ -11,7 +11,7 @@
     "test": "detox test",
     "test:ios": "detox test --configuration ios.sim.debug",
     "test:android": "detox test --configuration android.emu.debug",
-    "test:appium": "E2E_DRIVER=appium PLATFORM=ios npx wdio wdio.conf.ts",
+    "test:appium:ios": "E2E_DRIVER=appium PLATFORM=ios npx wdio wdio.conf.ts",
     "test:appium:android": "E2E_DRIVER=appium PLATFORM=android npx wdio wdio.conf.ts",
     "test:smoke": "detox test --configuration ios.sim.debug --spec tests/smoke.e2e.ts",
     "test:smoke:appium": "E2E_DRIVER=appium PLATFORM=ios REPORT_DIR=reports npx wdio wdio.conf.ts --spec tests/smoke.e2e.ts",
@@ -56,6 +56,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "dotenv": "^16.6.1",
     "winston": "^3.19.0"
   },
   "lint-staged": {
