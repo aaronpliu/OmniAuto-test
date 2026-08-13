@@ -14,7 +14,7 @@ module.exports = {
   testRunner: {
     args: {
       $0: "jest",
-      config: "configs/jest/ios.detox.config.js",
+      config: "jest.config.js",
     },
     jest: {
       setupTimeout: 120000,
