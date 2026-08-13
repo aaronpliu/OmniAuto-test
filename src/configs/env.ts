@@ -25,6 +25,9 @@ const rawDriver = process.env.E2E_DRIVER ?? 'detox';
 const driver: DriverName =
   rawDriver === 'appium' ? 'appium' : 'detox';
 
+// Which app's config/artifacts to use (Detox dispatcher + Appium app path).
+const appAlias = process.env.E2E_APP ?? 'mock';
+
 // Platform-aware defaults keep the per-platform caps lean in wdio.conf.ts.
 const DEFAULT_DEVICE_NAME: Record<Platform, string> = {
   ios: 'iPhone 15 Pro',
@@ -34,14 +37,17 @@ const DEFAULT_PLATFORM_VERSION: Record<Platform, string> = {
   ios: '17.0',
   android: '14.0',
 };
+const ARTIFACTS = `apps/${appAlias}/artifacts`;
 const DEFAULT_APP_PATH: Record<Platform, string> = {
-  ios: 'apps/mock/artifacts/ios/TestingGround.app',
-  android: 'apps/mock/artifacts/android/app-release.apk',
+  ios: `${ARTIFACTS}/ios/TestingGround.app`,
+  android: `${ARTIFACTS}/android/app-release.apk`,
 };
 
 export const env = {
   /** Active automation framework. */
   E2E_DRIVER: driver,
+  /** App alias selecting which config/artifacts to use (default `mock`). */
+  E2E_APP: appAlias,
   /** Target platform for Appium capability selection. */
   PLATFORM: platform,
   /** Device/emulator name reported to the driver. */

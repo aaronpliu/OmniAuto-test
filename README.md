@@ -132,13 +132,26 @@ apps/mock/artifacts/android/app-release.apk    ← Android release APK (git-igno
 
 ## Run tests
 
-Configurations are defined in `.detoxrc.js`:
+Configurations are defined per-app under `configs/<app>.detoxrc.js` and loaded
+by the root `.detoxrc.js` dispatcher — **you never edit `.detoxrc.js`** for
+local/CI runs. The dispatcher deep-merges env-var overrides on top of the base
+config, so app/device/binary changes are env-driven.
 
 | Configuration       | Platform | Device (local)      | App                                   |
 | ------------------- | -------- | ------------------- | ------------------------------------- |
 | `ios.sim.release`    | iOS      | iPhone 15 Pro       | `apps/mock/artifacts/ios/TestingGround.app` |
 | `android.emu.release`| Android  | `Pixel_6_API_34`    | `apps/mock/artifacts/android/app-release.apk` |
 | `android.device.release` | Android | real device (attached) | `apps/mock/artifacts/android/app-release.apk` |
+
+### Multi-app & override flow (no config edits)
+- `E2E_APP` selects the app → loads `configs/<E2E_APP>.detoxrc.js` (default `mock`).
+- Override env vars (documented in `.env.example`):
+  - `DETOX_CONFIG` — configuration name to run (skip retyping `--configuration`).
+  - `DETOX_DEVICE` / `DETOX_DEVICE_NAME` — device alias / AVD / UDID override.
+  - `DETOX_BINARY_PATH` / `DETOX_TEST_BINARY_PATH` — override app/test APK path.
+  - `DETOX_ANDROID_DEVICE` — adb serial for a real device.
+- Local: set these in `.env` (`cp .env.example .env`). CI: pass as pipeline env.
+- Appium side honors the same `E2E_APP` to derive its default `APPIUM_APP_PATH`.
 
 ```bash
 # iOS (simulator must be available; Detox launches/installs automatically)
@@ -149,6 +162,11 @@ npx detox test --configuration android.emu.release
 
 # Android on a real attached device
 npx detox test --configuration android.device.release
+
+# --- switching app / overrides (no file edits) ---
+E2E_APP=acme detox test --configuration ios.sim.release          # run the acme app
+DETOX_CONFIG=android.emu.release DETOX_BINARY_PATH=/tmp/app.apk \
+  detox test                                                     # pick config + local binary via env
 ```
 
 Convenience scripts (see `package.json`):
@@ -250,7 +268,9 @@ if (!summary.success) throw new Error('Smoke failed');
 
 ## Configuration files
 
-- `.detoxrc.js` — apps, devices, configurations, behavior, artifacts, logger.
+- `.detoxrc.js` — thin **dispatcher**: reads `E2E_APP`, loads `configs/<app>.detoxrc.js`,
+  deep-merges env overrides (`DETOX_CONFIG`/`DETOX_DEVICE`/`DETOX_BINARY_PATH`/…).
+  Per-app base configs live in `configs/<app>.detoxrc.js` (static, not edited per run).
   Uses Detox 20 Jest runner (`detox/runners/jest/*`). `apps` declare only
   `binaryPath` (prebuilt artifacts, no `build` step); `configurations` cover
   iOS simulator, Android emulator, and a real attached Android device

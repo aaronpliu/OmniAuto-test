@@ -12,6 +12,8 @@
     "test:ios": "detox test --configuration ios.sim.release",
     "test:android": "detox test --configuration android.emu.release",
     "test:android:device": "detox test --configuration android.device.release",
+    "test:app": "detox test --configuration ios.sim.release",
+    "test:app:acme": "E2E_APP=acme detox test --configuration ios.sim.release",
     "test:appium:ios": "E2E_DRIVER=appium PLATFORM=ios npx wdio wdio.conf.ts",
     "test:appium:android": "E2E_DRIVER=appium PLATFORM=android npx wdio wdio.conf.ts",
     "test:smoke": "detox test --configuration ios.sim.release --spec tests/smoke.e2e.ts",
