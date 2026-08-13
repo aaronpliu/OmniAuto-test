@@ -36,7 +36,7 @@ const DEFAULT_PLATFORM_VERSION: Record<Platform, string> = {
 };
 const DEFAULT_APP_PATH: Record<Platform, string> = {
   ios: 'apps/mock/artifacts/ios/TestingGround.app',
-  android: 'apps/mock/artifacts/android/app-debug.apk',
+  android: 'apps/mock/artifacts/android/app-release.apk',
 };
 
 export const env = {

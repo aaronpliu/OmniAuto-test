@@ -5,7 +5,7 @@
  * wdio's reporter API, so the same summary is produced on either runner.
  * Pick the driver with E2E_DRIVER (detox default / appium), e.g.:
  *
- *   detox test --configuration ios.sim.debug   (Jest)
+ *   detox test --configuration ios.sim.release   (Jest)
  *   npm run test:appium                         (Mocha + wdio)
  *
  * The reporter writes a JSON artifact to reports/ when REPORT_DIR is set:

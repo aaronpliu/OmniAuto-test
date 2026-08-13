@@ -19,7 +19,7 @@
  *
  * App binaries are expected under the same paths Detox uses (git-ignored):
  *   iOS    : apps/mock/artifacts/ios/TestingGround.app
- *   Android: apps/mock/artifacts/android/app-debug.apk
+ *   Android: apps/mock/artifacts/android/app-release.apk
  * Override with `APPIUM_APP_PATH` if your build outputs elsewhere.
  */
 import type { Options } from '@wdio/types';

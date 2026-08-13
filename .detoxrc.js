@@ -2,37 +2,30 @@
  * Detox configuration (v20.x).
  *
  * Structure:
- *   - `apps`       : reusable app builds, referenced by alias from configurations.
- *   - `devices`    : reusable device descriptors, referenced by alias.
- *   - `configurations`: one entry per (app × device × build-type) combo that
+ *   - `apps`       : reusable app descriptors (just the binary path — no build
+ *                    step; supply a prebuilt app via `binaryPath`).
+ *   - `devices`    : reusable device descriptors (simulator / emulator / real),
+ *                    referenced by alias.
+ *   - `configurations`: one entry per (app × device) combo that
  *                       `detox test --configuration <name>` can target.
  *
- * Adjust `binaryPath` / `build` to match your native project layout.
- * See https://wix.github.io/Detox/docs/config/apps/ and .../config/devices/.
+ * `apps` only declare `binaryPath` (prebuilt binaries live under
+ * `apps/<app>/artifacts/{ios,android}/`, git-ignored). There is intentionally
+ * no `build` step — build/install the app separately, then point Detox at the
+ * artifact. See https://wix.github.io/Detox/docs/config/apps/ and .../devices/.
  */
 
 /** @type {Detox.DetoxConfig} */
 module.exports = {
-  // Prebuilt app binaries are kept under `apps/<app>/artifacts/{ios,android}/`
-  // (git-ignored — never committed). `build` rebuilds them into those paths.
   apps: {
-    'ios.debug': {
+    'ios.release': {
       type: 'ios.app',
       binaryPath: 'apps/mock/artifacts/ios/TestingGround.app',
-      build:
-        'xcodebuild -workspace ios/OmniAutoTest.xcworkspace -scheme OmniAutoTest -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build && ' +
-        'cp -R ios/build/Build/Products/Debug-iphonesimulator/TestingGround.app apps/mock/artifacts/ios/TestingGround.app',
     },
-    'android.debug': {
+    'android.release': {
       type: 'android.apk',
-      binaryPath: 'apps/mock/artifacts/android/app-debug.apk',
-      build:
-        'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug && ' +
-        'cp android/app/build/outputs/apk/debug/app-debug.apk apps/mock/artifacts/android/app-debug.apk',
-      testBinaryPath:
-        'apps/mock/artifacts/android/app-debug-androidTest.apk',
-      // testBinaryPath is copied alongside the app APK during build:
-      // cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk apps/mock/artifacts/android/app-debug-androidTest.apk
+      binaryPath: 'apps/mock/artifacts/android/app-release.apk',
+      testBinaryPath: 'apps/mock/artifacts/android/app-release-androidTest.apk',
     },
   },
 
@@ -50,16 +43,24 @@ module.exports = {
       },
       gpuMode: 'swiftshader_indirect',
     },
+    'android.device': {
+      type: 'android.attached',
+      device: "*",
+    },
   },
 
   configurations: {
-    'ios.sim.debug': {
+    'ios.sim.release': {
       device: 'simulator',
-      app: 'ios.debug',
+      app: 'ios.release',
     },
-    'android.emu.debug': {
+    'android.emu.release': {
       device: 'emulator',
-      app: 'android.debug',
+      app: 'android.release',
+    },
+    'android.device.release': {
+      device: 'android.device',
+      app: 'android.release',
     },
   },
 

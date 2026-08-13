@@ -118,13 +118,13 @@ npm run typecheck   # tsc --noEmit
 ## App binaries & `.gitignore`
 
 Prebuilt apps live under `apps/<app>/artifacts/{ios,android}/` and are
-**never committed** (only the `.gitkeep` placeholder is tracked). Put your
-built binaries there, or let Detox build + copy them via the `build` scripts in
-`.detoxrc.js`:
+**never committed** (only the `.gitkeep` placeholder is tracked). Build/install
+the app separately (we use **release** builds, not debug), then point Detox at
+the artifact via `binaryPath` in `.detoxrc.js` (no `build` step is defined):
 
 ```
 apps/mock/artifacts/ios/TestingGround.app      ← iOS app (git-ignored)
-apps/mock/artifacts/android/app-debug.apk      ← Android APK (git-ignored)
+apps/mock/artifacts/android/app-release.apk    ← Android release APK (git-ignored)
 ```
 
 `.gitignore` keeps the folders (via `.gitkeep`) but ignores `*.app`, `*.apk`,
@@ -134,17 +134,21 @@ apps/mock/artifacts/android/app-debug.apk      ← Android APK (git-ignored)
 
 Configurations are defined in `.detoxrc.js`:
 
-| Configuration      | Platform | Device (local)      | App                                   |
-| ------------------ | -------- | ------------------- | ------------------------------------- |
-| `ios.sim.debug`    | iOS      | iPhone 15 Pro       | `apps/mock/artifacts/ios/TestingGround.app` |
-| `android.emu.debug`| Android  | `Pixel_6_API_34`    | `apps/mock/artifacts/android/app-debug.apk` |
+| Configuration       | Platform | Device (local)      | App                                   |
+| ------------------- | -------- | ------------------- | ------------------------------------- |
+| `ios.sim.release`    | iOS      | iPhone 15 Pro       | `apps/mock/artifacts/ios/TestingGround.app` |
+| `android.emu.release`| Android  | `Pixel_6_API_34`    | `apps/mock/artifacts/android/app-release.apk` |
+| `android.device.release` | Android | real device (attached) | `apps/mock/artifacts/android/app-release.apk` |
 
 ```bash
 # iOS (simulator must be available; Detox launches/installs automatically)
-npx detox test --configuration ios.sim.debug
+npx detox test --configuration ios.sim.release
 
 # Android (emulator must be running with AVD Pixel_6_API_34)
-npx detox test --configuration android.emu.debug
+npx detox test --configuration android.emu.release
+
+# Android on a real attached device
+npx detox test --configuration android.device.release
 ```
 
 Convenience scripts (see `package.json`):
@@ -177,7 +181,7 @@ same git-ignored artifacts Detox uses:
 | Platform | Automation | App path                                       | Device / AVD        |
 | -------- | ---------- | ---------------------------------------------- | ------------------- |
 | iOS      | XCUITest   | `apps/mock/artifacts/ios/TestingGround.app`     | `iPhone 15 Pro`     |
-| Android  | UiAutomator2 | `apps/mock/artifacts/android/app-debug.apk`   | `Pixel_6_API_34`    |
+| Android  | UiAutomator2 | `apps/mock/artifacts/android/app-release.apk` | `Pixel_6_API_34`    |
 
 ```bash
 # Install the Appium/wdio toolchain (one-time)
@@ -247,7 +251,10 @@ if (!summary.success) throw new Error('Smoke failed');
 ## Configuration files
 
 - `.detoxrc.js` — apps, devices, configurations, behavior, artifacts, logger.
-  Uses Detox 20 Jest runner (`detox/runners/jest/*`).
+  Uses Detox 20 Jest runner (`detox/runners/jest/*`). `apps` declare only
+  `binaryPath` (prebuilt artifacts, no `build` step); `configurations` cover
+  iOS simulator, Android emulator, and a real attached Android device
+  (`android.device.release` — select a specific device via `DETOX_ANDROID_DEVICE`).
 - `jest.config.js` — `ts-jest` transform for `*.ts`, Detox global setup/teardown.
 - `tsconfig.json` — path aliases (`@contracts`, `@adapters`, `@utils`, `@apps`);
   checked by `npm run typecheck` (covers `src`, `apps`, `tests`).
@@ -281,6 +288,6 @@ All variables are consolidated in `src/configs/env.ts` and documented in
 
 ## Notes
 
-- The `android.emu.debug` path requires a built `app-debug.apk` under
+- The `android.emu.release` path requires a built `app-release.apk` under
   `apps/mock/artifacts/android/` and a running `Pixel_6_API_34` emulator.
 - `tsconfig.check.json` is a temporary type-check config; safe to delete.
