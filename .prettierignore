@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+apps/**/artifacts/**
+reports/
+package-lock.json
+offline_library/
+*.log
