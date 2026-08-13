@@ -44,10 +44,23 @@ const DEFAULT_APP_PATH: Record<Platform, string> = {
 };
 
 export const env = {
-  /** Active automation framework. */
-  E2E_DRIVER: driver,
   /** App alias selecting which config/artifacts to use (default `mock`). */
   E2E_APP: appAlias,
+  /** Active automation framework. */
+  E2E_DRIVER: driver,
+  // --- Detox runtime overrides (read by .detoxrc.js dispatcher) -------------
+  /** Configuration name to run, instead of retyping --configuration. */
+  DETOX_CONFIG: process.env.DETOX_CONFIG || undefined,
+  /** Device alias override (simulator | emulator | android.device). */
+  DETOX_DEVICE: process.env.DETOX_DEVICE || undefined,
+  /** Device name/AVD/UDID override inside the chosen device. */
+  DETOX_DEVICE_NAME: process.env.DETOX_DEVICE_NAME || undefined,
+  /** App binary path override (iOS .app or Android .apk) — local debug. */
+  DETOX_BINARY_PATH: process.env.DETOX_BINARY_PATH || undefined,
+  /** Android instrumentation test APK path override. */
+  DETOX_TEST_BINARY_PATH: process.env.DETOX_TEST_BINARY_PATH || undefined,
+  /** adb serial for a real attached Android device. */
+  DETOX_ANDROID_DEVICE: process.env.DETOX_ANDROID_DEVICE || undefined,
   /** Target platform for Appium capability selection. */
   PLATFORM: platform,
   /** Device/emulator name reported to the driver. */
