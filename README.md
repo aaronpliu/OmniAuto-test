@@ -1,8 +1,9 @@
 # OmniAutoTest — E2E
 
-Cross-platform end-to-end test automation built on [Detox](https://wix.github.io/Detox/).
-The framework keeps a **driver-agnostic action layer** so concrete adapters
-(Detox today, others tomorrow) plug in without touching test or page logic.
+Cross-platform end-to-end test automation built on
+[Detox](https://wix.github.io/Detox/). The framework keeps a **driver-agnostic
+action layer** so concrete adapters (Detox today, others tomorrow) plug in
+without touching test or page logic.
 
 ## Architecture
 
@@ -39,21 +40,23 @@ core/             Driver-neutral core (env-switchable entry point)
 ```
 
 ### Why the indirection?
+
 `IActions` + `BaseActions` define a single contract. Each adapter implements it
-(`DetoxActions` today). To add another driver (e.g. Appium) you only implement
-a new `adapters/<driver>/` package — **existing pages, workflows and tests are
+(`DetoxActions` today). To add another driver (e.g. Appium) you only implement a
+new `adapters/<driver>/` package — **existing pages, workflows and tests are
 untouched** because they only depend on `IActions`.
 
 ### Naming conventions
 
-Follow these rules so the driver-agnostic core stays consistent with `contracts/`:
+Follow these rules so the driver-agnostic core stays consistent with
+`contracts/`:
 
 - **Interface files use an `I` prefix** — e.g. `IActions.ts`, `IAppLauncher.ts`,
-  `ILocator.ts`, `IDriver.ts`. The `I` is the file name, not just the type:
-  a file that *only* declares interfaces is named `I<Name>.ts`.
+  `ILocator.ts`, `IDriver.ts`. The `I` is the file name, not just the type: a
+  file that _only_ declares interfaces is named `I<Name>.ts`.
 - **`index.ts` is the entry point** of a directory. For `src/core`, import the
-  driver selector and types from `@core/index` (aliased as `@core`) — not from
-  a concrete module like `@core/Driver` or `@core/ILocator`.
+  driver selector and types from `@core/index` (aliased as `@core`) — not from a
+  concrete module like `@core/Driver` or `@core/ILocator`.
 - **Concrete (non-interface) modules keep their PascalCase name** — e.g.
   `Driver.ts` (registry logic), `BaseActions.ts`, `DetoxActions.ts`.
 - **Pages/workflows/specs must never import a concrete adapter** (e.g.
@@ -61,11 +64,11 @@ Follow these rules so the driver-agnostic core stays consistent with `contracts/
 
 ```ts
 // ✅ correct
-import { getDriver } from '@core';          // entry point
-import type { ILocator } from '@core/ILocator';
+import { getDriver } from "@core"; // entry point
+import type { ILocator } from "@core/ILocator";
 
 // ❌ avoid
-import { getDriver } from '@core/Driver';   // concrete module
+import { getDriver } from "@core/Driver"; // concrete module
 ```
 
 ## Prerequisites
@@ -97,8 +100,8 @@ This installs `detox`, `jest`, `ts-jest`, `winston`, `eslint`, `husky` and
 
 ## Git hooks & linting
 
-[Husky](https://typicode.github.io/husky/) + [lint-staged](https://github.com/lint-staged/lint-staged)
-run on every commit:
+[Husky](https://typicode.github.io/husky/) +
+[lint-staged](https://github.com/lint-staged/lint-staged) run on every commit:
 
 - `.husky/pre-commit` ⇒ `npx lint-staged`
 - lint-staged lints staged `*.ts` files with `eslint --fix` and type-checks via
@@ -111,16 +114,16 @@ npm run lint        # eslint over all .ts
 npm run typecheck   # tsc --noEmit
 ```
 
-> **Note:** `applesimutils` is a **Homebrew system tool, not an npm package**, so
-> it is not installed by `npm install` itself — the `postinstall` script copies
-> the bundled prebuilt binary into the system PATH.
+> **Note:** `applesimutils` is a **Homebrew system tool, not an npm package**,
+> so it is not installed by `npm install` itself — the `postinstall` script
+> copies the bundled prebuilt binary into the system PATH.
 
 ## App binaries & `.gitignore`
 
-Prebuilt apps live under `apps/<app>/artifacts/{ios,android}/` and are
-**never committed** (only the `.gitkeep` placeholder is tracked). Build/install
-the app separately (we use **release** builds, not debug), then point Detox at
-the artifact via `binaryPath` in `.detoxrc.js` (no `build` step is defined):
+Prebuilt apps live under `apps/<app>/artifacts/{ios,android}/` and are **never
+committed** (only the `.gitkeep` placeholder is tracked). Build/install the app
+separately (we use **release** builds, not debug), then point Detox at the
+artifact via `binaryPath` in `.detoxrc.js` (no `build` step is defined):
 
 ```
 apps/mock/artifacts/ios/TestingGround.app      ← iOS app (git-ignored)
@@ -137,16 +140,19 @@ by the root `.detoxrc.js` dispatcher — **you never edit `.detoxrc.js`** for
 local/CI runs. The dispatcher deep-merges env-var overrides on top of the base
 config, so app/device/binary changes are env-driven.
 
-| Configuration       | Platform | Device (local)      | App                                   |
-| ------------------- | -------- | ------------------- | ------------------------------------- |
-| `ios.sim.release`    | iOS      | iPhone 15 Pro       | `apps/mock/artifacts/ios/TestingGround.app` |
-| `android.emu.release`| Android  | `Pixel_6_API_34`    | `apps/mock/artifacts/android/app-release.apk` |
-| `android.device.release` | Android | real device (attached) | `apps/mock/artifacts/android/app-release.apk` |
+| Configuration            | Platform | Device (local)         | App                                           |
+| ------------------------ | -------- | ---------------------- | --------------------------------------------- |
+| `ios.sim.release`        | iOS      | iPhone 15 Pro          | `apps/mock/artifacts/ios/TestingGround.app`   |
+| `android.emu.release`    | Android  | `Pixel_6_API_34`       | `apps/mock/artifacts/android/app-release.apk` |
+| `android.device.release` | Android  | real device (attached) | `apps/mock/artifacts/android/app-release.apk` |
 
 ### Multi-app & override flow (no config edits)
-- `E2E_APP` selects the app → loads `configs/<E2E_APP>.detoxrc.js` (default `mock`).
+
+- `E2E_APP` selects the app → loads `configs/<E2E_APP>.detoxrc.js` (default
+  `mock`).
 - Override env vars (documented in `.env.example`):
-  - `DETOX_CONFIG` — configuration name to run (skip retyping `--configuration`).
+  - `DETOX_CONFIG` — configuration name to run (skip retyping
+    `--configuration`).
   - `DETOX_DEVICE` / `DETOX_DEVICE_NAME` — device alias / AVD / UDID override.
   - `DETOX_BINARY_PATH` / `DETOX_TEST_BINARY_PATH` — override app/test APK path.
   - `DETOX_ANDROID_DEVICE` — adb serial for a real device.
@@ -196,10 +202,10 @@ and `PLATFORM` (`ios` default / `android`, selects the Appium capability).
 capabilities; `PLATFORM` picks which one is active. App paths default to the
 same git-ignored artifacts Detox uses:
 
-| Platform | Automation | App path                                       | Device / AVD        |
-| -------- | ---------- | ---------------------------------------------- | ------------------- |
-| iOS      | XCUITest   | `apps/mock/artifacts/ios/TestingGround.app`     | `iPhone 15 Pro`     |
-| Android  | UiAutomator2 | `apps/mock/artifacts/android/app-release.apk` | `Pixel_6_API_34`    |
+| Platform | Automation   | App path                                      | Device / AVD     |
+| -------- | ------------ | --------------------------------------------- | ---------------- |
+| iOS      | XCUITest     | `apps/mock/artifacts/ios/TestingGround.app`   | `iPhone 15 Pro`  |
+| Android  | UiAutomator2 | `apps/mock/artifacts/android/app-release.apk` | `Pixel_6_API_34` |
 
 ```bash
 # Install the Appium/wdio toolchain (one-time)
@@ -236,14 +242,14 @@ implement a Jest or wdio reporter interface — smoke cases just record their
 outcome and call `finish()`.
 
 ```ts
-import { SmokeReporter, runSmoke } from '@utils/SmokeReporter';
+import { SmokeReporter, runSmoke } from "@utils/SmokeReporter";
 
 const reporter = new SmokeReporter({ reportDir: env.REPORT_DIR });
-await runSmoke('app-launch', () => getDriver().launcher.launchApp(), reporter);
-await runSmoke('promo-dismiss', () => page.dismissPromoIfPresent(), reporter);
+await runSmoke("app-launch", () => getDriver().launcher.launchApp(), reporter);
+await runSmoke("promo-dismiss", () => page.dismissPromoIfPresent(), reporter);
 
 const summary = await reporter.finish(); // prints summary, writes JSON if reportDir set
-if (!summary.success) throw new Error('Smoke failed');
+if (!summary.success) throw new Error("Smoke failed");
 ```
 
 - `runSmoke(name, fn, reporter)` — measures duration, captures errors, records
@@ -268,43 +274,45 @@ if (!summary.success) throw new Error('Smoke failed');
 
 ## Configuration files
 
-- `.detoxrc.js` — thin **dispatcher**: reads `E2E_APP`, loads `configs/<app>.detoxrc.js`,
-  deep-merges env overrides (`DETOX_CONFIG`/`DETOX_DEVICE`/`DETOX_BINARY_PATH`/…).
-  Per-app base configs live in `configs/<app>.detoxrc.js` (static, not edited per run).
-  Uses Detox 20 Jest runner (`detox/runners/jest/*`). `apps` declare only
-  `binaryPath` (prebuilt artifacts, no `build` step); `configurations` cover
-  iOS simulator, Android emulator, and a real attached Android device
-  (`android.device.release` — select a specific device via `DETOX_ANDROID_DEVICE`).
-- `jest.config.js` — `ts-jest` transform for `*.ts`, Detox global setup/teardown.
+- `.detoxrc.js` — thin **dispatcher**: reads `E2E_APP`, loads
+  `configs/<app>.detoxrc.js`, deep-merges env overrides
+  (`DETOX_CONFIG`/`DETOX_DEVICE`/`DETOX_BINARY_PATH`/…). Per-app base configs
+  live in `configs/<app>.detoxrc.js` (static, not edited per run). Uses Detox 20
+  Jest runner (`detox/runners/jest/*`). `apps` declare only `binaryPath`
+  (prebuilt artifacts, no `build` step); `configurations` cover iOS simulator,
+  Android emulator, and a real attached Android device (`android.device.release`
+  — select a specific device via `DETOX_ANDROID_DEVICE`).
+- `jest.config.js` — `ts-jest` transform for `*.ts`, Detox global
+  setup/teardown.
 - `tsconfig.json` — path aliases (`@contracts`, `@adapters`, `@utils`, `@apps`);
   checked by `npm run typecheck` (covers `src`, `apps`, `tests`).
 - `tsconfig.appium.json` — extends `tsconfig.json`, adds `wdio.conf.ts` and the
   `@wdio/types` lib; checked by `npm run typecheck:appium` (run after
   `npm install` so the WebdriverIO types are present).
 - `wdio.conf.ts` — WebdriverIO/Appium runner config for `E2E_DRIVER=appium`.
-- `configs/env.ts` — **single source of truth** for all environment
-  variables. Centralizes defaults, types (`E2E_DRIVER`, `PLATFORM`, …) and
-  platform-aware logic, and loads `.env` via `dotenv`. All call sites import
-  from here instead of reading `process.env` directly. See `.env.example`.
+- `configs/env.ts` — **single source of truth** for all environment variables.
+  Centralizes defaults, types (`E2E_DRIVER`, `PLATFORM`, …) and platform-aware
+  logic, and loads `.env` via `dotenv`. All call sites import from here instead
+  of reading `process.env` directly. See `.env.example`.
 
 ### Environment variables
 
 All variables are consolidated in `configs/env.ts` and documented in
 `.env.example` (copy to `.env` to override locally). Summary:
 
-| Variable | Default | Notes |
-|---|---|---|
-| `E2E_DRIVER` | `detox` | `detox` \| `appium` |
-| `PLATFORM` | `ios` | `ios` \| `android` (Appium only) |
-| `DEVICE_NAME` | `iPhone 15 Pro` / `Pixel_6_API_34` | platform-aware |
-| `PLATFORM_VERSION` | `17.0` / `14.0` | platform-aware |
-| `UDID` | — | iOS simulator UDID (optional) |
-| `AVD_NAME` | `Pixel_6_API_34` | Android AVD |
-| `APPIUM_APP_PATH` | per-platform artifact path | override app binary |
-| `APPIUM_APP_PACKAGE` / `APPIUM_APP_ACTIVITY` | `com.testingground` / `…MainActivity` | Android |
-| `REPORT_DIR` | — | smoke JSON output dir |
-| `LOG_LEVEL` | `info` | trace\|debug\|info\|warn\|error |
-| `OMNITEST_SESSION_DIR` | — | injected by global setup |
+| Variable                                     | Default                               | Notes                            |
+| -------------------------------------------- | ------------------------------------- | -------------------------------- |
+| `E2E_DRIVER`                                 | `detox`                               | `detox` \| `appium`              |
+| `PLATFORM`                                   | `ios`                                 | `ios` \| `android` (Appium only) |
+| `DEVICE_NAME`                                | `iPhone 15 Pro` / `Pixel_6_API_34`    | platform-aware                   |
+| `PLATFORM_VERSION`                           | `17.0` / `14.0`                       | platform-aware                   |
+| `UDID`                                       | —                                     | iOS simulator UDID (optional)    |
+| `AVD_NAME`                                   | `Pixel_6_API_34`                      | Android AVD                      |
+| `APPIUM_APP_PATH`                            | per-platform artifact path            | override app binary              |
+| `APPIUM_APP_PACKAGE` / `APPIUM_APP_ACTIVITY` | `com.testingground` / `…MainActivity` | Android                          |
+| `REPORT_DIR`                                 | —                                     | smoke JSON output dir            |
+| `LOG_LEVEL`                                  | `info`                                | trace\|debug\|info\|warn\|error  |
+| `OMNITEST_SESSION_DIR`                       | —                                     | injected by global setup         |
 
 ## Notes
 

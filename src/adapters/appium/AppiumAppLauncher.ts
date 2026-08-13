@@ -1,5 +1,5 @@
-import type { BaseLaunchOptions, IAppLauncher } from '@contracts/IAppLauncher';
-import { Logger } from '@utils/logger';
+import type { BaseLaunchOptions, IAppLauncher } from "@contracts/IAppLauncher";
+import { Logger } from "@utils/logger";
 
 const logger = Logger.getInstance();
 
@@ -16,7 +16,9 @@ function getDriver(): {
 } {
   const driver = (globalThis as { driver?: any }).driver;
   if (!driver) {
-    throw new Error('[AppiumAppLauncher] WebdriverIO `driver` is not available — run under the wdio runner');
+    throw new Error(
+      "[AppiumAppLauncher] WebdriverIO `driver` is not available — run under the wdio runner"
+    );
   }
   return driver;
 }
@@ -33,7 +35,7 @@ export class AppiumAppLauncher implements IAppLauncher {
   async launchApp(options: AppiumLaunchOptions = {}): Promise<void> {
     logger.info(`launching app via Appium (newInstance=${options.newInstance ?? true})`);
     const driver = getDriver();
-    if (options.newInstance && typeof driver.restartApp === 'function') {
+    if (options.newInstance && typeof driver.restartApp === "function") {
       await driver.restartApp();
     } else {
       await driver.launchApp();
@@ -42,8 +44,8 @@ export class AppiumAppLauncher implements IAppLauncher {
 
   async reloadApp(): Promise<void> {
     const driver = getDriver();
-    logger.debug('reloading app (Appium restartApp)');
-    if (typeof driver.restartApp === 'function') {
+    logger.debug("reloading app (Appium restartApp)");
+    if (typeof driver.restartApp === "function") {
       await driver.restartApp();
     } else {
       await driver.launchApp();

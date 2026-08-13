@@ -11,36 +11,48 @@
  * The reporter writes a JSON artifact to reports/ when REPORT_DIR is set:
  *   REPORT_DIR=reports E2E_DRIVER=appium npx wdio wdio.conf.ts
  */
-import { getDriver } from '@core/index';
-import { SmokeReporter, runSmoke } from '@utils/SmokeReporter';
-import { LoginPage } from '@apps/mock/pages/LoginPage';
-import { loginLocators } from '@apps/mock/locators/login.locators';
-import { env } from '@configs/env';
+import { getDriver } from "@core/index";
+import { SmokeReporter, runSmoke } from "@utils/SmokeReporter";
+import { LoginPage } from "@apps/mock/pages/LoginPage";
+import { loginLocators } from "@apps/mock/locators/login.locators";
+import { env } from "@configs/env";
 
 const reporter = new SmokeReporter({
   reportDir: env.REPORT_DIR, // optional; writes reports/<name>-<ts>.json
   reportName: `smoke-${env.E2E_DRIVER}`,
 });
 
-describe('smoke', () => {
+describe("smoke", () => {
   let page: LoginPage;
 
   beforeAll(() => {
     page = new LoginPage();
   });
 
-  it('app launches and the promo banner can be dismissed', async () => {
-    await runSmoke('app-launch', async () => {
-      await getDriver().launcher.launchApp();
-    }, reporter);
+  it("app launches and the promo banner can be dismissed", async () => {
+    await runSmoke(
+      "app-launch",
+      async () => {
+        await getDriver().launcher.launchApp();
+      },
+      reporter
+    );
 
-    await runSmoke('promo-dismiss', async () => {
-      await page.dismissPromoIfPresent();
-    }, reporter);
+    await runSmoke(
+      "promo-dismiss",
+      async () => {
+        await page.dismissPromoIfPresent();
+      },
+      reporter
+    );
 
-    await runSmoke('login-screen-visible', async () => {
-      await page.locate(loginLocators.username).toBeVisible();
-    }, reporter);
+    await runSmoke(
+      "login-screen-visible",
+      async () => {
+        await page.locate(loginLocators.username).toBeVisible();
+      },
+      reporter
+    );
 
     const summary = await reporter.finish();
     // Surface the failure to the runner so the test still fails on smoke errors.

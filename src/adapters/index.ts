@@ -6,29 +6,28 @@
  * contracts (IMatcherFactory + IAppLauncher). Add a new framework by creating
  * `./<driver>/` and registering it below — no page or test needs to change.
  */
-import { registerDriver } from '@core/Driver';
-import type { IDriver } from '@core/IDriver';
-import { DetoxMatcherFactory } from './detox/DetoxMatcherFactory';
-import { detoxAppLauncher } from './detox/DetoxAppLauncher';
-import { AppiumMatcherFactory } from './appium/AppiumMatcherFactory';
-import { appiumAppLauncher } from './appium/AppiumAppLauncher';
+import { registerDriver } from "@core/Driver";
+import type { IDriver } from "@core/IDriver";
+import { DetoxMatcherFactory } from "./detox/DetoxMatcherFactory";
+import { detoxAppLauncher } from "./detox/DetoxAppLauncher";
+import { AppiumMatcherFactory } from "./appium/AppiumMatcherFactory";
+import { appiumAppLauncher } from "./appium/AppiumAppLauncher";
 
 // Register the Detox driver.
-registerDriver('detox', (): IDriver => ({
-  name: 'detox',
+registerDriver("detox", (): IDriver => ({
+  name: "detox",
   matcher: new DetoxMatcherFactory(),
   launcher: detoxAppLauncher,
 }));
 
 // Register the Appium driver. Each framework registers itself the same way;
 // pages and tests never need to change when a new driver is added.
-registerDriver('appium', (): IDriver => ({
-  name: 'appium',
+registerDriver("appium", (): IDriver => ({
+  name: "appium",
   matcher: new AppiumMatcherFactory(),
   launcher: appiumAppLauncher,
 }));
 
 // Re-export the concrete adapters for direct imports where useful.
-export * from './detox';
-export * from './appium';
-
+export * from "./detox";
+export * from "./appium";

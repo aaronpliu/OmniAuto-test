@@ -1,7 +1,7 @@
-import { getDriver } from '@core/index';
-import { LoginPage } from '@apps/mock/pages/LoginPage';
-import { loginWithValidUser } from '@apps/mock/workflows/loginWorkflow';
-import { validUser, invalidUser } from '@apps/mock/fixtures/users';
+import { getDriver } from "@core/index";
+import { LoginPage } from "@apps/mock/pages/LoginPage";
+import { loginWithValidUser } from "@apps/mock/workflows/loginWorkflow";
+import { validUser, invalidUser } from "@apps/mock/fixtures/users";
 
 // Resolve the active driver once (Detox by default; set E2E_DRIVER=appium to switch).
 // Pages and tests stay identical across frameworks — only the launch/runner
@@ -16,7 +16,7 @@ const driver = getDriver();
  *   E2E_DRIVER=detox  detox test --configuration ios.sim.debug
  *   E2E_DRIVER=appium npx wdio wdio.conf.ts   (or: npm run test:appium)
  */
-describe('Login flow', () => {
+describe("Login flow", () => {
   beforeAll(async () => {
     await driver.launcher.launchApp();
   });
@@ -26,17 +26,17 @@ describe('Login flow', () => {
     await driver.launcher.reloadApp();
   });
 
-  it('logs in with valid credentials and shows the welcome banner', async () => {
+  it("logs in with valid credentials and shows the welcome banner", async () => {
     const page = new LoginPage();
     await page.login(validUser.username, validUser.password);
     // await page.expectWelcomeVisible();
   });
 
-  it('logs in via the reusable workflow', async () => {
+  it("logs in via the reusable workflow", async () => {
     await loginWithValidUser();
   });
 
-  it('shows an error for invalid credentials', async () => {
+  it("shows an error for invalid credentials", async () => {
     const page = new LoginPage();
     await page.login(invalidUser.username, invalidUser.password);
     // await page.expectErrorVisible();

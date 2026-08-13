@@ -10,32 +10,31 @@
  * place. `wdio.conf.ts` still executes before TS path aliases resolve, so it
  * imports this module via its relative path.
  */
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 
 // Best-effort: ignore if no `.env` exists (variables may come from the shell).
 dotenv.config();
 
-export type DriverName = 'detox' | 'appium';
-export type Platform = 'ios' | 'android';
+export type DriverName = "detox" | "appium";
+export type Platform = "ios" | "android";
 
-const rawPlatform = (process.env.PLATFORM ?? 'ios').toLowerCase();
-const platform: Platform = rawPlatform === 'android' ? 'android' : 'ios';
+const rawPlatform = (process.env.PLATFORM ?? "ios").toLowerCase();
+const platform: Platform = rawPlatform === "android" ? "android" : "ios";
 
-const rawDriver = process.env.E2E_DRIVER ?? 'detox';
-const driver: DriverName =
-  rawDriver === 'appium' ? 'appium' : 'detox';
+const rawDriver = process.env.E2E_DRIVER ?? "detox";
+const driver: DriverName = rawDriver === "appium" ? "appium" : "detox";
 
 // Which app's config/artifacts to use (Detox dispatcher + Appium app path).
-const appAlias = process.env.E2E_APP ?? 'mock';
+const appAlias = process.env.E2E_APP ?? "mock";
 
 // Platform-aware defaults keep the per-platform caps lean in wdio.conf.ts.
 const DEFAULT_DEVICE_NAME: Record<Platform, string> = {
-  ios: 'iPhone 15 Pro',
-  android: 'Pixel_6_API_34',
+  ios: "iPhone 15 Pro",
+  android: "Pixel_6_API_34",
 };
 const DEFAULT_PLATFORM_VERSION: Record<Platform, string> = {
-  ios: '17.0',
-  android: '14.0',
+  ios: "17.0",
+  android: "14.0",
 };
 const ARTIFACTS = `apps/${appAlias}/artifacts`;
 const DEFAULT_APP_PATH: Record<Platform, string> = {
@@ -70,23 +69,22 @@ export const env = {
   /** (iOS only) Specific simulator UDID; undefined lets Appium pick default. */
   UDID: process.env.UDID || undefined,
   /** (Android only) AVD to launch when no device is connected. */
-  AVD_NAME: process.env.AVD_NAME ?? 'Pixel_6_API_34',
+  AVD_NAME: process.env.AVD_NAME ?? "Pixel_6_API_34",
   /** Override the built app binary path. */
   APPIUM_APP_PATH: process.env.APPIUM_APP_PATH ?? DEFAULT_APP_PATH[platform],
   /** (Android only) App package when not auto-detected. */
-  APPIUM_APP_PACKAGE: process.env.APPIUM_APP_PACKAGE ?? 'com.testingground',
+  APPIUM_APP_PACKAGE: process.env.APPIUM_APP_PACKAGE ?? "com.testingground",
   /** (Android only) App activity when not auto-detected. */
-  APPIUM_APP_ACTIVITY: process.env.APPIUM_APP_ACTIVITY ?? 'com.testingground.MainActivity',
+  APPIUM_APP_ACTIVITY: process.env.APPIUM_APP_ACTIVITY ?? "com.testingground.MainActivity",
   /** Smoke reporter output dir; defaults to an app-scoped folder so concurrent
    *  runs of different apps don't overwrite each other. Set explicitly to override. */
   REPORT_DIR: process.env.REPORT_DIR || `reports/${appAlias}/smoke`,
   /** Console log level (trace|debug|info|warn|error). */
-  LOG_LEVEL: process.env.LOG_LEVEL ?? 'info',
+  LOG_LEVEL: process.env.LOG_LEVEL ?? "info",
   /** Session dir for file logging. Defaults to an app-scoped, per-run folder so
    *  concurrent runs of different apps on one machine get isolated logs. An
    *  explicit value (e.g. from global setup or CI) still wins. */
-  OMNITEST_SESSION_DIR:
-    process.env.OMNITEST_SESSION_DIR || `reports/${appAlias}/run-${Date.now()}`,
+  OMNITEST_SESSION_DIR: process.env.OMNITEST_SESSION_DIR || `reports/${appAlias}/run-${Date.now()}`,
 } as const;
 
 export default env;

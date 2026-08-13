@@ -28,8 +28,8 @@
 // `configs/env.ts` (single source of truth). We use the typed `tsx/cjs/api`
 // entry (`register()`) instead of the untyped `tsx/cjs` side-effect subpath,
 // which avoids an implicit-`any` error in strict mode. No extra build step needed.
-require('tsx/cjs/api').register();
-const { env } = require('./configs/env');
+require("tsx/cjs/api").register();
+const { env } = require("./configs/env");
 
 /** @type {Detox.DetoxConfig} */
 function buildConfig() {
@@ -42,8 +42,12 @@ function buildConfig() {
     if (env.DETOX_BINARY_PATH && targetApp && base.apps[targetApp]) {
       base.apps[targetApp].binaryPath = env.DETOX_BINARY_PATH;
     }
-    if (env.DETOX_TEST_BINARY_PATH && targetApp &&
-        base.apps[targetApp] && base.apps[targetApp].type === 'android.apk') {
+    if (
+      env.DETOX_TEST_BINARY_PATH &&
+      targetApp &&
+      base.apps[targetApp] &&
+      base.apps[targetApp].type === "android.apk"
+    ) {
       base.apps[targetApp].testBinaryPath = env.DETOX_TEST_BINARY_PATH;
     }
 
@@ -54,13 +58,14 @@ function buildConfig() {
     if (env.DETOX_DEVICE_NAME) {
       const dev = base.devices[base.configurations[cfg].device];
       if (dev) {
-        dev.device = dev.device && typeof dev.device === 'object'
-          ? { ...dev.device, type: env.DETOX_DEVICE_NAME, avdName: env.DETOX_DEVICE_NAME }
-          : env.DETOX_DEVICE_NAME;
+        dev.device =
+          dev.device && typeof dev.device === "object"
+            ? { ...dev.device, type: env.DETOX_DEVICE_NAME, avdName: env.DETOX_DEVICE_NAME }
+            : env.DETOX_DEVICE_NAME;
       }
     }
-    if (env.DETOX_ANDROID_DEVICE && base.devices['android.device']) {
-      base.devices['android.device'].device = env.DETOX_ANDROID_DEVICE;
+    if (env.DETOX_ANDROID_DEVICE && base.devices["android.device"]) {
+      base.devices["android.device"].device = env.DETOX_ANDROID_DEVICE;
     }
     return base;
   };

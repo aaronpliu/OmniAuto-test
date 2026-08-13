@@ -12,16 +12,16 @@ export interface Point {
 }
 
 /** Supported swipe / scroll directions. */
-export type Direction = 'left' | 'right' | 'up' | 'down';
+export type Direction = "left" | "right" | "up" | "down";
 
 /** Supported scroll-to edges. */
-export type Edge = 'left' | 'right' | 'top' | 'bottom';
+export type Edge = "left" | "right" | "top" | "bottom";
 
 /** Gesture speed presets. */
-export type GestureSpeed = 'fast' | 'slow';
+export type GestureSpeed = "fast" | "slow";
 
 /** Date formats accepted by date-picker actions. */
-export type DateFormat = 'ISO8601' | string;
+export type DateFormat = "ISO8601" | string;
 
 /**
  * Attributes describing the runtime state of a resolved UI element.

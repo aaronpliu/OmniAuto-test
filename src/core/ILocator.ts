@@ -11,7 +11,7 @@
  * (Detox `by.id`, Appium `accessibility id`), so `testID`-based locators work
  * for free in every driver. Driver-specific escapes go in `raw`.
  */
-import type { IActions } from '@contracts/index';
+import type { IActions } from "@contracts/index";
 
 /** A stable test identity, mapped to Detox `by.id` / Appium `accessibility id`. */
 export interface ILocator {

@@ -1,6 +1,6 @@
-import { device } from 'detox';
-import type { BaseLaunchOptions, IAppLauncher } from '@contracts/IAppLauncher';
-import { Logger } from '@utils/logger';
+import { device } from "detox";
+import type { BaseLaunchOptions, IAppLauncher } from "@contracts/IAppLauncher";
+import { Logger } from "@utils/logger";
 
 const logger = Logger.getInstance();
 
@@ -28,14 +28,14 @@ export class DetoxAppLauncher implements IAppLauncher {
   async launchApp(options: DetoxLaunchOptions = {}): Promise<void> {
     const merged = { ...DEFAULT_OPTIONS, ...options };
     logger.info(
-      `launching app via Detox (newInstance=${merged.newInstance}, delete=${merged.delete})`,
+      `launching app via Detox (newInstance=${merged.newInstance}, delete=${merged.delete})`
     );
     await device.launchApp(merged);
   }
 
   async reloadApp(): Promise<void> {
-    if (typeof device.reloadReactNative === 'function') {
-      logger.debug('reloading React Native runtime');
+    if (typeof device.reloadReactNative === "function") {
+      logger.debug("reloading React Native runtime");
       await device.reloadReactNative();
     }
   }

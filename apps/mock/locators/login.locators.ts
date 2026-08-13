@@ -1,4 +1,4 @@
-import type { ILocator } from '@core/ILocator';
+import type { ILocator } from "@core/ILocator";
 
 /**
  * Declarative locators for the login screen. These are driver-neutral
@@ -9,15 +9,15 @@ import type { ILocator } from '@core/ILocator';
  */
 export const loginLocators = {
   /** Username / email text field. */
-  username: { id: 'usernameInput' } as ILocator,
+  username: { id: "usernameInput" } as ILocator,
   /** Password secure text field. */
-  password: { id: 'passwordInput' } as ILocator,
+  password: { id: "passwordInput" } as ILocator,
   /** Submit button. */
-  submit: { id: 'loginButton' } as ILocator,
+  submit: { id: "loginButton" } as ILocator,
   /** Inline error message shown on failed login. */
-  error: { id: 'login.error' } as ILocator,
+  error: { id: "login.error" } as ILocator,
   /** Welcome banner shown after a successful login (on the home screen). */
-  welcome: { id: 'home.welcome' } as ILocator,
+  welcome: { id: "home.welcome" } as ILocator,
   /** Optional promo banner (CMS-configured); may be absent. */
-  promoBanner: { id: 'home.promoBanner' } as ILocator,
+  promoBanner: { id: "home.promoBanner" } as ILocator,
 };

@@ -1,5 +1,5 @@
-import { LoginPage } from '../pages/LoginPage';
-import { validUser, type UserCredentials } from '../fixtures/users';
+import { LoginPage } from "../pages/LoginPage";
+import { validUser, type UserCredentials } from "../fixtures/users";
 
 /**
  * High-level login workflow combining page-object steps into a single,

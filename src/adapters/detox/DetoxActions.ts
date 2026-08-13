@@ -1,5 +1,5 @@
-import { BaseActions } from '@contracts/BaseActions';
-import type { IActions } from '@contracts/IActions';
+import { BaseActions } from "@contracts/BaseActions";
+import type { IActions } from "@contracts/IActions";
 import type {
   DateFormat,
   Direction,
@@ -7,12 +7,12 @@ import type {
   ElementAttributes,
   GestureSpeed,
   Point,
-} from '@contracts/types';
+} from "@contracts/types";
 
 // Detox is shipped as `export = Detox`, so we import the namespace as a type
 // and reference its real element/type definitions instead of re-declaring a
 // duplicate structural interface.
-import { Logger } from '@utils/logger';
+import { Logger } from "@utils/logger";
 
 // Module-level logger; shared singleton from @utils/logger.
 const logger = Logger.getInstance();
@@ -47,7 +47,7 @@ export class DetoxActions extends BaseActions {
   private get expect(): Detox.ExpectFacade {
     if (!this.expectFacade) {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      this.expectFacade = require('detox').expect as Detox.ExpectFacade;
+      this.expectFacade = require("detox").expect as Detox.ExpectFacade;
     }
     return this.expectFacade;
   }
@@ -59,7 +59,7 @@ export class DetoxActions extends BaseActions {
   private get waitFor(): Detox.WaitForFacade {
     if (!this.waitForFacade) {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      this.waitForFacade = require('detox').waitFor as Detox.WaitForFacade;
+      this.waitForFacade = require("detox").waitFor as Detox.WaitForFacade;
     }
     return this.waitForFacade;
   }
@@ -72,7 +72,7 @@ export class DetoxActions extends BaseActions {
   }
 
   async multiTap(times: number): Promise<void> {
-    this.assertGreaterThanOrEqual(times, 1, 'times');
+    this.assertGreaterThanOrEqual(times, 1, "times");
     await this.native.multiTap(times);
   }
 
@@ -84,7 +84,7 @@ export class DetoxActions extends BaseActions {
         await this.native.longPress(point);
       }
     } else if (duration !== undefined) {
-      this.assertPositive(duration, 'duration');
+      this.assertPositive(duration, "duration");
       await this.native.longPress(duration);
     } else {
       await this.native.longPress();
@@ -99,9 +99,9 @@ export class DetoxActions extends BaseActions {
     targetX: number,
     targetY: number,
     speed?: GestureSpeed,
-    holdDuration?: number,
+    holdDuration?: number
   ): Promise<void> {
-    this.assertPositive(duration, 'duration');
+    this.assertPositive(duration, "duration");
     const targetNative = (target as DetoxActions).native;
     await this.native.longPressAndDrag(
       duration,
@@ -110,8 +110,8 @@ export class DetoxActions extends BaseActions {
       targetNative,
       targetX,
       targetY,
-      speed ?? 'fast',
-      holdDuration ?? 0,
+      speed ?? "fast",
+      holdDuration ?? 0
     );
   }
 
@@ -122,20 +122,25 @@ export class DetoxActions extends BaseActions {
     speed?: GestureSpeed,
     normalizedOffset?: number,
     startX?: number,
-    startY?: number,
+    startY?: number
   ): Promise<void> {
     await this.native.swipe(direction, speed, normalizedOffset, startX, startY);
   }
 
   async pinch(scale: number, speed?: GestureSpeed, angle?: number): Promise<void> {
-    this.assertPositive(scale, 'scale');
+    this.assertPositive(scale, "scale");
     await this.native.pinch(scale, speed, angle);
   }
 
   /* ------------------------------ scroll -------------------------------- */
 
-  async scroll(offset: number, direction: Direction, startX?: number, startY?: number): Promise<void> {
-    this.assertPositive(offset, 'offset');
+  async scroll(
+    offset: number,
+    direction: Direction,
+    startX?: number,
+    startY?: number
+  ): Promise<void> {
+    this.assertPositive(offset, "offset");
     await this.native.scroll(offset, direction, startX, startY);
   }
 
@@ -144,14 +149,14 @@ export class DetoxActions extends BaseActions {
   }
 
   async scrollToIndex(index: number): Promise<void> {
-    this.assertGreaterThanOrEqual(index, 0, 'index');
+    this.assertGreaterThanOrEqual(index, 0, "index");
     await this.native.scrollToIndex(index);
   }
 
   /* ---------------------------- text input ------------------------------ */
 
   async typeText(text: string): Promise<void> {
-    this.assertNonEmpty(text, 'text');
+    this.assertNonEmpty(text, "text");
     logger.debug(`typeText on ${this.description}`);
     await this.native.typeText(text);
   }
@@ -175,31 +180,31 @@ export class DetoxActions extends BaseActions {
   /* -------------------------- pickers / sliders ------------------------- */
 
   async setColumnToValue(column: number, value: string): Promise<void> {
-    this.assertGreaterThanOrEqual(column, 0, 'column');
-    this.assertNonEmpty(value, 'value');
+    this.assertGreaterThanOrEqual(column, 0, "column");
+    this.assertNonEmpty(value, "value");
     await this.native.setColumnToValue(column, value);
   }
 
   async setDatePickerDate(dateString: string, dateFormat: DateFormat): Promise<void> {
-    this.assertNonEmpty(dateString, 'dateString');
-    this.assertNonEmpty(dateFormat, 'dateFormat');
+    this.assertNonEmpty(dateString, "dateString");
+    this.assertNonEmpty(dateFormat, "dateFormat");
     await this.native.setDatePickerDate(dateString, dateFormat);
   }
 
   async adjustSliderToPosition(normalizedPosition: number): Promise<void> {
-    this.assertInRange(normalizedPosition, 0, 1, 'normalizedPosition');
+    this.assertInRange(normalizedPosition, 0, 1, "normalizedPosition");
     await this.native.adjustSliderToPosition(normalizedPosition);
   }
 
   /* ------------------------------- misc --------------------------------- */
 
   async performAccessibilityAction(actionName: string): Promise<void> {
-    this.assertNonEmpty(actionName, 'actionName');
+    this.assertNonEmpty(actionName, "actionName");
     await this.native.performAccessibilityAction(actionName);
   }
 
   async takeScreenshot(name: string): Promise<string> {
-    this.assertNonEmpty(name, 'name');
+    this.assertNonEmpty(name, "name");
     return this.native.takeScreenshot(name);
   }
 
@@ -237,15 +242,17 @@ export class DetoxActions extends BaseActions {
    * everything else (e.g. detox not initialized, bad handle) is rethrown.
    */
   private isVisibilityConditionFailure(err: unknown): boolean {
-    if (!err || typeof err !== 'object') return false;
+    if (!err || typeof err !== "object") return false;
     const e = err as { name?: string; message?: string };
-    if ((e.name ?? '').includes('Detox')) return true;
-    return /timed out|WaitFor|not (visible|found)|could not be (located|matched)/i.test(e.message ?? '');
+    if ((e.name ?? "").includes("Detox")) return true;
+    return /timed out|WaitFor|not (visible|found)|could not be (located|matched)/i.test(
+      e.message ?? ""
+    );
   }
 
   async toBeVisible(percent?: number): Promise<void> {
-    if (percent !== undefined) this.assertInRange(percent, 1, 100, 'percent');
-    logger.debug(`expect toBeVisible(${percent ?? ''}) on ${this.description}`);
+    if (percent !== undefined) this.assertInRange(percent, 1, 100, "percent");
+    logger.debug(`expect toBeVisible(${percent ?? ""}) on ${this.description}`);
     await this.expect(this.native).toBeVisible(percent);
   }
 
@@ -258,17 +265,17 @@ export class DetoxActions extends BaseActions {
   }
 
   async toHaveText(text: string): Promise<void> {
-    this.assertNonEmpty(text, 'text');
+    this.assertNonEmpty(text, "text");
     await this.expect(this.native).toHaveText(text);
   }
 
   async toHaveLabel(label: string): Promise<void> {
-    this.assertNonEmpty(label, 'label');
+    this.assertNonEmpty(label, "label");
     await this.expect(this.native).toHaveLabel(label);
   }
 
   async toHaveId(id: string): Promise<void> {
-    this.assertNonEmpty(id, 'id');
+    this.assertNonEmpty(id, "id");
     await this.expect(this.native).toHaveId(id);
   }
 
@@ -277,8 +284,8 @@ export class DetoxActions extends BaseActions {
   }
 
   async toHaveSliderPosition(normalizedPosition: number, tolerance?: number): Promise<void> {
-    this.assertInRange(normalizedPosition, 0, 1, 'normalizedPosition');
-    if (tolerance !== undefined) this.assertPositive(tolerance, 'tolerance');
+    this.assertInRange(normalizedPosition, 0, 1, "normalizedPosition");
+    if (tolerance !== undefined) this.assertPositive(tolerance, "tolerance");
     await this.expect(this.native).toHaveSliderPosition(normalizedPosition, tolerance);
   }
 

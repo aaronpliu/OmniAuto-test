@@ -11,11 +11,11 @@
  */
 
 // Driver-agnostic contracts (element actions + app-launch contract).
-export * from './contracts';
+export * from "./contracts";
 
 // Neutral locator model + driver selector (registry-backed, env-switchable).
-export * from './core/ILocator';
-export { getDriver, registerDriver } from './core/index';
+export * from "./core/ILocator";
+export { getDriver, registerDriver } from "./core/index";
 
 // Utilities (logger, …).
-export * from './utils';
+export * from "./utils";

@@ -1,13 +1,7 @@
-import { BaseActions } from '@contracts/BaseActions';
-import type { IActions } from '@contracts/IActions';
-import type {
-  Direction,
-  Edge,
-  ElementAttributes,
-  GestureSpeed,
-  Point,
-} from '@contracts/types';
-import { Logger } from '@utils/logger';
+import { BaseActions } from "@contracts/BaseActions";
+import type { IActions } from "@contracts/IActions";
+import type { Direction, Edge, ElementAttributes, GestureSpeed, Point } from "@contracts/types";
+import { Logger } from "@utils/logger";
 
 const logger = Logger.getInstance();
 
@@ -36,7 +30,7 @@ interface AppiumElement {
 }
 
 interface AppiumTouchAction {
-  action: 'press' | 'longPress' | 'tap' | 'move' | 'wait' | 'release';
+  action: "press" | "longPress" | "tap" | "move" | "wait" | "release";
   x?: number;
   y?: number;
   count?: number;
@@ -57,7 +51,7 @@ interface AppiumDriver {
   // holds or `timeout` elapses; rejects (TimeoutError) on timeout.
   waitUntil(
     condition: () => Promise<boolean>,
-    options: { timeout?: number; timeoutMsg?: string; interval?: number },
+    options: { timeout?: number; timeoutMsg?: string; interval?: number }
   ): Promise<boolean>;
 }
 
@@ -65,7 +59,7 @@ interface AppiumDriver {
 class NotSupportedError extends Error {
   constructor(method: string) {
     super(`[AppiumActions] "${method}" is not supported by the WebdriverIO/Appium adapter`);
-    this.name = 'NotSupportedError';
+    this.name = "NotSupportedError";
   }
 }
 
@@ -73,15 +67,17 @@ class NotSupportedError extends Error {
 function getDriver(): AppiumDriver {
   const driver = (globalThis as { driver?: AppiumDriver }).driver;
   if (!driver) {
-    throw new Error('[AppiumActions] WebdriverIO `driver` is not available — run under the wdio runner');
+    throw new Error(
+      "[AppiumActions] WebdriverIO `driver` is not available — run under the wdio runner"
+    );
   }
   return driver;
 }
 
 /** Best-effort platform detection for selector construction. */
 function isIOS(): boolean {
-  const platform = getDriver().capabilities?.platformName?.toLowerCase() ?? '';
-  return platform.includes('ios');
+  const platform = getDriver().capabilities?.platformName?.toLowerCase() ?? "";
+  return platform.includes("ios");
 }
 
 /**
@@ -121,23 +117,23 @@ export class AppiumActions extends BaseActions {
     logger.debug(`tap(${JSON.stringify(point)}) on ${this.description}`);
     const elem = await this.element();
     if (point) {
-      await getDriver().touchAction(elem, [{ action: 'tap', x: point.x, y: point.y }]);
+      await getDriver().touchAction(elem, [{ action: "tap", x: point.x, y: point.y }]);
     } else {
       await elem.click();
     }
   }
 
   async multiTap(times: number): Promise<void> {
-    this.assertGreaterThanOrEqual(times, 1, 'times');
+    this.assertGreaterThanOrEqual(times, 1, "times");
     const elem = await this.element();
-    await getDriver().touchAction(elem, [{ action: 'tap', count: times }]);
+    await getDriver().touchAction(elem, [{ action: "tap", count: times }]);
   }
 
   async longPress(point?: Point, duration?: number): Promise<void> {
     const elem = await this.element();
     const actions: AppiumTouchAction[] = [
       {
-        action: 'longPress',
+        action: "longPress",
         ...(point ? { x: point.x, y: point.y } : {}),
         ...(duration !== undefined ? { duration } : {}),
       },
@@ -151,15 +147,15 @@ export class AppiumActions extends BaseActions {
     sourceY: number,
     target: IActions,
     targetX: number,
-    targetY: number,
+    targetY: number
   ): Promise<void> {
-    this.assertPositive(duration, 'duration');
+    this.assertPositive(duration, "duration");
     const source = await this.element();
     const targetElem = await (target as AppiumActions).element();
     await getDriver().touchAction(source, [
-      { action: 'longPress', x: sourceX, y: sourceY, duration },
-      { action: 'move', element: targetElem, x: targetX, y: targetY },
-      { action: 'release' },
+      { action: "longPress", x: sourceX, y: sourceY, duration },
+      { action: "move", element: targetElem, x: targetX, y: targetY },
+      { action: "release" },
     ]);
   }
 
@@ -170,7 +166,7 @@ export class AppiumActions extends BaseActions {
     speed?: GestureSpeed,
     normalizedOffset?: number,
     startX?: number,
-    startY?: number,
+    startY?: number
   ): Promise<void> {
     void speed;
     const elem = await this.element();
@@ -185,43 +181,42 @@ export class AppiumActions extends BaseActions {
     };
     const d = delta[direction];
     await getDriver().touchAction(elem, [
-      { action: 'press', x, y },
-      { action: 'move', x: x + d.x, y: y + d.y },
-      { action: 'release' },
+      { action: "press", x, y },
+      { action: "move", x: x + d.x, y: y + d.y },
+      { action: "release" },
     ]);
   }
 
   async pinch(): Promise<void> {
-    throw new NotSupportedError('pinch');
+    throw new NotSupportedError("pinch");
   }
 
   /* ------------------------------ scroll -------------------------------- */
 
   async scroll(offset: number, direction: Direction): Promise<void> {
-    this.assertPositive(offset, 'offset');
+    this.assertPositive(offset, "offset");
     // Map swipe-style Direction onto scroll-style Edge.
-    const edge: Edge =
-      direction === 'up' ? 'top' : direction === 'down' ? 'bottom' : direction;
+    const edge: Edge = direction === "up" ? "top" : direction === "down" ? "bottom" : direction;
     await this.scrollTo(edge);
   }
 
   async scrollTo(edge: Edge): Promise<void> {
     const elem = await this.element();
-    const wdioEdge = edge === 'top' ? 'up' : edge === 'bottom' ? 'down' : edge;
-    await getDriver().execute('mobile: scroll', {
+    const wdioEdge = edge === "top" ? "up" : edge === "bottom" ? "down" : edge;
+    await getDriver().execute("mobile: scroll", {
       elementId: elem.elementId,
       direction: wdioEdge,
     });
   }
 
   async scrollToIndex(): Promise<void> {
-    throw new NotSupportedError('scrollToIndex');
+    throw new NotSupportedError("scrollToIndex");
   }
 
   /* ---------------------------- text input ------------------------------ */
 
   async typeText(text: string): Promise<void> {
-    this.assertNonEmpty(text, 'text');
+    this.assertNonEmpty(text, "text");
     logger.debug(`typeText on ${this.description}`);
     const elem = await this.element();
     await elem.setValue(text);
@@ -238,35 +233,35 @@ export class AppiumActions extends BaseActions {
   }
 
   async tapReturnKey(): Promise<void> {
-    await getDriver().keys('Enter');
+    await getDriver().keys("Enter");
   }
 
   async tapBackspaceKey(): Promise<void> {
-    await getDriver().keys('Backspace');
+    await getDriver().keys("Backspace");
   }
 
   /* -------------------------- pickers / sliders ------------------------- */
 
   async setColumnToValue(): Promise<void> {
-    throw new NotSupportedError('setColumnToValue');
+    throw new NotSupportedError("setColumnToValue");
   }
 
   async setDatePickerDate(): Promise<void> {
-    throw new NotSupportedError('setDatePickerDate');
+    throw new NotSupportedError("setDatePickerDate");
   }
 
   async adjustSliderToPosition(): Promise<void> {
-    throw new NotSupportedError('adjustSliderToPosition');
+    throw new NotSupportedError("adjustSliderToPosition");
   }
 
   /* ------------------------------- misc --------------------------------- */
 
   async performAccessibilityAction(): Promise<void> {
-    throw new NotSupportedError('performAccessibilityAction');
+    throw new NotSupportedError("performAccessibilityAction");
   }
 
   async takeScreenshot(name: string): Promise<string> {
-    this.assertNonEmpty(name, 'name');
+    this.assertNonEmpty(name, "name");
     const elem = await this.element();
     return elem.saveScreenshot(`${name}.png`);
   }
@@ -275,9 +270,9 @@ export class AppiumActions extends BaseActions {
     const elem = await this.element();
     const [text, label, value, identifier, visible, enabled] = await Promise.all([
       elem.getText().catch(() => undefined),
-      elem.getAttribute(isIOS() ? 'label' : 'content-desc').catch(() => undefined),
+      elem.getAttribute(isIOS() ? "label" : "content-desc").catch(() => undefined),
       elem.getValue().catch(() => undefined),
-      elem.getAttribute(isIOS() ? 'name' : 'resource-id').catch(() => undefined),
+      elem.getAttribute(isIOS() ? "name" : "resource-id").catch(() => undefined),
       elem.isDisplayed().catch(() => undefined),
       elem.isExisting().catch(() => undefined),
     ]);
@@ -312,10 +307,10 @@ export class AppiumActions extends BaseActions {
     // (TimeoutError) once the budget is exhausted. A hand-rolled sleep loop would
     // bail early on the first `no such element` from element() and never wait.
     try {
-      await getDriver().waitUntil(
-        async () => (await this.element()).isDisplayed(),
-        { timeout: timeoutMs, timeoutMsg: `${this.description} to become visible` },
-      );
+      await getDriver().waitUntil(async () => (await this.element()).isDisplayed(), {
+        timeout: timeoutMs,
+        timeoutMsg: `${this.description} to become visible`,
+      });
       return true;
     } catch (err) {
       if (this.isVisibilityConditionFailure(err)) return false;
@@ -330,10 +325,12 @@ export class AppiumActions extends BaseActions {
    * Covers both the immediate `element()` throw and a `waitUntil` timeout.
    */
   private isVisibilityConditionFailure(err: unknown): boolean {
-    if (!err || typeof err !== 'object') return false;
+    if (!err || typeof err !== "object") return false;
     const e = err as { name?: string; message?: string };
-    const message = (e.message ?? '').toLowerCase();
-    return /no such element|stale element|not (visible|found)|timed out|could not be (located|matched)|wait until|waituntil|to become visible/.test(message);
+    const message = (e.message ?? "").toLowerCase();
+    return /no such element|stale element|not (visible|found)|timed out|could not be (located|matched)|wait until|waituntil|to become visible/.test(
+      message
+    );
   }
 
   async toBeVisible(): Promise<void> {
@@ -358,7 +355,7 @@ export class AppiumActions extends BaseActions {
   }
 
   async toHaveText(text: string): Promise<void> {
-    this.assertNonEmpty(text, 'text');
+    this.assertNonEmpty(text, "text");
     const elem = await this.element();
     const actual = (await elem.getText()).trim();
     if (actual !== text) {
@@ -367,18 +364,18 @@ export class AppiumActions extends BaseActions {
   }
 
   async toHaveLabel(label: string): Promise<void> {
-    this.assertNonEmpty(label, 'label');
+    this.assertNonEmpty(label, "label");
     const elem = await this.element();
-    const actual = (await elem.getAttribute(isIOS() ? 'label' : 'content-desc')) ?? '';
+    const actual = (await elem.getAttribute(isIOS() ? "label" : "content-desc")) ?? "";
     if (actual !== label) {
       throw new Error(`[${this.description}] expected label "${label}", got "${actual}"`);
     }
   }
 
   async toHaveId(id: string): Promise<void> {
-    this.assertNonEmpty(id, 'id');
+    this.assertNonEmpty(id, "id");
     const elem = await this.element();
-    const actual = (await elem.getAttribute(isIOS() ? 'name' : 'resource-id')) ?? '';
+    const actual = (await elem.getAttribute(isIOS() ? "name" : "resource-id")) ?? "";
     if (actual !== id) {
       throw new Error(`[${this.description}] expected id "${id}", got "${actual}"`);
     }
@@ -386,17 +383,17 @@ export class AppiumActions extends BaseActions {
 
   async toHaveValue(value: string): Promise<void> {
     const elem = await this.element();
-    const actual = (await elem.getValue()) ?? '';
+    const actual = (await elem.getValue()) ?? "";
     if (actual !== value) {
       throw new Error(`[${this.description}] expected value "${value}", got "${actual}"`);
     }
   }
 
   async toHaveSliderPosition(): Promise<void> {
-    throw new NotSupportedError('toHaveSliderPosition');
+    throw new NotSupportedError("toHaveSliderPosition");
   }
 
   async toHaveToggleValue(): Promise<void> {
-    throw new NotSupportedError('toHaveToggleValue');
+    throw new NotSupportedError("toHaveToggleValue");
   }
 }

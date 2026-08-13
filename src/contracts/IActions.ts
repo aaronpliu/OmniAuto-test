@@ -1,11 +1,4 @@
-import type {
-  DateFormat,
-  Direction,
-  Edge,
-  ElementAttributes,
-  GestureSpeed,
-  Point,
-} from './types';
+import type { DateFormat, Direction, Edge, ElementAttributes, GestureSpeed, Point } from "./types";
 
 /**
  * `IActions` defines the contract for every interaction that can be performed
@@ -49,7 +42,7 @@ export interface IActions {
     targetX: number,
     targetY: number,
     speed?: GestureSpeed,
-    holdDuration?: number,
+    holdDuration?: number
   ): Promise<void>;
 
   /* ---------------------------------------------------------------------- */
@@ -62,7 +55,7 @@ export interface IActions {
     speed?: GestureSpeed,
     normalizedOffset?: number,
     startX?: number,
-    startY?: number,
+    startY?: number
   ): Promise<void>;
 
   /** Pinch (iOS only). scale < 1 zooms out, > 1 zooms in. */

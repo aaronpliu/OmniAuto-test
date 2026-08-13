@@ -22,44 +22,44 @@
  *   Android: apps/mock/artifacts/android/app-release.apk
  * Override with `APPIUM_APP_PATH` if your build outputs elsewhere.
  */
-import type { Options } from '@wdio/types';
-import { env } from './configs/env';
+import type { Options } from "@wdio/types";
+import { env } from "./configs/env";
 
 const PLATFORM = env.PLATFORM;
 
 // --- iOS (XCUITest) -------------------------------------------------------
 const IOS_CAPS = {
-  platformName: 'iOS',
-  'appium:automationName': 'XCUITest',
-  'appium:deviceName': env.DEVICE_NAME,
-  'appium:platformVersion': env.PLATFORM_VERSION,
+  platformName: "iOS",
+  "appium:automationName": "XCUITest",
+  "appium:deviceName": env.DEVICE_NAME,
+  "appium:platformVersion": env.PLATFORM_VERSION,
   // Simulator UDID (optional — omit to let Appium pick the default simulator).
-  ...(env.UDID ? { 'appium:udid': env.UDID } : {}),
+  ...(env.UDID ? { "appium:udid": env.UDID } : {}),
   // Absolute path to the built .app bundle.
-  'appium:app': env.APPIUM_APP_PATH,
-  'appium:newCommandTimeout': 240,
+  "appium:app": env.APPIUM_APP_PATH,
+  "appium:newCommandTimeout": 240,
   // Keep app data between sessions; flip to true for a clean install each run.
-  'appium:noReset': true,
+  "appium:noReset": true,
 } as const;
 
 // --- Android (UiAutomator2) ----------------------------------------------
 const ANDROID_CAPS = {
-  platformName: 'Android',
-  'appium:automationName': 'UiAutomator2',
-  'appium:deviceName': env.DEVICE_NAME,
-  'appium:platformVersion': env.PLATFORM_VERSION,
+  platformName: "Android",
+  "appium:automationName": "UiAutomator2",
+  "appium:deviceName": env.DEVICE_NAME,
+  "appium:platformVersion": env.PLATFORM_VERSION,
   // AVD to launch if no device is connected. Matches Detox's emulator config.
-  'appium:avd': env.AVD_NAME,
+  "appium:avd": env.AVD_NAME,
   // Absolute path to the built .apk.
-  'appium:app': env.APPIUM_APP_PATH,
+  "appium:app": env.APPIUM_APP_PATH,
   // Replace with your app's package/activity if Appium should not auto-detect.
-  'appium:appPackage': env.APPIUM_APP_PACKAGE,
-  'appium:appActivity': env.APPIUM_APP_ACTIVITY,
-  'appium:newCommandTimeout': 240,
-  'appium:noReset': true,
+  "appium:appPackage": env.APPIUM_APP_PACKAGE,
+  "appium:appActivity": env.APPIUM_APP_ACTIVITY,
+  "appium:newCommandTimeout": 240,
+  "appium:noReset": true,
 } as const;
 
-const ACTIVE_CAPS = PLATFORM === 'android' ? ANDROID_CAPS : IOS_CAPS;
+const ACTIVE_CAPS = PLATFORM === "android" ? ANDROID_CAPS : IOS_CAPS;
 
 // NOTE: wdio v9's `Options.Testrunner` type does not declare every runtime
 // field we use (notably `capabilities`, `port`, `hostname`). These are valid at
@@ -68,19 +68,19 @@ const ACTIVE_CAPS = PLATFORM === 'android' ? ANDROID_CAPS : IOS_CAPS;
 export const config = {
   // Mocha is the only maintained runner that reuses the same describe/it globals
   // our specs already use (jest-runner was removed in wdio v9).
-  framework: 'mocha',
-  runner: 'local',
+  framework: "mocha",
+  runner: "local",
 
-  specs: ['./tests/**/*.e2e.ts'],
+  specs: ["./tests/**/*.e2e.ts"],
 
   // Transpile TypeScript on the fly so the *.e2e.ts specs run without a build step.
   // wdio v9 uses `tsConfigPath` (pointing at a tsconfig) for on-the-fly TS.
-  tsConfigPath: './tsconfig.json',
+  tsConfigPath: "./tsconfig.json",
 
   // Mocha-specific options.
   mochaOpts: {
     timeout: 120000,
-    ui: 'bdd',
+    ui: "bdd",
   },
 
   // --- Capabilities (selected by PLATFORM) --------------------------------
@@ -89,9 +89,9 @@ export const config = {
   // --- Services -----------------------------------------------------------
   // `appium` service spins up a local Appium server; remove if you run your
   // own server and set `hostname`/`port` instead.
-  services: ['appium'],
+  services: ["appium"],
   port: 4723,
-  hostname: '127.0.0.1',
+  hostname: "127.0.0.1",
 
   // --- Hooks --------------------------------------------------------------
   /**
@@ -100,9 +100,10 @@ export const config = {
    * adapter's `getDriver()` (in AppiumAppLauncher / AppiumActions) relies on.
    */
   before: async function (_, __, context) {
-    const driver = (context as { driver?: unknown }).driver ?? (globalThis as { browser?: unknown }).browser;
+    const driver =
+      (context as { driver?: unknown }).driver ?? (globalThis as { browser?: unknown }).browser;
     (globalThis as { driver?: unknown }).driver = driver;
   },
 
-  logLevel: 'info',
+  logLevel: "info",
 } as Options.Testrunner;

@@ -1,13 +1,6 @@
-import type {
-  DateFormat,
-  Direction,
-  Edge,
-  ElementAttributes,
-  GestureSpeed,
-  Point,
-} from './types';
-import type { IActions } from './IActions';
-import { Logger } from '@utils/logger';
+import type { DateFormat, Direction, Edge, ElementAttributes, GestureSpeed, Point } from "./types";
+import type { IActions } from "./IActions";
+import { Logger } from "@utils/logger";
 
 // Module-level logger; shared singleton from @utils/logger.
 const logger = Logger.getInstance();
@@ -57,7 +50,9 @@ export abstract class BaseActions implements IActions {
 
   protected assertInRange(value: number, min: number, max: number, name: string): void {
     if (!Number.isFinite(value) || value < min || value > max) {
-      throw new Error(`[${this.description}] ${name} must be within [${min}, ${max}], got ${value}`);
+      throw new Error(
+        `[${this.description}] ${name} must be within [${min}, ${max}], got ${value}`
+      );
     }
   }
 
@@ -97,7 +92,7 @@ export abstract class BaseActions implements IActions {
     targetX: number,
     targetY: number,
     speed?: GestureSpeed,
-    holdDuration?: number,
+    holdDuration?: number
   ): Promise<void>;
 
   /* ----------------------------- gestures ------------------------------- */
@@ -107,14 +102,19 @@ export abstract class BaseActions implements IActions {
     speed?: GestureSpeed,
     normalizedOffset?: number,
     startX?: number,
-    startY?: number,
+    startY?: number
   ): Promise<void>;
 
   abstract pinch(scale: number, speed?: GestureSpeed, angle?: number): Promise<void>;
 
   /* ------------------------------ scroll -------------------------------- */
 
-  abstract scroll(offset: number, direction: Direction, startX?: number, startY?: number): Promise<void>;
+  abstract scroll(
+    offset: number,
+    direction: Direction,
+    startX?: number,
+    startY?: number
+  ): Promise<void>;
   abstract scrollTo(edge: Edge, startX?: number, startY?: number): Promise<void>;
   abstract scrollToIndex(index: number): Promise<void>;
 

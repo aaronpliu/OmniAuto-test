@@ -11,53 +11,61 @@
 
 /** @type {Detox.DetoxConfig} */
 module.exports = {
-  apps: {
-    'ios.release': {
-      type: 'ios.app',
-      binaryPath: 'apps/mock/artifacts/ios/TestingGround.app',
+  testRunner: {
+    args: {
+      $0: "jest",
+      config: "configs/jest/ios.detox.config.js",
     },
-    'android.release': {
-      type: 'android.apk',
-      binaryPath: 'apps/mock/artifacts/android/app-release.apk',
-      testBinaryPath: 'apps/mock/artifacts/android/app-release-androidTest.apk',
+    jest: {
+      setupTimeout: 120000,
+    },
+  },
+  apps: {
+    "ios.release": {
+      type: "ios.app",
+      binaryPath: "apps/mock/artifacts/ios/TestingGround.app",
+    },
+    "android.release": {
+      type: "android.apk",
+      binaryPath: "apps/mock/artifacts/android/app-release.apk",
+      testBinaryPath: "apps/mock/artifacts/android/app-release-androidTest.apk",
     },
   },
 
   devices: {
     simulator: {
-      type: 'ios.simulator',
+      type: "ios.simulator",
       device: {
-        type: 'iPhone 15 Pro',
+        type: "iPhone 15 Pro",
       },
     },
     emulator: {
-      type: 'android.emulator',
+      type: "android.emulator",
       device: {
-        avdName: 'Pixel_6_API_34',
+        avdName: "Pixel_6_API_34",
       },
-      gpuMode: 'swiftshader_indirect',
+      gpuMode: "swiftshader_indirect",
     },
-    'android.device': {
-      type: 'android.attached',
-      device: '*',
+    "android.device": {
+      type: "android.attached",
+      device: "*",
     },
   },
 
   configurations: {
-    'ios.sim.release': {
-      device: 'simulator',
-      app: 'ios.release',
+    "ios.sim.release": {
+      device: "simulator",
+      app: "ios.release",
     },
-    'android.emu.release': {
-      device: 'emulator',
-      app: 'android.release',
+    "android.emu.release": {
+      device: "emulator",
+      app: "android.release",
     },
-    'android.device.release': {
-      device: 'android.device',
-      app: 'android.release',
+    "android.device.release": {
+      device: "android.device",
+      app: "android.release",
     },
   },
-
   // Reuse the same driver & artifacts settings across all configurations.
   behavior: {
     init: {
@@ -65,8 +73,7 @@ module.exports = {
       exposeGlobals: true,
       reinstallApp: true,
       launchArgs: {
-        detoxURLBlacklistRegex:
-          '.*(https://example.com|wss://example.com).*',
+        detoxURLBlacklistRegex: ".*(https://example.com|wss://example.com).*",
       },
     },
     cleanup: {
@@ -76,15 +83,15 @@ module.exports = {
 
   artifacts: {
     plugins: {
-      log: 'failing',
-      screenshot: 'failing',
-      video: 'failing',
-      instruments: 'failing',
+      log: "failing",
+      screenshot: "failing",
+      video: "failing",
+      instruments: "failing",
     },
   },
 
   logger: {
-    level: 'info',
+    level: "info",
     options: {
       showDate: true,
       showLoggerName: true,

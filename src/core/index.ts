@@ -7,11 +7,8 @@
  * pages and tests should import `getDriver` from `@core` (or `@core/index`),
  * not directly from a concrete module.
  */
-import '@adapters';
+import "@adapters";
 
-export {
-  getDriver,
-  registerDriver,
-} from './Driver';
+export { getDriver, registerDriver } from "./Driver";
 
-export type { IDriver, DriverName } from './IDriver';
+export type { IDriver, DriverName } from "./IDriver";

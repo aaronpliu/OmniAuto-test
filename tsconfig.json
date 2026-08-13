@@ -29,6 +29,11 @@
       "@apps/*": ["apps/*"]
     }
   },
-  "include": ["src/**/*.ts", "apps/**/*.ts", "tests/**/*.ts", "configs/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "apps/**/*.ts",
+    "tests/**/*.ts",
+    "configs/**/*.ts"
+  ],
   "exclude": ["node_modules", "reports"]
 }
