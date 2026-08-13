@@ -22,13 +22,13 @@
       "@core/*": ["src/core/*"],
       "@contracts/*": ["src/contracts/*"],
       "@utils/*": ["src/utils/*"],
-      "@configs/*": ["src/configs/*"],
+      "@configs/*": ["configs/*"],
       "@adapters/*": ["src/adapters/*"],
       "@factory/*": ["src/factory/*"],
       "@setup/*": ["src/setup/*"],
       "@apps/*": ["apps/*"]
     }
   },
-  "include": ["src/**/*.ts", "apps/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "apps/**/*.ts", "tests/**/*.ts", "configs/**/*.ts"],
   "exclude": ["node_modules", "reports"]
 }

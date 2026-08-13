@@ -23,7 +23,7 @@
  * Override with `APPIUM_APP_PATH` if your build outputs elsewhere.
  */
 import type { Options } from '@wdio/types';
-import { env } from './src/configs/env';
+import { env } from './configs/env';
 
 const PLATFORM = env.PLATFORM;
 

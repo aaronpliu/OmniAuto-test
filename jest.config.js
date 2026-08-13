@@ -20,7 +20,7 @@ module.exports = {
     '^@core/(.*)$': '<rootDir>/src/core/$1',
     '^@contracts/(.*)$': '<rootDir>/src/contracts/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
-    '^@configs/(.*)$': '<rootDir>/src/configs/$1',
+    '^@configs/(.*)$': '<rootDir>/configs/$1',
     '^@adapters$': '<rootDir>/src/adapters/index.ts',
     '^@adapters/(.*)$': '<rootDir>/src/adapters/$1',
     '^@factory/(.*)$': '<rootDir>/src/factory/$1',

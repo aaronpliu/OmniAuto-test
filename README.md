@@ -282,14 +282,14 @@ if (!summary.success) throw new Error('Smoke failed');
   `@wdio/types` lib; checked by `npm run typecheck:appium` (run after
   `npm install` so the WebdriverIO types are present).
 - `wdio.conf.ts` — WebdriverIO/Appium runner config for `E2E_DRIVER=appium`.
-- `src/configs/env.ts` — **single source of truth** for all environment
+- `configs/env.ts` — **single source of truth** for all environment
   variables. Centralizes defaults, types (`E2E_DRIVER`, `PLATFORM`, …) and
   platform-aware logic, and loads `.env` via `dotenv`. All call sites import
   from here instead of reading `process.env` directly. See `.env.example`.
 
 ### Environment variables
 
-All variables are consolidated in `src/configs/env.ts` and documented in
+All variables are consolidated in `configs/env.ts` and documented in
 `.env.example` (copy to `.env` to override locally). Summary:
 
 | Variable | Default | Notes |
