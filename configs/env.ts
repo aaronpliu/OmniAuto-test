@@ -77,12 +77,16 @@ export const env = {
   APPIUM_APP_PACKAGE: process.env.APPIUM_APP_PACKAGE ?? 'com.testingground',
   /** (Android only) App activity when not auto-detected. */
   APPIUM_APP_ACTIVITY: process.env.APPIUM_APP_ACTIVITY ?? 'com.testingground.MainActivity',
-  /** Smoke reporter output dir; undefined skips file output. */
-  REPORT_DIR: process.env.REPORT_DIR || undefined,
+  /** Smoke reporter output dir; defaults to an app-scoped folder so concurrent
+   *  runs of different apps don't overwrite each other. Set explicitly to override. */
+  REPORT_DIR: process.env.REPORT_DIR || `reports/${appAlias}/smoke`,
   /** Console log level (trace|debug|info|warn|error). */
   LOG_LEVEL: process.env.LOG_LEVEL ?? 'info',
-  /** Session dir for file logging, normally injected by global setup. */
-  OMNITEST_SESSION_DIR: process.env.OMNITEST_SESSION_DIR || undefined,
+  /** Session dir for file logging. Defaults to an app-scoped, per-run folder so
+   *  concurrent runs of different apps on one machine get isolated logs. An
+   *  explicit value (e.g. from global setup or CI) still wins. */
+  OMNITEST_SESSION_DIR:
+    process.env.OMNITEST_SESSION_DIR || `reports/${appAlias}/run-${Date.now()}`,
 } as const;
 
 export default env;
