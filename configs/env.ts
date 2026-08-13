@@ -1,18 +1,35 @@
 /**
- * Centralized environment configuration.
+ * Centralized configuration.
  *
- * Single source of truth for every environment variable the framework reads.
- * Loading `.env` (via dotenv) is attempted once at import time so a local
- * `.env` file (copied from `.env.example`) is honored without extra setup.
+ * Design
+ * ------
+ * There is ONE config per app, dynamically selected by `E2E_APP`
+ * (default `mock`). Each framework reads its own config file:
  *
- * Call sites should import from here instead of touching `process.env`
- * directly — this keeps defaults, types, and platform-aware logic in one
- * place. `wdio.conf.ts` still executes before TS path aliases resolve, so it
- * imports this module via its relative path.
+ *   Detox  → configs/<E2E_APP>.detoxrc.js   (apps, devices, configurations)
+ *   Appium → wdio.conf.ts                   (capabilities, keyed by E2E_APP)
+ *
+ * `env.ts` centralizes the shared values both frameworks consume (app alias,
+ * platform, device selectors, report/session dirs) and derives the app binary
+ * path from E2E_APP. Appium-specific per-app values (Android package/activity)
+ * live in wdio.conf.ts — no separate *.config.json file is needed.
+ *
+ * `.env` is reserved for SHARED/global values only (secrets, LOG_LEVEL, ...).
+ * It intentionally does NOT define app-specific keys, so concurrent runs of
+ * different apps stay isolated and the shared `.env` can never leak app-specific
+ * values across runs.
+ *
+ * Resolution precedence for overridable values:
+ *   explicit CLI/shell env var  >  framework config (per-app)  >  default
+ *
+ * Call sites import from here instead of touching `process.env` directly.
+ * `wdio.conf.ts` still executes before TS path aliases resolve, so it imports
+ * this module via its relative path. `.env` is loaded via dotenv (best-effort;
+ * variables may also come from the shell).
  */
 import dotenv from "dotenv";
 
-// Best-effort: ignore if no `.env` exists (variables may come from the shell).
+// Load shared/global .env (best-effort; ignored if the file is absent).
 dotenv.config();
 
 export type DriverName = "detox" | "appium";
@@ -24,10 +41,11 @@ const platform: Platform = rawPlatform === "android" ? "android" : "ios";
 const rawDriver = process.env.E2E_DRIVER ?? "detox";
 const driver: DriverName = rawDriver === "appium" ? "appium" : "detox";
 
-// Which app's config/artifacts to use (Detox dispatcher + Appium app path).
+// Which app's config/artifacts to load. Drives both the Detox dispatcher and the
+// Appium app path. Switch apps with NO config edits — just set E2E_APP.
 const appAlias = process.env.E2E_APP ?? "mock";
 
-// Platform-aware defaults keep the per-platform caps lean in wdio.conf.ts.
+// --- Framework-level defaults (platform aware) -------------------------------
 const DEFAULT_DEVICE_NAME: Record<Platform, string> = {
   ios: "iPhone 15 Pro",
   android: "Pixel_6_API_34",
@@ -37,6 +55,8 @@ const DEFAULT_PLATFORM_VERSION: Record<Platform, string> = {
   android: "14.0",
 };
 const ARTIFACTS = `apps/${appAlias}/artifacts`;
+// Default app binary path is derived deterministically from E2E_APP. Override
+// per run via the CLI env var APPIUM_APP_PATH (Appium) / DETOX_BINARY_PATH (Detox).
 const DEFAULT_APP_PATH: Record<Platform, string> = {
   ios: `${ARTIFACTS}/ios/TestingGround.app`,
   android: `${ARTIFACTS}/android/app-release.apk`,
@@ -70,20 +90,19 @@ export const env = {
   UDID: process.env.UDID || undefined,
   /** (Android only) AVD to launch when no device is connected. */
   AVD_NAME: process.env.AVD_NAME ?? "Pixel_6_API_34",
-  /** Override the built app binary path. */
+  /** Built app binary path, derived from E2E_APP. Override via CLI env var. */
   APPIUM_APP_PATH: process.env.APPIUM_APP_PATH ?? DEFAULT_APP_PATH[platform],
-  /** (Android only) App package when not auto-detected. */
+  // (Android only) App package/activity. These are Appium-specific per-app values
+  // and live in wdio.conf.ts (keyed by E2E_APP); a CLI env var here overrides them.
   APPIUM_APP_PACKAGE: process.env.APPIUM_APP_PACKAGE ?? "com.testingground",
-  /** (Android only) App activity when not auto-detected. */
   APPIUM_APP_ACTIVITY: process.env.APPIUM_APP_ACTIVITY ?? "com.testingground.MainActivity",
-  /** Smoke reporter output dir; defaults to an app-scoped folder so concurrent
-   *  runs of different apps don't overwrite each other. Set explicitly to override. */
+  /** Smoke reporter output dir; app-scoped so concurrent runs of different apps
+   *  don't overwrite each other. Set explicitly (CLI/global .env) to override. */
   REPORT_DIR: process.env.REPORT_DIR || `reports/${appAlias}/smoke`,
   /** Console log level (trace|debug|info|warn|error). */
   LOG_LEVEL: process.env.LOG_LEVEL ?? "info",
-  /** Session dir for file logging. Defaults to an app-scoped, per-run folder so
-   *  concurrent runs of different apps on one machine get isolated logs. An
-   *  explicit value (e.g. from global setup or CI) still wins. */
+  /** Session dir for file logging. App-scoped, per-run folder so concurrent runs
+   *  on one machine stay isolated. An explicit value (CI/global .env) still wins. */
   OMNITEST_SESSION_DIR: process.env.OMNITEST_SESSION_DIR || `reports/${appAlias}/run-${Date.now()}`,
 } as const;
 

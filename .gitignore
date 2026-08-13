@@ -35,8 +35,13 @@ apps/**/artifacts/android/*.aab
 *.jpg
 
 # Environment / secrets
+# `.env` holds only shared/global values. Per-app settings are NOT kept in env
+# files — they are derived from E2E_APP or loaded from committed
+# configs/<app>.config.json. Ignore every local .env variant so none are ever
+# committed; `.env.example` stays tracked as the schema reference.
 .env
-.env.local
+.env.*
+!.env.example
 
 # Editor / OS
 .vscode/

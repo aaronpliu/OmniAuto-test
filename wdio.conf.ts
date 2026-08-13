@@ -27,6 +27,19 @@ import { env } from "./configs/env";
 
 const PLATFORM = env.PLATFORM;
 
+// --- Per-app Appium settings -------------------------------------------------
+// Appium-specific per-app values (Android package/activity) live here, keyed by
+// E2E_APP. No separate *.config.json needed — wdio.conf.ts IS the Appium config.
+// A CLI env var (APPIUM_APP_PACKAGE / APPIUM_APP_ACTIVITY) still overrides these.
+interface AppiumAppSettings {
+  appPackage: string;
+  appActivity: string;
+}
+const APPIUM_APPS: Record<string, AppiumAppSettings> = {
+  mock: { appPackage: "com.testingground", appActivity: "com.testingground.MainActivity" },
+};
+const appiumApp = APPIUM_APPS[env.E2E_APP] ?? APPIUM_APPS.mock;
+
 // --- iOS (XCUITest) -------------------------------------------------------
 const IOS_CAPS = {
   platformName: "iOS",
@@ -52,9 +65,9 @@ const ANDROID_CAPS = {
   "appium:avd": env.AVD_NAME,
   // Absolute path to the built .apk.
   "appium:app": env.APPIUM_APP_PATH,
-  // Replace with your app's package/activity if Appium should not auto-detect.
-  "appium:appPackage": env.APPIUM_APP_PACKAGE,
-  "appium:appActivity": env.APPIUM_APP_ACTIVITY,
+  // Per-app package/activity from wdio.conf.ts (keyed by E2E_APP); CLI env overrides.
+  "appium:appPackage": env.APPIUM_APP_PACKAGE ?? appiumApp.appPackage,
+  "appium:appActivity": env.APPIUM_APP_ACTIVITY ?? appiumApp.appActivity,
   "appium:newCommandTimeout": 240,
   "appium:noReset": true,
 } as const;

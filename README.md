@@ -223,8 +223,9 @@ export DEVICE_NAME="iPhone 15 Pro"            # or "Pixel_6_API_34"
 export PLATFORM_VERSION="17.0"                # or "14.0"
 export AVD_NAME="Pixel_6_API_34"              # Android emulator to launch
 export UDID="<sim-udid>"                      # iOS: pin a specific simulator
-export APPIUM_APP_PACKAGE="com.testingground" # Android only
-export APPIUM_APP_ACTIVITY="com.testingground.MainActivity"  # Android only
+# (Android package/activity live in wdio.conf.ts — keyed by E2E_APP, not .env.)
+# A CLI env var here still overrides that config for a one-off run, e.g.:
+export APPIUM_APP_PACKAGE="com.testingground" # Android only, overrides wdio.conf.ts
 ```
 
 `wdio.conf.ts` starts a local Appium server (`@wdio/appium-service`), injects
@@ -300,19 +301,19 @@ if (!summary.success) throw new Error("Smoke failed");
 All variables are consolidated in `configs/env.ts` and documented in
 `.env.example` (copy to `.env` to override locally). Summary:
 
-| Variable                                     | Default                               | Notes                            |
-| -------------------------------------------- | ------------------------------------- | -------------------------------- |
-| `E2E_DRIVER`                                 | `detox`                               | `detox` \| `appium`              |
-| `PLATFORM`                                   | `ios`                                 | `ios` \| `android` (Appium only) |
-| `DEVICE_NAME`                                | `iPhone 15 Pro` / `Pixel_6_API_34`    | platform-aware                   |
-| `PLATFORM_VERSION`                           | `17.0` / `14.0`                       | platform-aware                   |
-| `UDID`                                       | —                                     | iOS simulator UDID (optional)    |
-| `AVD_NAME`                                   | `Pixel_6_API_34`                      | Android AVD                      |
-| `APPIUM_APP_PATH`                            | per-platform artifact path            | override app binary              |
-| `APPIUM_APP_PACKAGE` / `APPIUM_APP_ACTIVITY` | `com.testingground` / `…MainActivity` | Android                          |
-| `REPORT_DIR`                                 | —                                     | smoke JSON output dir            |
-| `LOG_LEVEL`                                  | `info`                                | trace\|debug\|info\|warn\|error  |
-| `OMNITEST_SESSION_DIR`                       | —                                     | injected by global setup         |
+| Variable                                     | Default                                  | Notes                            |
+| -------------------------------------------- | ---------------------------------------- | -------------------------------- |
+| `E2E_DRIVER`                                 | `detox`                                  | `detox` \| `appium`              |
+| `PLATFORM`                                   | `ios`                                    | `ios` \| `android` (Appium only) |
+| `DEVICE_NAME`                                | `iPhone 15 Pro` / `Pixel_6_API_34`       | platform-aware                   |
+| `PLATFORM_VERSION`                           | `17.0` / `14.0`                          | platform-aware                   |
+| `UDID`                                       | —                                        | iOS simulator UDID (optional)    |
+| `AVD_NAME`                                   | `Pixel_6_API_34`                         | Android AVD                      |
+| `APPIUM_APP_PATH`                            | per-platform artifact path               | override app binary              |
+| `APPIUM_APP_PACKAGE` / `APPIUM_APP_ACTIVITY` | from `wdio.conf.ts` (keyed by `E2E_APP`) | Android (CLI overrides config)   |
+| `REPORT_DIR`                                 | —                                        | smoke JSON output dir            |
+| `LOG_LEVEL`                                  | `info`                                   | trace\|debug\|info\|warn\|error  |
+| `OMNITEST_SESSION_DIR`                       | —                                        | injected by global setup         |
 
 ## Notes
 
