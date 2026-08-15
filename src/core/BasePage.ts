@@ -34,4 +34,23 @@ export abstract class BasePage {
   locate(locator: ILocator): IActions {
     return this.find(locator);
   }
+
+  /* --------------------------- assertion helpers ------------------------ */
+  // Thin wrappers so page flows read as intent, not raw `find(...).toBeVisible()`.
+  // Each resolves the locator once and delegates to the contract's expectation.
+
+  /** Assert the element resolved by `locator` is visible. */
+  protected expectVisible(locator: ILocator): Promise<void> {
+    return this.find(locator).toBeVisible();
+  }
+
+  /** Assert the element resolved by `locator` exists. */
+  protected expectExists(locator: ILocator): Promise<void> {
+    return this.find(locator).toExist();
+  }
+
+  /** Assert the element resolved by `locator` has the given text. */
+  protected expectText(locator: ILocator, text: string): Promise<void> {
+    return this.find(locator).toHaveText(text);
+  }
 }

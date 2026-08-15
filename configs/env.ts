@@ -28,11 +28,14 @@
  * variables may also come from the shell).
  */
 import dotenv from "dotenv";
+import type { DriverName } from "../src/core/IDriver";
 
 // Load shared/global .env (best-effort; ignored if the file is absent).
 dotenv.config();
 
-export type DriverName = "detox" | "appium";
+// `DriverName` is the single source of truth, owned by `src/core/IDriver`.
+// Imported here via a relative path because this module also loads inside
+// wdio.conf.ts before TS path aliases are resolved.
 export type Platform = "ios" | "android";
 
 const rawPlatform = (process.env.PLATFORM ?? "ios").toLowerCase();

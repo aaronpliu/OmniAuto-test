@@ -29,31 +29,38 @@ export class AppiumMatcherFactory implements IMatcherFactory {
       ).driver?.capabilities?.platformName?.toLowerCase() ?? "";
     const ios = platform.includes("ios");
 
-    if (locator.raw) {
-      const raw = ios ? locator.raw.ios : locator.raw.android;
-      if (raw) return String(raw);
+    switch (locator.strategy) {
+      case "raw": {
+        const raw = locator.value as { ios?: unknown; android?: unknown };
+        const selected = ios ? raw.ios : raw.android;
+        if (selected) return String(selected);
+        throw new Error(
+          `[AppiumMatcherFactory] raw locator missing ios/android: ${JSON.stringify(locator)}`
+        );
+      }
+      case "id": {
+        // `~` is WebdriverIO's accessibility-id shortcut; works on both platforms.
+        return `~${locator.value as string}`;
+      }
+      case "text":
+      case "label": {
+        const text = locator.value as string;
+        return ios
+          ? `-ios predicate string:label == "${text}"`
+          : `android=new UiSelector().text("${text}")`;
+      }
+      case "traits": {
+        logger.debug(
+          `[AppiumMatcherFactory] traits ignored (no Appium equivalent): ${locator.value}`
+        );
+        throw new Error(
+          `[AppiumMatcherFactory] "traits" strategy has no Appium equivalent: ${JSON.stringify(locator)}`
+        );
+      }
+      default: {
+        const _exhaustive: never = locator.strategy;
+        throw new Error(`[AppiumMatcherFactory] unsupported strategy: ${String(_exhaustive)}`);
+      }
     }
-
-    if (locator.id) {
-      // `~` is WebdriverIO's accessibility-id shortcut; works on both platforms.
-      return `~${locator.id}`;
-    }
-
-    const text = locator.text ?? locator.label;
-    if (text) {
-      return ios
-        ? `-ios predicate string:label == "${text}"`
-        : `android=new UiSelector().text("${text}")`;
-    }
-
-    if (locator.traits?.length) {
-      logger.debug(
-        `[AppiumMatcherFactory] traits ignored (no Appium equivalent): ${locator.traits}`
-      );
-    }
-
-    throw new Error(
-      `[AppiumMatcherFactory] locator has no id/text/label and no raw selector: ${JSON.stringify(locator)}`
-    );
   }
 }

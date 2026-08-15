@@ -28,6 +28,8 @@ const logger = Logger.getInstance();
  * element itself).
  */
 export class DetoxActions extends BaseActions {
+  protected readonly adapterName = "DetoxActions";
+
   /** The underlying Detox element handle. */
   private readonly native: Detox.NativeElement;
 

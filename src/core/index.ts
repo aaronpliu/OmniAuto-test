@@ -13,4 +13,5 @@ export { getDriver, registerDriver } from "./Driver";
 export { BasePage } from "./BasePage";
 
 export type { IDriver, DriverName } from "./IDriver";
-export type { ILocator } from "./ILocator";
+export type { ILocator, LocatorStrategy } from "./ILocator";
+export { byId, byText, byLabel, byRaw } from "./ILocator";

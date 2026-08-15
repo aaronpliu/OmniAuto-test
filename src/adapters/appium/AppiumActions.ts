@@ -55,14 +55,6 @@ interface AppiumDriver {
   ): Promise<boolean>;
 }
 
-/** Thrown for {@link IActions} methods a given driver cannot service natively. */
-class NotSupportedError extends Error {
-  constructor(method: string) {
-    super(`[AppiumActions] "${method}" is not supported by the WebdriverIO/Appium adapter`);
-    this.name = "NotSupportedError";
-  }
-}
-
 /** Resolve the global WebdriverIO `driver` (set by the wdio runner). */
 function getDriver(): AppiumDriver {
   const driver = (globalThis as { driver?: AppiumDriver }).driver;
@@ -94,6 +86,8 @@ function isIOS(): boolean {
  */
 export class AppiumActions extends BaseActions {
   private readonly selector: string;
+
+  protected readonly adapterName = "AppiumActions";
 
   constructor(selector: string, description: string) {
     super(description);
@@ -187,10 +181,6 @@ export class AppiumActions extends BaseActions {
     ]);
   }
 
-  async pinch(): Promise<void> {
-    throw new NotSupportedError("pinch");
-  }
-
   /* ------------------------------ scroll -------------------------------- */
 
   async scroll(offset: number, direction: Direction): Promise<void> {
@@ -207,10 +197,6 @@ export class AppiumActions extends BaseActions {
       elementId: elem.elementId,
       direction: wdioEdge,
     });
-  }
-
-  async scrollToIndex(): Promise<void> {
-    throw new NotSupportedError("scrollToIndex");
   }
 
   /* ---------------------------- text input ------------------------------ */
@@ -241,24 +227,13 @@ export class AppiumActions extends BaseActions {
   }
 
   /* -------------------------- pickers / sliders ------------------------- */
-
-  async setColumnToValue(): Promise<void> {
-    throw new NotSupportedError("setColumnToValue");
-  }
-
-  async setDatePickerDate(): Promise<void> {
-    throw new NotSupportedError("setDatePickerDate");
-  }
-
-  async adjustSliderToPosition(): Promise<void> {
-    throw new NotSupportedError("adjustSliderToPosition");
-  }
+  // pinch / scrollToIndex / setColumnToValue / setDatePickerDate /
+  // adjustSliderToPosition are optional actions inherited from BaseActions as
+  // NotSupportedError (WebdriverIO/Appium cannot service them natively).
 
   /* ------------------------------- misc --------------------------------- */
-
-  async performAccessibilityAction(): Promise<void> {
-    throw new NotSupportedError("performAccessibilityAction");
-  }
+  // performAccessibilityAction is an optional action inherited from BaseActions
+  // as NotSupportedError (WebdriverIO/Appium cannot service it natively).
 
   async takeScreenshot(name: string): Promise<string> {
     this.assertNonEmpty(name, "name");
@@ -389,11 +364,7 @@ export class AppiumActions extends BaseActions {
     }
   }
 
-  async toHaveSliderPosition(): Promise<void> {
-    throw new NotSupportedError("toHaveSliderPosition");
-  }
-
-  async toHaveToggleValue(): Promise<void> {
-    throw new NotSupportedError("toHaveToggleValue");
-  }
+  // toHaveSliderPosition / toHaveToggleValue are optional actions inherited
+  // from BaseActions as NotSupportedError (WebdriverIO/Appium cannot service
+  // them natively).
 }

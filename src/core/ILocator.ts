@@ -7,27 +7,52 @@
  * implements {@link IMatcherFactory} to translate a neutral {@link ILocator}
  * into its own element handle, wrapped as the driver-agnostic {@link IActions}.
  *
- * Keep locators minimal and strategy-based. The `id` field is universal
- * (Detox `by.id`, Appium `accessibility id`), so `testID`-based locators work
- * for free in every driver. Driver-specific escapes go in `raw`.
+ * A locator is expressed as an explicit `strategy` + `value` pair. The
+ * discriminator (`strategy`) makes {@link IMatcherFactory.buildSelector}
+ * a clean `switch` and keeps adding a new lookup strategy a one-line change in
+ * each adapter — no more guessing which loose field was set.
+ *
+ * The `id` strategy is universal (Detox `by.id`, Appium `accessibility id`), so
+ * `testID`-based locators work for free in every driver. Driver-specific escapes
+ * use `strategy: "raw"` with a `{ ios, android }` value. `traits` is an optional
+ * Detox-only composition modifier and is ignored by adapters that lack an
+ * equivalent.
  */
 import type { IActions } from "@contracts/index";
 
-/** A stable test identity, mapped to Detox `by.id` / Appium `accessibility id`. */
+/** Supported neutral lookup strategies. Add new ones here, then handle in each matcher factory. */
+export type LocatorStrategy = "id" | "text" | "label" | "traits" | "raw";
+
 export interface ILocator {
-  /** Stable test identity. Maps to Detox `by.id`, Appium `accessibility id`. */
-  id?: string;
-  /** Visible text. Maps to Detox `by.text`, Appium `name`/`-android uiautomator`. */
-  text?: string;
-  /** Accessibility label. */
-  label?: string;
-  /** Platform traits (button/link). Detox-specific; adapters may ignore. */
-  traits?: string[];
+  /** How to find the element. The discriminator that each matcher factory switches on. */
+  strategy: LocatorStrategy;
   /**
-   * Optional raw driver hints for escapes that have no neutral equivalent.
-   * e.g. `{ ios: by.id('x'), android: by.id('y') }` or Appium `xpath`.
+   * The lookup value. A string for `id`/`text`/`label`; an `{ ios, android }`
+   * selector pair for `raw` escapes; a comma-free value for `traits`.
    */
-  raw?: { ios?: unknown; android?: unknown };
+  value: string | { ios?: unknown; android?: unknown };
+  /** Optional Detox-only composition modifier (button/link). Adapters may ignore. */
+  traits?: string[];
+}
+
+/**
+ * Small helper to keep locator definitions terse and typo-safe:
+ *
+ * ```ts
+ * export const username = byId("login.username");
+ * ```
+ */
+export function byId(value: string, traits?: string[]): ILocator {
+  return { strategy: "id", value, traits };
+}
+export function byText(value: string, traits?: string[]): ILocator {
+  return { strategy: "text", value, traits };
+}
+export function byLabel(value: string, traits?: string[]): ILocator {
+  return { strategy: "label", value, traits };
+}
+export function byRaw(value: { ios?: unknown; android?: unknown }, traits?: string[]): ILocator {
+  return { strategy: "raw", value, traits };
 }
 
 /**

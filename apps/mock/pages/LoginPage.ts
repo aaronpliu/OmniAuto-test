@@ -32,12 +32,12 @@ export class LoginPage extends BasePage {
 
   /** Assert the welcome banner is visible after a successful login. */
   async expectWelcomeVisible(): Promise<void> {
-    await this.find(loginLocators.welcome).toBeVisible();
+    await this.expectVisible(loginLocators.welcome);
   }
 
   /** Assert an inline error is shown after a failed login. */
   async expectErrorVisible(): Promise<void> {
-    await this.find(loginLocators.error).toBeVisible();
+    await this.expectVisible(loginLocators.error);
   }
 
   /**

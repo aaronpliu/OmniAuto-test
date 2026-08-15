@@ -6,6 +6,18 @@ import { Logger } from "@utils/logger";
 const logger = Logger.getInstance();
 
 /**
+ * Thrown for {@link IActions} methods a given driver cannot service natively
+ * (e.g. `pinch` under WebdriverIO/Appium). Shared so every adapter reports the
+ * same, clearly-named contract failure instead of a silent no-op.
+ */
+export class NotSupportedError extends Error {
+  constructor(method: string, driver: string) {
+    super(`[${driver}] "${method}" is not supported by this adapter`);
+    this.name = "NotSupportedError";
+  }
+}
+
+/**
  * `BaseActions` is an abstract, driver-agnostic implementation of
  * {@link IActions}. It provides:
  *
@@ -14,12 +26,18 @@ const logger = Logger.getInstance();
  *  2. Lightweight parameter normalization (e.g. massaging optional args into
  *     the `NaN`-based convention Detox expects) so subclasses stay thin.
  *  3. Common guards (argument validation) shared by every adapter.
+ *  4. Default `NotSupportedError` for the driver-OPTIONAL actions (pinch,
+ *     date-pickers, sliders…). A new adapter therefore only implements the
+ *     core methods it can service and inherits a visible failure for the rest
+ *     — it is never forced to stub methods it doesn't support.
  *
  * Concrete adapters (e.g. `DetoxActions`) only need to implement
  * {@link resolve} plus any platform-specific methods they can service
- * natively; everything else is delegated here.
+ * natively; everything else is delegated here or throws via the default.
  */
 export abstract class BaseActions implements IActions {
+  /** Adapter name used in {@link NotSupportedError} messages (e.g. "AppiumActions"). */
+  protected abstract readonly adapterName: string;
   /** Human-readable description used in logs / error messages. */
   protected readonly description: string;
 
@@ -105,7 +123,10 @@ export abstract class BaseActions implements IActions {
     startY?: number
   ): Promise<void>;
 
-  abstract pinch(scale: number, speed?: GestureSpeed, angle?: number): Promise<void>;
+  /** Optional action — default throws {@link NotSupportedError} (override if supported). */
+  async pinch(_scale: number, _speed?: GestureSpeed, _angle?: number): Promise<void> {
+    throw new NotSupportedError("pinch", this.adapterName);
+  }
 
   /* ------------------------------ scroll -------------------------------- */
 
@@ -116,7 +137,11 @@ export abstract class BaseActions implements IActions {
     startY?: number
   ): Promise<void>;
   abstract scrollTo(edge: Edge, startX?: number, startY?: number): Promise<void>;
-  abstract scrollToIndex(index: number): Promise<void>;
+
+  /** Optional action — default throws {@link NotSupportedError} (override if supported). */
+  async scrollToIndex(_index: number): Promise<void> {
+    throw new NotSupportedError("scrollToIndex", this.adapterName);
+  }
 
   /* ---------------------------- text input ------------------------------ */
 
@@ -128,13 +153,27 @@ export abstract class BaseActions implements IActions {
 
   /* -------------------------- pickers / sliders ------------------------- */
 
-  abstract setColumnToValue(column: number, value: string): Promise<void>;
-  abstract setDatePickerDate(dateString: string, dateFormat: DateFormat): Promise<void>;
-  abstract adjustSliderToPosition(normalizedPosition: number): Promise<void>;
+  /** Optional action — default throws {@link NotSupportedError} (override if supported). */
+  async setColumnToValue(_column: number, _value: string): Promise<void> {
+    throw new NotSupportedError("setColumnToValue", this.adapterName);
+  }
+
+  /** Optional action — default throws {@link NotSupportedError} (override if supported). */
+  async setDatePickerDate(_dateString: string, _dateFormat: DateFormat): Promise<void> {
+    throw new NotSupportedError("setDatePickerDate", this.adapterName);
+  }
+
+  /** Optional action — default throws {@link NotSupportedError} (override if supported). */
+  async adjustSliderToPosition(_normalizedPosition: number): Promise<void> {
+    throw new NotSupportedError("adjustSliderToPosition", this.adapterName);
+  }
 
   /* ------------------------------- misc --------------------------------- */
 
-  abstract performAccessibilityAction(actionName: string): Promise<void>;
+  /** Optional action — default throws {@link NotSupportedError} (override if supported). */
+  async performAccessibilityAction(_actionName: string): Promise<void> {
+    throw new NotSupportedError("performAccessibilityAction", this.adapterName);
+  }
   abstract takeScreenshot(name: string): Promise<string>;
   abstract getAttributes(): Promise<ElementAttributes>;
 
@@ -150,6 +189,14 @@ export abstract class BaseActions implements IActions {
   abstract toHaveLabel(label: string): Promise<void>;
   abstract toHaveId(id: string): Promise<void>;
   abstract toHaveValue(value: string): Promise<void>;
-  abstract toHaveSliderPosition(normalizedPosition: number, tolerance?: number): Promise<void>;
-  abstract toHaveToggleValue(value: boolean): Promise<void>;
+
+  /** Optional action — default throws {@link NotSupportedError} (override if supported). */
+  async toHaveSliderPosition(_normalizedPosition: number, _tolerance?: number): Promise<void> {
+    throw new NotSupportedError("toHaveSliderPosition", this.adapterName);
+  }
+
+  /** Optional action — default throws {@link NotSupportedError} (override if supported). */
+  async toHaveToggleValue(_value: boolean): Promise<void> {
+    throw new NotSupportedError("toHaveToggleValue", this.adapterName);
+  }
 }

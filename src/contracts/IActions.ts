@@ -1,14 +1,19 @@
 import type { DateFormat, Direction, Edge, ElementAttributes, GestureSpeed, Point } from "./types";
+import type { IOptionalActions } from "./IOptionalActions";
 
 /**
- * `IActions` defines the contract for every interaction that can be performed
- * against a resolved UI element, regardless of the underlying automation
- * driver (Detox, Appium, Espresso, XCUITest…).
+ * `IActions` defines the CORE contract every driver MUST support — the actions
+ * common to Detox, Appium, Espresso, XCUITest… A new adapter only needs to
+ * implement these to be usable by pages/tests.
+ *
+ * Driver-OPTIONAL actions (pinch, date-pickers, sliders, …) live in
+ * {@link IOptionalActions} so adapters are never forced to implement what they
+ * can't service. See that interface for the split rationale.
  *
  * All methods are async because every real driver performs an over-the-wire
  * (or cross-process) round-trip to the device/simulator.
  */
-export interface IActions {
+export interface IActions extends IOptionalActions {
   /* ---------------------------------------------------------------------- */
   /* Tap / press                                                            */
   /* ---------------------------------------------------------------------- */

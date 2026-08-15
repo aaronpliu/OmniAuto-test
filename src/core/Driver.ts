@@ -22,10 +22,30 @@ export function getDriver(name: DriverName = driverFromEnv()): IDriver {
   const factory = registry.get(name);
   if (!factory) {
     throw new Error(
-      `[getDriver] unknown driver "${name}". Registered: [${[...registry.keys()].join(", ")}]`
+      `[getDriver] unknown driver "${name}". Registered: [${[...registry.keys()].join(", ")}]. ` +
+        `Did you forget to import "@adapters" (side-effect registration) before calling getDriver?`
     );
   }
   return factory();
+}
+
+/**
+ * Startup / CI self-check: fail fast if an expected driver is missing from the
+ * registry. Call once after the adapters module has been imported, e.g.:
+ *
+ * ```ts
+ * import "@adapters";                       // triggers side-effect registration
+ * assertAllDriversRegistered(["detox", "appium"]);
+ * ```
+ */
+export function assertAllDriversRegistered(expected: DriverName[]): void {
+  const missing = expected.filter((name) => !registry.has(name));
+  if (missing.length > 0) {
+    throw new Error(
+      `[assertAllDriversRegistered] missing drivers: [${missing.join(", ")}]. ` +
+        `Ensure each is registered (see src/adapters/index.ts).`
+    );
+  }
 }
 
 function driverFromEnv(): DriverName {
