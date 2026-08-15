@@ -10,5 +10,7 @@
 import "@adapters";
 
 export { getDriver, registerDriver } from "./Driver";
+export { BasePage } from "./BasePage";
 
 export type { IDriver, DriverName } from "./IDriver";
+export type { ILocator } from "./ILocator";

@@ -36,7 +36,8 @@ core/             Driver-neutral core (env-switchable entry point)
   ILocator        Neutral locator model + IMatcherFactory (locator → IActions)
   IDriver         Driver facade types (matcher + launcher) + DriverName
   Driver          Registry / selector — getDriver(E2E_DRIVER), registerDriver
-  index           Entry point (`@core`): re-exports getDriver + types
+  BasePage        Abstract page base — `find`/`locate` (locator → IActions)
+  index           Entry point (`@core`): re-exports getDriver, BasePage + types
 ```
 
 ### Why the indirection?
@@ -70,6 +71,34 @@ import type { ILocator } from "@core/ILocator";
 // ❌ avoid
 import { getDriver } from "@core/Driver"; // concrete module
 ```
+
+### Page objects extend `BasePage`
+
+Every page object should `extend BasePage` rather than re-implementing element
+resolution. `BasePage` provides the shared plumbing once:
+
+- `find(locator)` — **protected**; resolves a neutral `ILocator` into a
+  contract-compliant `IActions` via the active driver's matcher. Used inside
+  page-step methods.
+- `locate(locator)` — **public**; same resolution, exposed so specs can assert
+  directly on an element (e.g. visibility checks in a smoke suite).
+
+```ts
+import { BasePage } from "@core";
+import { loginLocators } from "../locators/login.locators";
+
+export class LoginPage extends BasePage {
+  async login(username: string, password: string) {
+    await this.find(loginLocators.username).typeText(username);
+    await this.find(loginLocators.password).typeText(password);
+    await this.find(loginLocators.submit).tap();
+  }
+}
+```
+
+New pages only declare business flow — no `find`/`locate` boilerplate, and the
+resolution mechanism stays identical across Detox, Appium, or any future
+adapter.
 
 ## Prerequisites
 
