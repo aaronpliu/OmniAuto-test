@@ -9,6 +9,7 @@
  * the smoke report identical across frameworks.
  */
 import { Logger } from "./logger";
+import { renderSmokeHtml, sendSmokeReport } from "./SmokeEmail";
 
 const logger = Logger.getInstance();
 
@@ -34,8 +35,10 @@ export interface SmokeSummary {
 export interface SmokeReporterOptions {
   /** Write a JSON report to this directory (created if missing). */
   reportDir?: string;
-  /** Prefix for the JSON report file name. */
+  /** Prefix for the JSON/HTML report file name. */
   reportName?: string;
+  /** When true, render an HTML report and email it after finish (best-effort). */
+  email?: boolean;
 }
 
 export class SmokeReporter {
@@ -76,6 +79,19 @@ export class SmokeReporter {
     this.printSummary(summary);
     if (this.opts.reportDir) {
       await this.writeJson(summary);
+      await this.writeHtml(summary);
+    }
+    if (this.opts.email) {
+      try {
+        // HTML already written above; sendSmokeReport only delivers via the API.
+        await sendSmokeReport(summary, {
+          reportDir: this.opts.reportDir,
+          reportName: this.opts.reportName ?? "smoke",
+          skipWrite: true,
+        });
+      } catch (err) {
+        logger.warn(`Smoke email delivery failed: ${(err as Error).message}`);
+      }
     }
     return summary;
   }
@@ -109,6 +125,18 @@ export class SmokeReporter {
     const file = path.join(dir, `${name}-${Date.now()}.json`);
     fs.writeFileSync(file, JSON.stringify(s, null, 2), "utf8");
     logger.info(`Smoke report written: ${file}`);
+  }
+
+  /** Render and persist the self-contained HTML report (no extra config needed). */
+  private async writeHtml(s: SmokeSummary): Promise<void> {
+    const fs = await import("fs");
+    const path = await import("path");
+    const dir = path.resolve(this.opts.reportDir as string);
+    fs.mkdirSync(dir, { recursive: true });
+    const name = this.opts.reportName ?? "smoke";
+    const file = path.join(dir, `${name}-${Date.now()}.html`);
+    fs.writeFileSync(file, renderSmokeHtml(s), "utf8");
+    logger.info(`Smoke HTML report written: ${file}`);
   }
 }
 

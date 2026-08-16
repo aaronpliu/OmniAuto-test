@@ -338,6 +338,37 @@ if (!summary.success) throw new Error("Smoke failed");
   logic, and loads `.env` via `dotenv`. All call sites import from here instead
   of reading `process.env` directly. See `.env.example`.
 
+## Smoke report & email
+
+The framework-agnostic `SmokeReporter` (`src/utils/SmokeReporter.ts`) records
+each smoke case and, on `finish()`, prints a summary and (when `REPORT_DIR` is
+set) writes a JSON artifact. On top of that:
+
+- **HTML report** — `renderSmokeHtml(summary)` produces a self-contained,
+  inline-styled HTML document (no external assets, renders in browsers and email
+  clients).
+- **Email delivery** — `sendSmokeReport(summary)` writes the HTML next to the
+  JSON and sends it via an external **email API** (HTTP `POST`) **if
+  configured**. Email is best-effort: misconfiguration logs a warning and
+  returns `false` rather than failing the run. No SMTP server is configured in
+  this project.
+
+Two ways to send:
+
+1. **Inline in a run** — pass `email: true` to the reporter (wired through
+   `SmokeReporterOptions`). The smoke suite emails immediately on `finish()`.
+2. **Standalone after a run** (CI) — once a JSON artifact exists:
+   ```bash
+   REPORT_DIR=reports/mock/smoke npm run report:email
+   ```
+
+Required env vars for email (read directly from `process.env` at send time, not
+part of the core `env.ts` config): `SMOKE_REPORT_API_URL` (the delivery
+endpoint), `SMOKE_REPORT_RECIPIENTS` (comma-separated), `SMOKE_REPORT_FROM`;
+optional `SMOKE_REPORT_API_TOKEN` (sent as a Bearer auth header),
+`SMOKE_REPORT_SUBJECT`. The API receives a JSON body
+`{ to, from, subject, html }`.
+
 ### Environment variables
 
 All variables are consolidated in `configs/env.ts` and documented in
