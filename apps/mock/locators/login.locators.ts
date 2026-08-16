@@ -1,5 +1,5 @@
 import type { ILocator } from "@core/ILocator";
-import { byId } from "@core/ILocator";
+import { byId, byText, allOf } from "@core/ILocator";
 
 /**
  * Declarative locators for the login screen. These are driver-neutral
@@ -21,4 +21,11 @@ export const loginLocators = {
   welcome: byId("home.welcome"),
   /** Optional promo banner (CMS-configured); may be absent. */
   promoBanner: byId("home.promoBanner"),
+
+  /**
+   * Composite example: submit button narrowed by both id AND visible text.
+   * Detox ⇒ by.id("loginButton").and(by.text("Sign in")); Appium ⇒ combined
+   * selector. Composites keep multi-condition matching in the neutral model.
+   */
+  submitByText: allOf(byId("loginButton"), byText("Sign in")),
 } satisfies Record<string, ILocator>;

@@ -292,7 +292,20 @@ if (!summary.success) throw new Error("Smoke failed");
 
 ## Add a new test
 
-1. **Locator** — add entries in `apps/<app>/locators/*.locators.ts`.
+1. **Locator** — add entries in `apps/<app>/locators/*.locators.ts`. A locator
+   can be a single strategy (`byId`/`byText`/`byLabel`/`byRaw`) or a
+   **composite** that combines several conditions without leaving the neutral
+   model:
+   ```ts
+   import { byId, byText, allOf, anyOf } from "@core/ILocator";
+
+   // AND: every condition must match — Detox ⇒ by.id("x").and(by.text("y")).
+   const submit = allOf(byId("loginButton"), byText("Sign in"));
+   // OR:  any condition may match — Detox has no OR (throws); Appium iOS ⇒ predicate OR.
+   const promo = anyOf(byId("home.promoBanner"), byText("Today's offer"));
+   ```
+   Composites recurse, so `allOf(a, anyOf(b, c))` is valid. Note Detox supports
+   only `allOf` (AND) — `anyOf` throws a descriptive error there.
 2. **Page** — expose elements with `find(locator)` (a thin helper returning
    `IActions` from the adapter) and compose semantic flows:
    ```ts
