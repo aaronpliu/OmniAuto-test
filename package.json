@@ -25,7 +25,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "typecheck:appium": "tsc --noEmit -p tsconfig.appium.json"
+    "typecheck:appium": "tsc --noEmit -p tsconfig.appium.json",
+    "dry-run": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.appium.json"
   },
   "repository": {
     "type": "git",
